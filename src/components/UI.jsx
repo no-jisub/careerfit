@@ -1,15 +1,23 @@
 import Icon from './Icon';
 
 export const statusMeta = {
-  scheduled: { label: '상담 예정', icon: 'calendar' },
-  inProgress: { label: '상담 진행 중', icon: 'clock' },
-  writing: { label: '기록 작성 필요', icon: 'note' },
-  complete: { label: '완료', icon: 'check' },
-  overdue: { label: '기한 초과', icon: 'alert' },
+  consultation: {
+    scheduled: { label: '상담 예정', icon: 'calendar' },
+    inProgress: { label: '상담 진행 중', icon: 'clock' },
+    writing: { label: '기록 작성 필요', icon: 'note' },
+    complete: { label: '상담 완료', icon: 'check' },
+  },
+  followUp: {
+    scheduled: { label: '예정', icon: 'calendar' },
+    inProgress: { label: '진행 중', icon: 'clock' },
+    complete: { label: '완료', icon: 'check' },
+    overdue: { label: '기한 초과', icon: 'alert' },
+  },
 };
 
-export function StatusBadge({ status }) {
-  const meta = statusMeta[status] || statusMeta.scheduled;
+export function StatusBadge({ status, context = 'consultation' }) {
+  const contextMeta = statusMeta[context] || statusMeta.consultation;
+  const meta = contextMeta[status] || contextMeta.scheduled;
   return <span className={`badge badge-${status}`}><Icon name={meta.icon} size={14} />{meta.label}</span>;
 }
 
