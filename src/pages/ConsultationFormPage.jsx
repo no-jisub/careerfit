@@ -4,16 +4,17 @@ import { useApp } from '../App';
 import Icon from '../components/Icon';
 import { Avatar, StatusBadge } from '../components/UI';
 import { generateConsultationDraft } from '../services/consultationAiService';
+import { addDays, toDateKey } from '../utils/date';
 
-const emptyForm = { date: '2026-07-20', type: '진로 탐색', purpose: '관심 직무 구체화 및 경험 계획 수립', currentConcern: '', rawMemo: '', guidance: '', programs: [], studentActions: '', counselorActions: '', nextCheckItems: '', nextDate: '2026-08-03' };
+const createEmptyForm = () => { const today = toDateKey(); return { date: today, type: '진로 탐색', purpose: '관심 직무 구체화 및 경험 계획 수립', currentConcern: '', rawMemo: '', guidance: '', programs: [], studentActions: '', counselorActions: '', nextCheckItems: '', nextDate: addDays(today, 14) }; };
 
 export default function ConsultationFormPage() {
   const { studentId } = useParams();
   const navigate = useNavigate();
-  const { students, consultations, setConsultations, setFollowUps, notify, draftForm, setDraftForm } = useApp();
+  const { students, consultations, setConsultations, setFollowUps, persistRecords, notify, draftForm, setDraftForm } = useApp();
   const student = students.find(s => s.id === studentId) || students[0];
   const latest = consultations.filter(c => c.studentId === student.id).sort((a, b) => b.date.localeCompare(a.date))[0];
-  const [form, setForm] = useState(() => draftForm?.studentId === student.id ? draftForm.form : { ...emptyForm, currentConcern: student.concern, rawMemo: '개발 수업 경험을 되짚어 보니 문제를 정의하고 팀의 의견을 정리하는 과정에 흥미를 느꼈다고 함. 서비스 기획 직무를 직접 경험해 본 뒤 개발 직무와 비교하고 싶어 함.', studentActions: '관심 직무 비교표 작성 및 UX 서비스 기획 캠프 신청', counselorActions: '직무 비교표 양식과 캠프 상세 일정 전달', nextCheckItems: '직무 비교 결과와 캠프 신청 여부' });
+  const [form, setForm] = useState(() => draftForm?.studentId === student.id ? draftForm.form : { ...createEmptyForm(), currentConcern: student.concern, rawMemo: '개발 수업 경험을 되짚어 보니 문제를 정의하고 팀의 의견을 정리하는 과정에 흥미를 느꼈다고 함. 서비스 기획 직무를 직접 경험해 본 뒤 개발 직무와 비교하고 싶어 함.', studentActions: '관심 직무 비교표 작성 및 UX 서비스 기획 캠프 신청', counselorActions: '직무 비교표 양식과 캠프 상세 일정 전달', nextCheckItems: '직무 비교 결과와 캠프 신청 여부' });
   const [aiDraft, setAiDraft] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -37,7 +38,7 @@ export default function ConsultationFormPage() {
     const newTasks = [];
     if (studentTask.trim()) newTasks.push({ id: `f${Date.now()}a`, studentId: student.id, content: studentTask.trim(), owner: '학생', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date });
     if (counselorTask.trim()) newTasks.push({ id: `f${Date.now()}b`, studentId: student.id, content: counselorTask.trim(), owner: '교직원', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date });
-    setFollowUps(prev => [...prev, ...newTasks]); setDraftForm(null); notify('상담 기록을 저장했습니다.'); navigate(`/students/${student.id}`);
+    setFollowUps(prev => [...prev, ...newTasks]); void persistRecords('consultations', [consultation]); void persistRecords('followUps', newTasks); setDraftForm(null); notify('상담 기록을 저장했습니다.'); navigate(`/students/${student.id}`);
   };
 
   return <>
