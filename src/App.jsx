@@ -39,7 +39,11 @@ function AppProvider({ children }) {
 }
 
 function CounselorRoutes() {
-  const logout = () => { localStorage.removeItem('careerfit_role'); window.location.assign('/login'); };
+  const logout = () => {
+    localStorage.removeItem('careerfit_role');
+    window.location.hash = '/login';
+    window.location.reload();
+  };
   return <Routes>
     <Route element={<AppLayout logout={logout} />}>
       <Route path="dashboard" element={<DashboardPage />} />

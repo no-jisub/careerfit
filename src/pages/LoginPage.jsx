@@ -1,7 +1,11 @@
 import Icon from '../components/Icon';
 
 export default function LoginPage() {
-  const login = role => { localStorage.setItem('careerfit_role', role); window.location.assign(role === 'counselor' ? '/dashboard' : '/student'); };
+  const login = role => {
+    localStorage.setItem('careerfit_role', role);
+    window.location.hash = role === 'counselor' ? '/dashboard' : '/student';
+    window.location.reload();
+  };
   return <main className="login-page">
     <section className="login-brand-panel">
       <div className="login-brand"><span className="brand-mark"><Icon name="target" size={26} /></span>커리어<span>핏</span></div>
