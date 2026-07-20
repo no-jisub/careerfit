@@ -6,12 +6,12 @@ import { Avatar, StatusBadge } from '../components/UI';
 import { generateConsultationDraft } from '../services/consultationAiService';
 import { addDays, toDateKey } from '../utils/date';
 
-const createEmptyForm = () => { const today = toDateKey(); return { date: today, type: '진로 탐색', purpose: '관심 직무 구체화 및 경험 계획 수립', currentConcern: '', rawMemo: '', guidance: '', programs: [], studentActions: '', counselorActions: '', nextCheckItems: '', nextDate: addDays(today, 14) }; };
+const createEmptyForm = () => { const today = toDateKey(); return { date: today, type: '진로 탐색', purpose: '관심 직무 구체화 및 경험 계획 수립', currentConcern: '', rawMemo: '', guidance: '', programs: [], studentActions: '', counselorActions: '', nextCheckItems: '', nextDate: addDays(today, 14), studentVisible: true }; };
 
 export default function ConsultationFormPage() {
   const { studentId } = useParams();
   const navigate = useNavigate();
-  const { students, consultations, setConsultations, setFollowUps, persistRecords, notify, draftForm, setDraftForm } = useApp();
+  const { students, consultations, setConsultations, setConsultationNotes, setFollowUps, persistRecords, notify, draftForm, setDraftForm } = useApp();
   const student = students.find(s => s.id === studentId) || students[0];
   const latest = consultations.filter(c => c.studentId === student.id).sort((a, b) => b.date.localeCompare(a.date))[0];
   const [form, setForm] = useState(() => draftForm?.studentId === student.id ? draftForm.form : { ...createEmptyForm(), currentConcern: student.concern, rawMemo: '개발 수업 경험을 되짚어 보니 문제를 정의하고 팀의 의견을 정리하는 과정에 흥미를 느꼈다고 함. 서비스 기획 직무를 직접 경험해 본 뒤 개발 직무와 비교하고 싶어 함.', studentActions: '관심 직무 비교표 작성 및 UX 서비스 기획 캠프 신청', counselorActions: '직무 비교표 양식과 캠프 상세 일정 전달', nextCheckItems: '직무 비교 결과와 캠프 신청 여부' });
@@ -35,7 +35,8 @@ export default function ConsultationFormPage() {
     if (saving) return;
     if (!form.purpose.trim() || !form.rawMemo.trim()) { setError('필수 항목을 입력해 주세요.'); document.querySelector('#rawMemo')?.focus(); return; }
     const final = aiDraft || generateConsultationDraft(form);
-    const consultation = { id: `c${Date.now()}`, studentId: student.id, date: form.date, type: form.type, purpose: final.purpose, counselor: '박지현', summary: final.summary, concern: final.concern, guidance: final.guidance, programs: final.programs, studentActions: final.studentActions, counselorActions: final.counselorActions, nextCheckItems: final.nextCheckItems };
+    const consultation = { id: `c${Date.now()}`, studentId: student.id, date: form.date, type: form.type, purpose: final.purpose, counselor: '박지현', summary: final.summary, concern: final.concern, guidance: final.guidance, programs: final.programs, studentActions: final.studentActions, counselorActions: final.counselorActions, nextCheckItems: final.nextCheckItems, studentVisible: form.studentVisible };
+    const internalNote = { id: consultation.id, consultationId: consultation.id, studentId: student.id, note: form.rawMemo.trim(), updatedAt: new Date().toISOString() };
     const newTasks = [];
     if (studentTask.trim()) newTasks.push({ id: `f${Date.now()}a`, studentId: student.id, content: studentTask.trim(), owner: '학생', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date });
     if (counselorTask.trim()) newTasks.push({ id: `f${Date.now()}b`, studentId: student.id, content: counselorTask.trim(), owner: '교직원', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date });
@@ -44,9 +45,11 @@ export default function ConsultationFormPage() {
     try {
       await Promise.all([
         persistRecords('consultations', [consultation]),
+        persistRecords('consultationNotes', [internalNote]),
         persistRecords('followUps', newTasks),
       ]);
       setConsultations(prev => [...prev, consultation]);
+      setConsultationNotes(prev => [...prev, internalNote]);
       setFollowUps(prev => [...prev, ...newTasks]);
       setDraftForm(null);
       localStorage.removeItem(`draft_${student.id}`);
@@ -69,7 +72,8 @@ export default function ConsultationFormPage() {
         <div className="form-divider" />
         <div className="form-section-title"><span>2</span><div><h2>상담 메모</h2><p>완성된 문장보다 중요한 키워드와 맥락을 편하게 남겨 주세요.</p></div></div>
         <label>학생의 현재 고민<textarea rows="3" value={form.currentConcern} onChange={e => update('currentConcern', e.target.value)} /></label>
-        <label>핵심 상담 메모 <span className="required">필수</span><textarea id="rawMemo" className="memo-area" rows="8" value={form.rawMemo} onChange={e => update('rawMemo', e.target.value)} placeholder="예: 개발 수업은 재미있었지만, 문제를 정의하고 사람들과 조율하는 역할에 더 흥미를 느낌..." /><small className="field-hint">메모가 구체적일수록 AI 초안이 더 정확하게 정리됩니다.</small>{error && <span className="field-error" role="alert">{error}</span>}</label>
+        <label>상담 담당자 내부 메모 <span className="required">필수</span><textarea id="rawMemo" className="memo-area" rows="8" value={form.rawMemo} onChange={e => update('rawMemo', e.target.value)} placeholder="예: 개발 수업은 재미있었지만, 문제를 정의하고 사람들과 조율하는 역할에 더 흥미를 느낌..." /><small className="field-hint">이 원문 메모는 상담 담당자만 볼 수 있는 별도 공간에 저장됩니다.</small>{error && <span className="field-error" role="alert">{error}</span>}</label>
+        <label className="visibility-option"><input type="checkbox" checked={form.studentVisible ?? true} onChange={e => update('studentVisible', e.target.checked)} /><span><strong>정리된 상담 요약을 학생에게 공개</strong><small>내부 메모는 공개되지 않으며, AI 초안의 요약·안내·다음 행동만 학생 화면에 표시됩니다.</small></span></label>
         <label>담당자가 안내한 내용<textarea rows="4" value={form.guidance} onChange={e => update('guidance', e.target.value)} placeholder="상담 중 안내한 자료나 조언을 입력하세요." /></label>
         <div className="selected-programs"><div><span className="eyebrow">안내 프로그램</span><h3>비교과 프로그램</h3></div><button className="button secondary small" onClick={openPrograms}><Icon name="spark" size={16} />추천 프로그램 찾기</button>{form.programs.length ? form.programs.map(p => <span className="selected-chip" key={p}>{p}<button aria-label={`${p} 삭제`} onClick={() => update('programs', form.programs.filter(x => x !== p))}>×</button></span>) : <p>아직 추가한 프로그램이 없습니다.</p>}</div>
         <div className="form-divider" />
