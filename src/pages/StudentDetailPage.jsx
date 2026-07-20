@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useApp } from '../App';
 import Icon from '../components/Icon';
 import { Avatar, EmptyState, StatusBadge } from '../components/UI';
+import { addDays, toDateKey } from '../utils/date';
 
 export default function StudentDetailPage() {
   const { studentId } = useParams();
@@ -14,8 +15,8 @@ export default function StudentDetailPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [taskText, setTaskText] = useState('');
   const [taskOwner, setTaskOwner] = useState('학생');
-  const [dueDate, setDueDate] = useState('2026-07-30');
-  const addTask = e => { e.preventDefault(); if (!taskText.trim() || !dueDate) return; setFollowUps(x => [...x, { id: `f${Date.now()}`, studentId: student.id, content: taskText.trim(), owner: taskOwner, dueDate, status: 'scheduled', consultationDate: new Date().toISOString().slice(0, 10) }]); setTaskText(''); setTaskOwner('학생'); setShowAdd(false); notify('후속 조치를 추가했습니다.'); };
+  const [dueDate, setDueDate] = useState(() => addDays(toDateKey(), 7));
+  const addTask = e => { e.preventDefault(); if (!taskText.trim() || !dueDate) return; setFollowUps(x => [...x, { id: `f${Date.now()}`, studentId: student.id, content: taskText.trim(), owner: taskOwner, dueDate, status: 'scheduled', consultationDate: toDateKey() }]); setTaskText(''); setTaskOwner('학생'); setShowAdd(false); notify('후속 조치를 추가했습니다.'); };
   return <>
     <nav className="breadcrumb" aria-label="현재 위치"><Link to="/students">학생 관리</Link><Icon name="chevron" size={14} /><span>{student.name}</span></nav>
     <section className="profile-hero">

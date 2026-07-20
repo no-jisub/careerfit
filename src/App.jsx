@@ -14,6 +14,7 @@ import FollowUpsPage from './pages/FollowUpsPage';
 import ProgramsPage from './pages/ProgramsPage';
 import StudentMyPage from './pages/StudentMyPage';
 import SettingsPage from './pages/SettingsPage';
+import { resolveFollowUpStatus, toDateKey } from './utils/date';
 
 const AppContext = createContext(null);
 const read = (key, fallback) => {
@@ -23,9 +24,9 @@ const read = (key, fallback) => {
 export function useApp() { return useContext(AppContext); }
 
 function AppProvider({ children }) {
-  const [students, setStudents] = useState(() => read('careerfit_students', initialStudents));
+  const [students, setStudents] = useState(() => read('careerfit_students', initialStudents).map(student => student.appointment && !student.appointmentDate ? { ...student, appointmentDate: toDateKey() } : student));
   const [consultations, setConsultations] = useState(() => read('careerfit_consultations', initialConsultations));
-  const [followUps, setFollowUps] = useState(() => read('careerfit_followups', initialFollowUps));
+  const [followUps, setFollowUps] = useState(() => read('careerfit_followups', initialFollowUps).map(followUp => ({ ...followUp, status: resolveFollowUpStatus(followUp) })));
   const [toast, setToast] = useState('');
   const [draftForm, setDraftForm] = useState(null);
 
