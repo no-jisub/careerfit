@@ -17,6 +17,7 @@ export default function ConsultationFormPage() {
   const [form, setForm] = useState(() => draftForm?.studentId === student.id ? draftForm.form : { ...createEmptyForm(), currentConcern: student.concern, rawMemo: '개발 수업 경험을 되짚어 보니 문제를 정의하고 팀의 의견을 정리하는 과정에 흥미를 느꼈다고 함. 서비스 기획 직무를 직접 경험해 본 뒤 개발 직무와 비교하고 싶어 함.', studentActions: '관심 직무 비교표 작성 및 UX 서비스 기획 캠프 신청', counselorActions: '직무 비교표 양식과 캠프 상세 일정 전달', nextCheckItems: '직무 비교 결과와 캠프 신청 여부' });
   const [aiDraft, setAiDraft] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [studentTask, setStudentTask] = useState('관심 직무 비교표 작성');
   const [counselorTask, setCounselorTask] = useState('직무 비교표 양식 전달');
@@ -30,20 +31,37 @@ export default function ConsultationFormPage() {
     setLoading(true);
     setTimeout(() => { try { setAiDraft(generateConsultationDraft(form)); notify('상담일지 초안을 생성했습니다.'); } catch (e) { setError(e.message); } finally { setLoading(false); } }, 650);
   };
-  const save = () => {
+  const save = async () => {
+    if (saving) return;
     if (!form.purpose.trim() || !form.rawMemo.trim()) { setError('필수 항목을 입력해 주세요.'); document.querySelector('#rawMemo')?.focus(); return; }
     const final = aiDraft || generateConsultationDraft(form);
     const consultation = { id: `c${Date.now()}`, studentId: student.id, date: form.date, type: form.type, purpose: final.purpose, counselor: '박지현', summary: final.summary, concern: final.concern, guidance: final.guidance, programs: final.programs, studentActions: final.studentActions, counselorActions: final.counselorActions, nextCheckItems: final.nextCheckItems };
-    setConsultations(prev => [...prev, consultation]);
     const newTasks = [];
     if (studentTask.trim()) newTasks.push({ id: `f${Date.now()}a`, studentId: student.id, content: studentTask.trim(), owner: '학생', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date });
     if (counselorTask.trim()) newTasks.push({ id: `f${Date.now()}b`, studentId: student.id, content: counselorTask.trim(), owner: '교직원', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date });
-    setFollowUps(prev => [...prev, ...newTasks]); void persistRecords('consultations', [consultation]); void persistRecords('followUps', newTasks); setDraftForm(null); notify('상담 기록을 저장했습니다.'); navigate(`/students/${student.id}`);
+    setSaving(true);
+    setError('');
+    try {
+      await Promise.all([
+        persistRecords('consultations', [consultation]),
+        persistRecords('followUps', newTasks),
+      ]);
+      setConsultations(prev => [...prev, consultation]);
+      setFollowUps(prev => [...prev, ...newTasks]);
+      setDraftForm(null);
+      localStorage.removeItem(`draft_${student.id}`);
+      notify('상담 기록을 저장했습니다.');
+      navigate(`/students/${student.id}`);
+    } catch {
+      setError('저장하지 못했습니다. 입력 내용은 유지되므로 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return <>
     <nav className="breadcrumb" aria-label="현재 위치"><Link to={`/students/${student.id}`}>{student.name}</Link><Icon name="chevron" size={14} /><span>상담 기록 작성</span></nav>
-    <div className="form-page-header"><div><span className="eyebrow">상담 진행 중 · {form.date}</span><h1>상담 기록 작성</h1><p>상담 중에는 핵심만 메모하고, AI 초안으로 정리해 보세요.</p></div><div><button className="button secondary" onClick={() => { localStorage.setItem(`draft_${student.id}`, JSON.stringify(form)); notify('상담 기록을 임시 저장했습니다.'); }}>임시 저장</button><button className="button primary" onClick={save}>상담 기록 저장</button></div></div>
+    <div className="form-page-header"><div><span className="eyebrow">상담 진행 중 · {form.date}</span><h1>상담 기록 작성</h1><p>상담 중에는 핵심만 메모하고, AI 초안으로 정리해 보세요.</p></div><div><button className="button secondary" disabled={saving} onClick={() => { localStorage.setItem(`draft_${student.id}`, JSON.stringify(form)); notify('상담 기록을 임시 저장했습니다.'); }}>임시 저장</button><button className="button primary" disabled={saving} onClick={save}>{saving ? '저장 중...' : '상담 기록 저장'}</button></div></div>
     <div className="consultation-layout">
       <section className="card consultation-form-card">
         <div className="form-section-title"><span>1</span><div><h2>상담 기본 정보</h2><p>상담의 목적과 유형을 선택해 주세요.</p></div></div>
@@ -67,6 +85,6 @@ export default function ConsultationFormPage() {
         <section className="card task-register"><span className="eyebrow">저장 시 함께 등록</span><h2>후속 조치</h2><label>학생 담당<input value={studentTask} onChange={e => setStudentTask(e.target.value)} /></label><label>교직원 담당<input value={counselorTask} onChange={e => setCounselorTask(e.target.value)} /></label><small><Icon name="calendar" size={14} />기한 {form.nextDate}</small></section>
       </aside>
     </div>
-    <div className="mobile-savebar"><button className="button secondary" onClick={generate}>AI 초안</button><button className="button primary" onClick={save}>상담 기록 저장</button></div>
+    <div className="mobile-savebar"><button className="button secondary" disabled={saving} onClick={generate}>AI 초안</button><button className="button primary" disabled={saving} onClick={save}>{saving ? '저장 중...' : '상담 기록 저장'}</button></div>
   </>;
 }
