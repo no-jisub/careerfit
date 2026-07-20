@@ -84,6 +84,21 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /consultationNotes/{noteId} {
+      allow read: if isAdmin()
+        || (isCounselor() && resource.data.counselorUid == request.auth.uid);
+      allow create: if isAdmin()
+        || (isCounselor()
+          && request.resource.data.counselorUid == request.auth.uid
+          && isAssignedStudent(request.resource.data.studentId));
+      allow update: if isAdmin()
+        || (isCounselor()
+          && resource.data.counselorUid == request.auth.uid
+          && request.resource.data.counselorUid == resource.data.counselorUid
+          && request.resource.data.studentId == resource.data.studentId);
+      allow delete: if isAdmin();
+    }
+
     match /followUps/{followUpId} {
       allow read: if isAdmin()
         || (isCounselor() && resource.data.ownerUid == request.auth.uid)

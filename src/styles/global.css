@@ -334,6 +334,13 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(35,86,216,.35); 
 .memo-area { background: #fbfcff; border-color: #ccd8ee; }
 .field-hint { display: block; margin-top: 6px; color: #929bad; font-size: 9px; font-weight: 500; }
 .field-error { display: block; margin-top: 7px; color: var(--red); font-size: 10px; }
+.visibility-option { padding: 13px; border: 1px solid #d9e3f3; border-radius: 10px; display: flex!important; align-items: flex-start; gap: 10px; background: #f7faff; }
+.visibility-option input { width: 18px; height: 18px; margin: 1px 0 0!important; flex: 0 0 auto; }
+.visibility-option span, .visibility-option strong, .visibility-option small { display: block; }
+.visibility-option small { margin-top: 4px; color: var(--muted); font-weight: 500; line-height: 1.5; }
+.internal-note { margin-bottom: 12px; padding: 13px; border: 1px solid #eadfbf; border-radius: 10px; background: #fffaf0; }
+.internal-note strong { color: #87621d; font-size: 10px; }
+.internal-note p { margin: 6px 0 0; color: #655940; font-size: 10px; line-height: 1.65; white-space: pre-wrap; }
 .selected-programs { padding: 16px; border: 1px dashed #cfd8e9; border-radius: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #fbfcff; }
 .selected-programs > div { margin-right: auto; }
 .selected-programs h3 { margin: 0; font-size: 12px; }
