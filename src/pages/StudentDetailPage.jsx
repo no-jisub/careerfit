@@ -34,7 +34,7 @@ export default function StudentDetailPage() {
       <aside className="detail-aside">
         <section className="card info-card"><span className="eyebrow">학생 기본 정보</span><h2>프로필</h2><dl><div><dt>연락처</dt><dd>{student.phone}</dd></div><div><dt>진로 목표</dt><dd>{student.goal}</dd></div><div><dt>담당 상담자</dt><dd>{student.counselor}</dd></div><div><dt>최근 상담일</dt><dd>{student.lastConsultation}</dd></div></dl></section>
         <section className="card"><div className="section-header compact"><div><span className="eyebrow">해야 할 일</span><h2>미완료 후속 조치 <em>{tasks.length}</em></h2></div><button className="icon-button" aria-label="후속 조치 추가" onClick={() => setShowAdd(true)}><Icon name="plus" /></button></div>
-          <div className="aside-tasks">{tasks.map(t => <article className={t.status === 'overdue' ? 'overdue' : ''} key={t.id}><div><StatusBadge status={t.status} /><span>{t.owner} 담당</span></div><strong>{t.content}</strong><small><Icon name="calendar" size={14} />{t.dueDate}까지</small></article>)}{!tasks.length && <EmptyState title="등록된 후속 조치가 없습니다" />}</div>
+          <div className="aside-tasks">{tasks.map(t => <article className={t.status === 'overdue' ? 'overdue' : ''} key={t.id}><div><StatusBadge status={t.status} context="followUp" /><span>{t.owner} 담당</span></div><strong>{t.content}</strong><small><Icon name="calendar" size={14} />{t.dueDate}까지</small></article>)}{!tasks.length && <EmptyState title="등록된 후속 조치가 없습니다" />}</div>
         </section>
       </aside>
     </div>
