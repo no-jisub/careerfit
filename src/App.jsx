@@ -63,7 +63,7 @@ function AppProvider({ children }) {
   }, [user, role, syncingRemoteData]);
 
   const persistRecords = async (name, records) => {
-    if (!user) return;
+    if (!user) return records;
     const enriched = records.map(record => {
       const student = students.find(item => item.id === record.studentId);
       if (name === 'consultations') return { ...record, counselorUid: record.counselorUid || user.uid, studentUid: record.studentUid || student?.uid || '', studentVisible: record.studentVisible ?? true };
@@ -72,8 +72,10 @@ function AppProvider({ children }) {
     });
     try {
       await saveCareerRecords(name, enriched);
-    } catch {
+      return enriched;
+    } catch (error) {
       setToast('Firebase 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+      throw error;
     }
   };
 
