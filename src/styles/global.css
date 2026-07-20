@@ -112,6 +112,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(35,86,216,.35); 
 .header-actions { display: flex; align-items: center; gap: 10px; }
 .global-search { width: 260px; height: 40px; padding-left: 12px; display: flex; align-items: center; gap: 7px; color: #8792a7; background: #f5f7fa; border: 1px solid #edf0f5; border-radius: 10px; }
 .global-search input { height: 38px; padding: 0; border: 0; box-shadow: none; background: transparent; font-size: 12px; }
+.global-search-wrap { position: relative; }
 .profile-button { height: 40px; padding: 0 4px 0 6px; border: 0; display: flex; align-items: center; gap: 8px; color: #46536b; background: transparent; font-size: 12px; font-weight: 700; }
 .header-popover-wrap { position: relative; }
 .header-popover { width: 265px; position: absolute; z-index: 40; top: 49px; right: 0; padding: 15px; border: 1px solid var(--border); border-radius: 13px; background: white; box-shadow: 0 14px 38px rgba(21,38,72,.16); }
@@ -120,6 +121,14 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(35,86,216,.35); 
 .header-popover p b { display: block; margin-bottom: 2px; color: var(--blue); }
 .header-popover a, .header-popover button { width: 100%; min-height: 34px; border: 0; border-radius: 8px; display: flex; align-items: center; color: var(--blue); background: #f3f6fd; font-size: 10px; font-weight: 700; }
 .header-popover a { padding: 0 10px; }
+.search-popover { width: 330px; left: 0; right: auto; }
+.search-popover > a { min-height: 54px; margin-top: 5px; gap: 10px; color: #35425a; background: #f7f9fc; }
+.search-popover > a > span { flex: 0 0 auto; padding: 3px 6px; border-radius: 6px; color: var(--blue); background: var(--blue-soft); font-size: 8px; }
+.search-popover > a div { min-width: 0; }
+.search-popover > a b, .search-popover > a small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-popover > a small { margin-top: 3px; color: var(--muted); font-weight: 500; }
+.search-popover > button { margin-top: 9px; justify-content: center; }
+.notice-dot { min-width: 17px; height: 17px; position: absolute; top: -5px; right: -6px; padding: 0 4px; border: 2px solid white; border-radius: 9px; display: grid; place-items: center; color: white; background: var(--red); font-size: 7px; font-weight: 800; }
 .profile-popover { width: 210px; }
 .profile-popover small { display: block; margin: -6px 0 13px; color: #8993a6; font-size: 9px; }
 .profile-popover a, .profile-popover button { padding: 0 10px; color: #56637a; background: transparent; text-align: left; }
