@@ -66,6 +66,7 @@ function AppProvider({ children }) {
     if (!user) return records;
     const enriched = records.map(record => {
       const student = students.find(item => item.id === record.studentId);
+      if (name === 'students') return { ...record, counselorUid: record.counselorUid || user.uid };
       if (name === 'consultations') return { ...record, counselorUid: record.counselorUid || user.uid, studentUid: record.studentUid || student?.uid || '', studentVisible: record.studentVisible ?? true };
       if (name === 'followUps') return { ...record, ownerUid: record.ownerUid || user.uid, assigneeUid: record.assigneeUid || (record.owner === '학생' ? student?.uid || '' : user.uid) };
       return record;
