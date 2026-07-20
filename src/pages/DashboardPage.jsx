@@ -11,7 +11,7 @@ export default function DashboardPage() {
   const overdue = pending.filter(f => f.status === 'overdue');
   const studentById = id => students.find(s => s.id === id);
   return <>
-    <PageIntro eyebrow="7월 20일 월요일" title="좋은 아침이에요, 박지현 상담사님!" description="오늘 상담과 놓치기 쉬운 후속 조치를 먼저 모아봤어요." action={<Link className="button primary" to="/students/s1/consultation/new"><Icon name="plus" size={18} />상담 기록 작성</Link>} />
+    <PageIntro eyebrow="7월 20일 월요일" title="좋은 아침이에요, 박지현 상담사님!" description="오늘 상담과 놓치기 쉬운 후속 조치를 먼저 모아봤어요." action={<Link className="button primary" to="/students?select=consultation"><Icon name="plus" size={18} />상담 기록 작성</Link>} />
     <section className="summary-grid" aria-label="오늘의 상담 요약">
       <article className="summary-card blue"><span className="summary-icon"><Icon name="calendar" /></span><div><small>오늘 상담 예정</small><strong>{scheduled.length}<em>명</em></strong><p><b>다음</b> 오전 10:00 김하늘</p></div></article>
       <article className="summary-card purple"><span className="summary-icon"><Icon name="note" /></span><div><small>기록 작성 필요</small><strong>1<em>건</em></strong><p>오늘 안에 기록해 주세요</p></div></article>

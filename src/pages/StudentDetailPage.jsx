@@ -19,7 +19,7 @@ export default function StudentDetailPage() {
     <nav className="breadcrumb" aria-label="현재 위치"><Link to="/students">학생 관리</Link><Icon name="chevron" size={14} /><span>{student.name}</span></nav>
     <section className="profile-hero">
       <div className="profile-main"><Avatar student={student} size="large" /><div><div className="profile-name"><h1>{student.name}</h1><StatusBadge status={student.status} /></div><p>{student.studentNo} · {student.department} · {student.grade}</p><div className="tag-row">{student.interests.map(x => <span className="tag" key={x}>{x}</span>)}</div></div></div>
-      <div className="profile-actions"><button className="button secondary" onClick={() => notify('학생 정보 수정 기능을 열었습니다.')}>학생 정보 수정</button><button className="button secondary" onClick={() => setShowAdd(true)}><Icon name="plus" size={18} />후속 조치 추가</button><Link to="/programs?student=s1" className="button secondary"><Icon name="spark" size={17} />프로그램 추천</Link><Link to={`/students/${student.id}/consultation/new`} className="button primary"><Icon name="note" size={18} />상담 시작</Link></div>
+      <div className="profile-actions"><button className="button secondary" onClick={() => notify('학생 정보 수정 기능을 열었습니다.')}>학생 정보 수정</button><button className="button secondary" onClick={() => setShowAdd(true)}><Icon name="plus" size={18} />후속 조치 추가</button><Link to={`/programs?student=${student.id}`} className="button secondary"><Icon name="spark" size={17} />프로그램 추천</Link><Link to={`/students/${student.id}/consultation/new`} className="button primary"><Icon name="note" size={18} />상담 시작</Link></div>
     </section>
     <div className="detail-grid">
       <div className="detail-main">
