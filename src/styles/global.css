@@ -304,6 +304,8 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(35,86,216,.35); 
 .modal label input, .modal label select, .consultation-form-card label input, .consultation-form-card label select, .consultation-form-card label textarea, .ai-fields textarea, .task-register input { margin-top: 7px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .modal-actions { margin-top: 8px; display: flex; justify-content: flex-end; gap: 8px; }
+.student-edit-modal { max-height: calc(100vh - 40px); overflow-y: auto; }
+.student-edit-modal textarea { margin-top: 7px; }
 
 /* Consultation form */
 .form-page-header { margin-bottom: 22px; display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; }
