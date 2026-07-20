@@ -22,6 +22,11 @@ export const isFirebaseConfigured = [
 export const firebaseAuthEnabled = isFirebaseConfigured
   && import.meta.env.VITE_FIREBASE_AUTH_ENABLED === 'true';
 
+// Offline builds remain usable as a demo. Once real authentication is enabled,
+// demo role bypass must also be explicitly enabled.
+export const demoModeEnabled = !firebaseAuthEnabled
+  || import.meta.env.VITE_DEMO_MODE_ENABLED === 'true';
+
 export const firestoreSyncEnabled = firebaseAuthEnabled
   && import.meta.env.VITE_FIRESTORE_SYNC_ENABLED === 'true';
 
