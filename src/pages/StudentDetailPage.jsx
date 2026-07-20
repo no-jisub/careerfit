@@ -3,23 +3,25 @@ import { Link, useParams } from 'react-router-dom';
 import { useApp } from '../App';
 import Icon from '../components/Icon';
 import { Avatar, EmptyState, StatusBadge } from '../components/UI';
+import { addDays, toDateKey } from '../utils/date';
 
 export default function StudentDetailPage() {
   const { studentId } = useParams();
-  const { students, consultations, followUps, setFollowUps, notify } = useApp();
+  const { students, consultations, followUps, setFollowUps, persistRecords, notify } = useApp();
   const student = students.find(s => s.id === studentId) || students[0];
   const history = consultations.filter(c => c.studentId === student.id).sort((a, b) => b.date.localeCompare(a.date));
   const tasks = followUps.filter(f => f.studentId === student.id && f.status !== 'complete');
   const [expanded, setExpanded] = useState(history[0]?.id);
   const [showAdd, setShowAdd] = useState(false);
   const [taskText, setTaskText] = useState('');
-  const [dueDate, setDueDate] = useState('2026-07-30');
-  const addTask = e => { e.preventDefault(); if (!taskText.trim()) return; setFollowUps(x => [...x, { id: `f${Date.now()}`, studentId: student.id, content: taskText.trim(), owner: '학생', dueDate, status: 'scheduled', consultationDate: new Date().toISOString().slice(0, 10) }]); setTaskText(''); setShowAdd(false); notify('후속 조치를 추가했습니다.'); };
+  const [taskOwner, setTaskOwner] = useState('학생');
+  const [dueDate, setDueDate] = useState(() => addDays(toDateKey(), 7));
+  const addTask = e => { e.preventDefault(); if (!taskText.trim() || !dueDate) return; const nextTask = { id: `f${Date.now()}`, studentId: student.id, content: taskText.trim(), owner: taskOwner, dueDate, status: 'scheduled', consultationDate: toDateKey() }; setFollowUps(x => [...x, nextTask]); void persistRecords('followUps', [nextTask]); setTaskText(''); setTaskOwner('학생'); setShowAdd(false); notify('후속 조치를 추가했습니다.'); };
   return <>
     <nav className="breadcrumb" aria-label="현재 위치"><Link to="/students">학생 관리</Link><Icon name="chevron" size={14} /><span>{student.name}</span></nav>
     <section className="profile-hero">
       <div className="profile-main"><Avatar student={student} size="large" /><div><div className="profile-name"><h1>{student.name}</h1><StatusBadge status={student.status} /></div><p>{student.studentNo} · {student.department} · {student.grade}</p><div className="tag-row">{student.interests.map(x => <span className="tag" key={x}>{x}</span>)}</div></div></div>
-      <div className="profile-actions"><button className="button secondary" onClick={() => notify('학생 정보 수정 기능을 열었습니다.')}>학생 정보 수정</button><button className="button secondary" onClick={() => setShowAdd(true)}><Icon name="plus" size={18} />후속 조치 추가</button><Link to="/programs?student=s1" className="button secondary"><Icon name="spark" size={17} />프로그램 추천</Link><Link to={`/students/${student.id}/consultation/new`} className="button primary"><Icon name="note" size={18} />상담 시작</Link></div>
+      <div className="profile-actions"><button className="button secondary" onClick={() => notify('학생 정보 수정 기능을 열었습니다.')}>학생 정보 수정</button><button className="button secondary" onClick={() => setShowAdd(true)}><Icon name="plus" size={18} />후속 조치 추가</button><Link to={`/programs?student=${student.id}`} className="button secondary"><Icon name="spark" size={17} />프로그램 추천</Link><Link to={`/students/${student.id}/consultation/new`} className="button primary"><Icon name="note" size={18} />상담 시작</Link></div>
     </section>
     <div className="detail-grid">
       <div className="detail-main">
@@ -33,10 +35,10 @@ export default function StudentDetailPage() {
       <aside className="detail-aside">
         <section className="card info-card"><span className="eyebrow">학생 기본 정보</span><h2>프로필</h2><dl><div><dt>연락처</dt><dd>{student.phone}</dd></div><div><dt>진로 목표</dt><dd>{student.goal}</dd></div><div><dt>담당 상담자</dt><dd>{student.counselor}</dd></div><div><dt>최근 상담일</dt><dd>{student.lastConsultation}</dd></div></dl></section>
         <section className="card"><div className="section-header compact"><div><span className="eyebrow">해야 할 일</span><h2>미완료 후속 조치 <em>{tasks.length}</em></h2></div><button className="icon-button" aria-label="후속 조치 추가" onClick={() => setShowAdd(true)}><Icon name="plus" /></button></div>
-          <div className="aside-tasks">{tasks.map(t => <article className={t.status === 'overdue' ? 'overdue' : ''} key={t.id}><div><StatusBadge status={t.status} /><span>{t.owner} 담당</span></div><strong>{t.content}</strong><small><Icon name="calendar" size={14} />{t.dueDate}까지</small></article>)}{!tasks.length && <EmptyState title="등록된 후속 조치가 없습니다" />}</div>
+          <div className="aside-tasks">{tasks.map(t => <article className={t.status === 'overdue' ? 'overdue' : ''} key={t.id}><div><StatusBadge status={t.status} context="followUp" /><span>{t.owner} 담당</span></div><strong>{t.content}</strong><small><Icon name="calendar" size={14} />{t.dueDate}까지</small></article>)}{!tasks.length && <EmptyState title="등록된 후속 조치가 없습니다" />}</div>
         </section>
       </aside>
     </div>
-    {showAdd && <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && setShowAdd(false)}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="task-modal-title"><button className="modal-close" aria-label="닫기" onClick={() => setShowAdd(false)}>×</button><span className="eyebrow">새로운 다음 행동</span><h2 id="task-modal-title">후속 조치 추가</h2><form onSubmit={addTask}><label>후속 조치 내용<input autoFocus value={taskText} onChange={e => setTaskText(e.target.value)} placeholder="학생이 해야 할 다음 행동" required /></label><div className="form-row"><label>행동 담당자<select><option>학생</option><option>교직원</option></select></label><label>완료 기한<input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} /></label></div><div className="modal-actions"><button type="button" className="button secondary" onClick={() => setShowAdd(false)}>취소</button><button className="button primary">후속 조치 추가</button></div></form></section></div>}
+    {showAdd && <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && setShowAdd(false)}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="task-modal-title"><button className="modal-close" aria-label="닫기" onClick={() => setShowAdd(false)}>×</button><span className="eyebrow">새로운 다음 행동</span><h2 id="task-modal-title">후속 조치 추가</h2><form onSubmit={addTask}><label>후속 조치 내용<input autoFocus value={taskText} onChange={e => setTaskText(e.target.value)} placeholder="학생이 해야 할 다음 행동" required /></label><div className="form-row"><label>행동 담당자<select value={taskOwner} onChange={e => setTaskOwner(e.target.value)}><option>학생</option><option>교직원</option></select></label><label>완료 기한<input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required /></label></div><div className="modal-actions"><button type="button" className="button secondary" onClick={() => setShowAdd(false)}>취소</button><button className="button primary">후속 조치 추가</button></div></form></section></div>}
   </>;
 }
