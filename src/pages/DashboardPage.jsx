@@ -1,9 +1,10 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../App';
 import Icon from '../components/Icon';
 import { Avatar, EmptyState, PageIntro, SectionHeader, StatusBadge } from '../components/UI';
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const { students, consultations, followUps } = useApp();
   const scheduled = students.filter(s => s.appointment);
   const pending = followUps.filter(f => f.status !== 'complete');
@@ -27,7 +28,7 @@ export default function DashboardPage() {
       <section className="card span-2"><SectionHeader eyebrow="최근 활동" title="최근 상담 기록" action={<Link to="/consultations">전체 보기 <Icon name="chevron" size={16} /></Link>} />
         <div className="recent-list">{consultations.slice(-3).reverse().map(c => { const student = studentById(c.studentId); return <Link to={`/students/${c.studentId}`} key={c.id}><Avatar student={student} size="small" /><div><strong>{student?.name}</strong><p>{c.purpose} · {c.summary}</p></div><time>{c.date.slice(5).replace('-', '.')}</time></Link>; })}</div>
       </section>
-      <section className="card quick-search"><SectionHeader eyebrow="빠른 이동" title="학생 빠른 검색" /><label><span className="sr-only">학생 검색</span><Icon name="search" size={18} /><input placeholder="이름 또는 학번 입력" onKeyDown={e => { if (e.key === 'Enter' && e.currentTarget.value.trim()) window.location.assign(`/students?q=${encodeURIComponent(e.currentTarget.value.trim())}`); }} /></label><div className="quick-students">{students.slice(0, 3).map(s => <Link key={s.id} to={`/students/${s.id}`}><Avatar student={s} size="small" /><span><strong>{s.name}</strong><small>{s.department}</small></span><Icon name="chevron" size={16} /></Link>)}</div></section>
+      <section className="card quick-search"><SectionHeader eyebrow="빠른 이동" title="학생 빠른 검색" /><label><span className="sr-only">학생 검색</span><Icon name="search" size={18} /><input placeholder="이름 또는 학번 입력" onKeyDown={e => { if (e.key === 'Enter' && e.currentTarget.value.trim()) navigate(`/students?q=${encodeURIComponent(e.currentTarget.value.trim())}`); }} /></label><div className="quick-students">{students.slice(0, 3).map(s => <Link key={s.id} to={`/students/${s.id}`}><Avatar student={s} size="small" /><span><strong>{s.name}</strong><small>{s.department}</small></span><Icon name="chevron" size={16} /></Link>)}</div></section>
     </div>
   </>;
 }
