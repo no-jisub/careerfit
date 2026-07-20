@@ -415,6 +415,8 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(35,86,216,.35); 
 .task-content strong { font-size: 11px; }
 .task-content small { grid-column: 2; }
 .task-owner strong, .task-due strong { display: flex; align-items: center; gap: 5px; margin-top: 5px; font-size: 10px; }
+.task-due label { display: block; }
+.task-due input { width: 130px; height: 34px; margin-top: 4px; padding: 0 8px; font-size: 9px; }
 .task-actions { display: flex; gap: 6px; align-items: center; }
 .task-actions select { width: 88px; height: 36px; font-size: 10px; }
 .consultation-index > a { min-height: 105px; padding: 18px 23px; border-top: 1px solid #eef1f5; display: grid; grid-template-columns: 90px 46px 1fr 20px; gap: 16px; align-items: center; }
