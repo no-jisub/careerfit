@@ -1,0 +1,127 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function hasRole(role) {
+      return signedIn()
+        && (request.auth.token.role == role
+          || (exists(/databases/$(database)/documents/users/$(request.auth.uid))
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role));
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isCounselor() {
+      return hasRole('counselor');
+    }
+
+    function isStudent() {
+      return hasRole('student');
+    }
+
+    function isAssignedStudent(studentId) {
+      return get(/databases/$(database)/documents/students/$(studentId)).data.counselorUid
+        == request.auth.uid;
+    }
+
+    function hasMatchingStudentUid(studentId, studentUid) {
+      return get(/databases/$(database)/documents/students/$(studentId)).data.uid
+        == studentUid;
+    }
+
+    match /users/{userId} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == userId);
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.role == 'student';
+      allow update: if isAdmin()
+        || (signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.role == resource.data.role);
+      allow delete: if isAdmin();
+    }
+
+    match /students/{studentId} {
+      allow read: if isAdmin()
+        || (isCounselor() && resource.data.counselorUid == request.auth.uid)
+        || (isStudent() && resource.data.uid == request.auth.uid);
+      allow create: if isAdmin()
+        || (isCounselor() && request.resource.data.counselorUid == request.auth.uid);
+      allow update: if isAdmin()
+        || (isCounselor()
+          && resource.data.counselorUid == request.auth.uid
+          && request.resource.data.counselorUid == resource.data.counselorUid
+          && request.resource.data.uid == resource.data.uid);
+      allow delete: if isAdmin();
+    }
+
+    match /consultations/{consultationId} {
+      allow read: if isAdmin()
+        || (isCounselor() && resource.data.counselorUid == request.auth.uid)
+        || (isStudent()
+          && resource.data.studentUid == request.auth.uid
+          && resource.data.studentVisible == true);
+      allow create: if isAdmin()
+        || (isCounselor()
+          && request.resource.data.counselorUid == request.auth.uid
+          && isAssignedStudent(request.resource.data.studentId)
+          && hasMatchingStudentUid(
+            request.resource.data.studentId,
+            request.resource.data.studentUid
+          ));
+      allow update: if isAdmin()
+        || (isCounselor()
+          && resource.data.counselorUid == request.auth.uid
+          && request.resource.data.counselorUid == resource.data.counselorUid
+          && request.resource.data.studentUid == resource.data.studentUid
+          && request.resource.data.studentId == resource.data.studentId);
+      allow delete: if isAdmin();
+    }
+
+    match /followUps/{followUpId} {
+      allow read: if isAdmin()
+        || (isCounselor() && resource.data.ownerUid == request.auth.uid)
+        || (isStudent() && resource.data.assigneeUid == request.auth.uid);
+      allow create: if isAdmin()
+        || (isCounselor()
+          && request.resource.data.ownerUid == request.auth.uid
+          && isAssignedStudent(request.resource.data.studentId)
+          && (request.resource.data.assigneeUid == request.auth.uid
+            || hasMatchingStudentUid(
+              request.resource.data.studentId,
+              request.resource.data.assigneeUid
+            )));
+      allow update: if isAdmin()
+        || (isCounselor()
+          && resource.data.ownerUid == request.auth.uid
+          && request.resource.data.ownerUid == resource.data.ownerUid
+          && request.resource.data.assigneeUid == resource.data.assigneeUid
+          && request.resource.data.studentId == resource.data.studentId)
+        || (isStudent()
+          && resource.data.assigneeUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'completedAt', 'updatedAt']));
+      allow delete: if isAdmin();
+    }
+
+    match /programs/{programId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

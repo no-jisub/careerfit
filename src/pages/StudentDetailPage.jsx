@@ -7,7 +7,7 @@ import { addDays, toDateKey } from '../utils/date';
 
 export default function StudentDetailPage() {
   const { studentId } = useParams();
-  const { students, consultations, followUps, setFollowUps, notify } = useApp();
+  const { students, consultations, followUps, setFollowUps, persistRecords, notify } = useApp();
   const student = students.find(s => s.id === studentId) || students[0];
   const history = consultations.filter(c => c.studentId === student.id).sort((a, b) => b.date.localeCompare(a.date));
   const tasks = followUps.filter(f => f.studentId === student.id && f.status !== 'complete');
@@ -16,7 +16,7 @@ export default function StudentDetailPage() {
   const [taskText, setTaskText] = useState('');
   const [taskOwner, setTaskOwner] = useState('학생');
   const [dueDate, setDueDate] = useState(() => addDays(toDateKey(), 7));
-  const addTask = e => { e.preventDefault(); if (!taskText.trim() || !dueDate) return; setFollowUps(x => [...x, { id: `f${Date.now()}`, studentId: student.id, content: taskText.trim(), owner: taskOwner, dueDate, status: 'scheduled', consultationDate: toDateKey() }]); setTaskText(''); setTaskOwner('학생'); setShowAdd(false); notify('후속 조치를 추가했습니다.'); };
+  const addTask = e => { e.preventDefault(); if (!taskText.trim() || !dueDate) return; const nextTask = { id: `f${Date.now()}`, studentId: student.id, content: taskText.trim(), owner: taskOwner, dueDate, status: 'scheduled', consultationDate: toDateKey() }; setFollowUps(x => [...x, nextTask]); void persistRecords('followUps', [nextTask]); setTaskText(''); setTaskOwner('학생'); setShowAdd(false); notify('후속 조치를 추가했습니다.'); };
   return <>
     <nav className="breadcrumb" aria-label="현재 위치"><Link to="/students">학생 관리</Link><Icon name="chevron" size={14} /><span>{student.name}</span></nav>
     <section className="profile-hero">

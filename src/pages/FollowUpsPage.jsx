@@ -5,11 +5,11 @@ import Icon from '../components/Icon';
 import { Avatar, EmptyState, PageIntro, StatusBadge } from '../components/UI';
 
 export default function FollowUpsPage() {
-  const { students, followUps, setFollowUps, notify } = useApp();
+  const { students, followUps, setFollowUps, persistRecords, notify } = useApp();
   const [filter, setFilter] = useState('all');
   const [owner, setOwner] = useState('all');
   const items = useMemo(() => followUps.filter(f => (filter === 'all' || f.status === filter) && (owner === 'all' || f.owner === owner)).sort((a, b) => (a.status === 'overdue' ? -1 : 1) - (b.status === 'overdue' ? -1 : 1)), [followUps, filter, owner]);
-  const updateStatus = (id, status) => { setFollowUps(prev => prev.map(f => f.id === id ? { ...f, status } : f)); notify(status === 'complete' ? '후속 조치를 완료 처리했습니다.' : '후속 조치 상태를 변경했습니다.'); };
+  const updateStatus = (id, status) => { const current = followUps.find(f => f.id === id); if (!current) return; const updated = { ...current, status, updatedAt: new Date().toISOString(), ...(status === 'complete' ? { completedAt: new Date().toISOString() } : {}) }; setFollowUps(prev => prev.map(f => f.id === id ? updated : f)); void persistRecords('followUps', [updated]); notify(status === 'complete' ? '후속 조치를 완료 처리했습니다.' : '후속 조치 상태를 변경했습니다.'); };
   return <>
     <PageIntro eyebrow="후속 조치 관리" title="다음 행동을 놓치지 않도록" description="모든 학생의 후속 조치를 기한과 담당자별로 모아 확인하세요." action={<button className="button primary" onClick={() => notify('학생 상세 화면에서 새로운 후속 조치를 추가할 수 있어요.')}><Icon name="plus" size={18} />후속 조치 추가</button>} />
     <section className="task-filter-bar"><div className="segmented" aria-label="상태 필터">{[['all','전체'],['scheduled','예정'],['inProgress','진행 중'],['complete','완료'],['overdue','기한 초과']].map(([key,label]) => <button className={filter === key ? 'active' : ''} key={key} onClick={() => setFilter(key)}>{label}<span>{key === 'all' ? followUps.length : followUps.filter(f => f.status === key).length}</span></button>)}</div><select aria-label="행동 담당자" value={owner} onChange={e => setOwner(e.target.value)}><option value="all">전체 담당자</option><option value="학생">학생 담당</option><option value="교직원">교직원 담당</option></select></section>
