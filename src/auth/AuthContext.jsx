@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { auth, db, firebaseAuthEnabled } from '../lib/firebase';
+import { auth, db, demoModeEnabled, firebaseAuthEnabled } from '../lib/firebase';
 
 const AuthContext = createContext(null);
 
@@ -52,6 +52,9 @@ export function AuthProvider({ children }) {
   };
 
   const loginDemo = async nextRole => {
+    if (!demoModeEnabled || !['counselor', 'student'].includes(nextRole)) {
+      throw new Error('데모 로그인이 허용되지 않았습니다.');
+    }
     if (auth?.currentUser) await signOut(auth);
     localStorage.setItem('careerfit_role', nextRole);
     setUser(null);
@@ -66,7 +69,7 @@ export function AuthProvider({ children }) {
     setRole(null);
   };
 
-  const value = useMemo(() => ({ user, role, loading, firebaseAuthEnabled, loginWithEmail, loginDemo, logout }), [user, role, loading]);
+  const value = useMemo(() => ({ user, role, loading, demoModeEnabled, firebaseAuthEnabled, loginWithEmail, loginDemo, logout }), [user, role, loading]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

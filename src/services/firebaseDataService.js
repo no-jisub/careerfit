@@ -1,7 +1,7 @@
 import { collection, doc, onSnapshot, query, setDoc, where, writeBatch } from 'firebase/firestore';
 import { db, firestoreSyncEnabled } from '../lib/firebase';
 
-const collectionNames = ['students', 'consultations', 'followUps'];
+const collectionNamesFor = role => role === 'student' ? ['students', 'consultations', 'followUps'] : ['students', 'consultations', 'consultationNotes', 'followUps'];
 
 function constraintsFor(name, session) {
   if (session.role === 'admin') return [];
@@ -15,7 +15,7 @@ function constraintsFor(name, session) {
 
 export function subscribeCareerData(session, handlers, onError) {
   if (!firestoreSyncEnabled || !session.user || !session.role) return () => {};
-  const unsubscribes = collectionNames.map(name => {
+  const unsubscribes = collectionNamesFor(session.role).map(name => {
     const source = collection(db, name);
     const scopedQuery = query(source, ...constraintsFor(name, session));
     return onSnapshot(scopedQuery, snapshot => {
