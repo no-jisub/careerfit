@@ -42,6 +42,7 @@ function AppProvider({ children }) {
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_consultation_notes', JSON.stringify(consultationNotes)); }, [consultationNotes, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_followups', JSON.stringify(followUps)); }, [followUps, syncingRemoteData]);
   useEffect(() => { if (!toast) return undefined; const timer = setTimeout(() => setToast(''), 3200); return () => clearTimeout(timer); }, [toast]);
+  useEffect(() => { if (!role) setDraftForm(null); }, [role]);
 
   useEffect(() => {
     if (!syncingRemoteData) {

@@ -22,7 +22,11 @@ export default function ConsultationFormPage() {
   const [studentTask, setStudentTask] = useState('관심 직무 비교표 작성');
   const [counselorTask, setCounselorTask] = useState('직무 비교표 양식 전달');
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
-  useEffect(() => () => {}, []);
+  useEffect(() => {
+    // Remove drafts saved by older builds; counseling notes must not persist in
+    // long-lived, script-readable browser storage.
+    localStorage.removeItem(`draft_${student.id}`);
+  }, [student.id]);
 
   const openPrograms = () => { setDraftForm({ studentId: student.id, form }); navigate(`/programs?student=${student.id}&return=form`); };
   const generate = () => {
@@ -52,7 +56,6 @@ export default function ConsultationFormPage() {
       setConsultationNotes(prev => [...prev, internalNote]);
       setFollowUps(prev => [...prev, ...newTasks]);
       setDraftForm(null);
-      localStorage.removeItem(`draft_${student.id}`);
       notify('상담 기록을 저장했습니다.');
       navigate(`/students/${student.id}`);
     } catch {
@@ -64,7 +67,7 @@ export default function ConsultationFormPage() {
 
   return <>
     <nav className="breadcrumb" aria-label="현재 위치"><Link to={`/students/${student.id}`}>{student.name}</Link><Icon name="chevron" size={14} /><span>상담 기록 작성</span></nav>
-    <div className="form-page-header"><div><span className="eyebrow">상담 진행 중 · {form.date}</span><h1>상담 기록 작성</h1><p>상담 중에는 핵심만 메모하고, AI 초안으로 정리해 보세요.</p></div><div><button className="button secondary" disabled={saving} onClick={() => { localStorage.setItem(`draft_${student.id}`, JSON.stringify(form)); notify('상담 기록을 임시 저장했습니다.'); }}>임시 저장</button><button className="button primary" disabled={saving} onClick={save}>{saving ? '저장 중...' : '상담 기록 저장'}</button></div></div>
+    <div className="form-page-header"><div><span className="eyebrow">상담 진행 중 · {form.date}</span><h1>상담 기록 작성</h1><p>상담 중에는 핵심만 메모하고, AI 초안으로 정리해 보세요.</p></div><div><button className="button secondary" disabled={saving} onClick={() => { setDraftForm({ studentId: student.id, form }); notify('상담 기록을 현재 세션에 임시 저장했습니다.'); }}>임시 저장</button><button className="button primary" disabled={saving} onClick={save}>{saving ? '저장 중...' : '상담 기록 저장'}</button></div></div>
     <div className="consultation-layout">
       <section className="card consultation-form-card">
         <div className="form-section-title"><span>1</span><div><h2>상담 기본 정보</h2><p>상담의 목적과 유형을 선택해 주세요.</p></div></div>
