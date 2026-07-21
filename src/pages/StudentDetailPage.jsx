@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useApp } from '../App';
 import Icon from '../components/Icon';
-import { Avatar, EmptyState, StatusBadge } from '../components/UI';
+import { EmptyState, StatusBadge } from '../components/UI';
 import { addDays, toDateKey } from '../utils/date';
 
 export default function StudentDetailPage() {
@@ -19,6 +19,16 @@ export default function StudentDetailPage() {
   const [taskText, setTaskText] = useState('');
   const [taskOwner, setTaskOwner] = useState('학생');
   const [dueDate, setDueDate] = useState(() => addDays(toDateKey(), 7));
+  useEffect(() => {
+    if (!showAdd && !showEdit) return undefined;
+    const closeModal = event => {
+      if (event.key !== 'Escape' || savingStudent) return;
+      setShowAdd(false);
+      setShowEdit(false);
+    };
+    window.addEventListener('keydown', closeModal);
+    return () => window.removeEventListener('keydown', closeModal);
+  }, [showAdd, showEdit, savingStudent]);
   const openEdit = () => {
     setEditForm({
       name: student.name,
@@ -62,7 +72,7 @@ export default function StudentDetailPage() {
   return <>
     <nav className="breadcrumb" aria-label="현재 위치"><Link to="/students">학생 관리</Link><Icon name="chevron" size={14} /><span>{student.name}</span></nav>
     <section className="profile-hero">
-      <div className="profile-main"><Avatar student={student} size="large" /><div><div className="profile-name"><h1>{student.name}</h1><StatusBadge status={student.status} /></div><p>{student.studentNo} · {student.department} · {student.grade}</p><div className="tag-row">{student.interests.map(x => <span className="tag" key={x}>{x}</span>)}</div></div></div>
+      <div className="profile-main"><div><div className="profile-name"><h1>{student.name}</h1><StatusBadge status={student.status} /></div><p>{student.studentNo} · {student.department} · {student.grade}</p><div className="tag-row">{student.interests.map(x => <span className="tag" key={x}>{x}</span>)}</div></div></div>
       <div className="profile-actions"><button className="button secondary" onClick={openEdit}>학생 정보 수정</button><button className="button secondary" onClick={() => setShowAdd(true)}><Icon name="plus" size={18} />후속 조치 추가</button><Link to={`/programs?student=${student.id}`} className="button secondary"><Icon name="spark" size={17} />프로그램 추천</Link><Link to={`/students/${student.id}/consultation/new`} className="button primary"><Icon name="note" size={18} />상담 시작</Link></div>
     </section>
     <div className="detail-grid">
@@ -81,7 +91,7 @@ export default function StudentDetailPage() {
         </section>
       </aside>
     </div>
-    {showAdd && <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && setShowAdd(false)}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="task-modal-title"><button className="modal-close" aria-label="닫기" onClick={() => setShowAdd(false)}>×</button><span className="eyebrow">새로운 다음 행동</span><h2 id="task-modal-title">후속 조치 추가</h2><form onSubmit={addTask}><label>후속 조치 내용<input autoFocus value={taskText} onChange={e => setTaskText(e.target.value)} placeholder="학생이 해야 할 다음 행동" required /></label><div className="form-row"><label>행동 담당자<select value={taskOwner} onChange={e => setTaskOwner(e.target.value)}><option>학생</option><option>교직원</option></select></label><label>완료 기한<input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required /></label></div><div className="modal-actions"><button type="button" className="button secondary" onClick={() => setShowAdd(false)}>취소</button><button className="button primary">후속 조치 추가</button></div></form></section></div>}
-    {showEdit && <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && !savingStudent && setShowEdit(false)}><section className="modal student-edit-modal" role="dialog" aria-modal="true" aria-labelledby="student-edit-title"><button className="modal-close" aria-label="닫기" disabled={savingStudent} onClick={() => setShowEdit(false)}>×</button><span className="eyebrow">학생 기본 정보</span><h2 id="student-edit-title">학생 정보 수정</h2><form onSubmit={saveStudent}><div className="form-row"><label>이름<input autoFocus value={editForm.name || ''} onChange={e => updateStudentField('name', e.target.value)} required /></label><label>학번<input value={editForm.studentNo || ''} onChange={e => updateStudentField('studentNo', e.target.value)} required /></label><label>학과<input value={editForm.department || ''} onChange={e => updateStudentField('department', e.target.value)} required /></label><label>학년<select value={editForm.grade || ''} onChange={e => updateStudentField('grade', e.target.value)}>{['1학년','2학년','3학년','4학년','졸업생'].map(grade => <option key={grade}>{grade}</option>)}</select></label></div><label>연락처<input value={editForm.phone || ''} onChange={e => updateStudentField('phone', e.target.value)} required /></label><label>관심 분야 <small className="field-hint">쉼표로 구분해 주세요.</small><input value={editForm.interests || ''} onChange={e => updateStudentField('interests', e.target.value)} /></label><label>진로 목표<input value={editForm.goal || ''} onChange={e => updateStudentField('goal', e.target.value)} required /></label><label>현재 고민<textarea rows="4" value={editForm.concern || ''} onChange={e => updateStudentField('concern', e.target.value)} required /></label><div className="modal-actions"><button type="button" className="button secondary" disabled={savingStudent} onClick={() => setShowEdit(false)}>취소</button><button className="button primary" disabled={savingStudent}>{savingStudent ? '저장 중...' : '수정 내용 저장'}</button></div></form></section></div>}
+    {showAdd && <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && setShowAdd(false)}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="task-modal-title"><button className="modal-close" aria-label="닫기" onClick={() => setShowAdd(false)}><Icon name="close" size={19} /></button><span className="eyebrow">새로운 다음 행동</span><h2 id="task-modal-title">후속 조치 추가</h2><form onSubmit={addTask}><label>후속 조치 내용<input autoFocus value={taskText} onChange={e => setTaskText(e.target.value)} placeholder="학생이 해야 할 다음 행동" required /></label><div className="form-row"><label>행동 담당자<select value={taskOwner} onChange={e => setTaskOwner(e.target.value)}><option>학생</option><option>교직원</option></select></label><label>완료 기한<input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required /></label></div><div className="modal-actions"><button type="button" className="button secondary" onClick={() => setShowAdd(false)}>취소</button><button className="button primary">후속 조치 추가</button></div></form></section></div>}
+    {showEdit && <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && !savingStudent && setShowEdit(false)}><section className="modal student-edit-modal" role="dialog" aria-modal="true" aria-labelledby="student-edit-title"><button className="modal-close" aria-label="닫기" disabled={savingStudent} onClick={() => setShowEdit(false)}><Icon name="close" size={19} /></button><span className="eyebrow">학생 기본 정보</span><h2 id="student-edit-title">학생 정보 수정</h2><form onSubmit={saveStudent}><div className="form-row"><label>이름<input autoFocus value={editForm.name || ''} onChange={e => updateStudentField('name', e.target.value)} required /></label><label>학번<input value={editForm.studentNo || ''} onChange={e => updateStudentField('studentNo', e.target.value)} required /></label><label>학과<input value={editForm.department || ''} onChange={e => updateStudentField('department', e.target.value)} required /></label><label>학년<select value={editForm.grade || ''} onChange={e => updateStudentField('grade', e.target.value)}>{['1학년','2학년','3학년','4학년','졸업생'].map(grade => <option key={grade}>{grade}</option>)}</select></label></div><label>연락처<input value={editForm.phone || ''} onChange={e => updateStudentField('phone', e.target.value)} required /></label><label>관심 분야 <small className="field-hint">쉼표로 구분해 주세요.</small><input value={editForm.interests || ''} onChange={e => updateStudentField('interests', e.target.value)} /></label><label>진로 목표<input value={editForm.goal || ''} onChange={e => updateStudentField('goal', e.target.value)} required /></label><label>현재 고민<textarea rows="4" value={editForm.concern || ''} onChange={e => updateStudentField('concern', e.target.value)} required /></label><div className="modal-actions"><button type="button" className="button secondary" disabled={savingStudent} onClick={() => setShowEdit(false)}>취소</button><button className="button primary" disabled={savingStudent}>{savingStudent ? '저장 중...' : '수정 내용 저장'}</button></div></form></section></div>}
   </>;
 }

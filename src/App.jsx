@@ -1,23 +1,24 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, lazy, Suspense, useContext, useEffect, useMemo, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AppLayout from './components/AppLayout';
 import { initialStudents } from './data/students';
 import { initialConsultations } from './data/consultations';
 import { initialFollowUps } from './data/followUps';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import StudentsPage from './pages/StudentsPage';
-import StudentDetailPage from './pages/StudentDetailPage';
-import ConsultationFormPage from './pages/ConsultationFormPage';
-import ConsultationsPage from './pages/ConsultationsPage';
-import FollowUpsPage from './pages/FollowUpsPage';
-import ProgramsPage from './pages/ProgramsPage';
-import StudentMyPage from './pages/StudentMyPage';
-import SettingsPage from './pages/SettingsPage';
 import { resolveFollowUpStatus, toDateKey } from './utils/date';
 import { useAuth } from './auth/AuthContext';
 import { saveCareerRecords, subscribeCareerData } from './services/firebaseDataService';
 import { firestoreSyncEnabled } from './lib/firebase';
+
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const StudentsPage = lazy(() => import('./pages/StudentsPage'));
+const StudentDetailPage = lazy(() => import('./pages/StudentDetailPage'));
+const ConsultationFormPage = lazy(() => import('./pages/ConsultationFormPage'));
+const ConsultationsPage = lazy(() => import('./pages/ConsultationsPage'));
+const FollowUpsPage = lazy(() => import('./pages/FollowUpsPage'));
+const ProgramsPage = lazy(() => import('./pages/ProgramsPage'));
+const StudentMyPage = lazy(() => import('./pages/StudentMyPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 
 const AppContext = createContext(null);
 const read = (key, fallback) => {
@@ -112,9 +113,9 @@ export default function App() {
   const { user, role, loading } = useAuth();
   if (loading) return <main className="app-loading" role="status">로그인 정보를 확인하고 있어요...</main>;
   const dataSessionKey = firestoreSyncEnabled && user ? `firebase:${user.uid}` : 'demo';
-  return <AppProvider key={dataSessionKey}><Routes>
+  return <AppProvider key={dataSessionKey}><Suspense fallback={<main className="app-loading" role="status">화면을 준비하고 있어요...</main>}><Routes>
     <Route path="/login" element={<LoginPage />} />
     <Route path="/student" element={role === 'student' ? <StudentMyPage /> : <Navigate to="/login" replace />} />
     <Route path="/*" element={role === 'counselor' || role === 'admin' ? <CounselorRoutes /> : <Navigate to="/login" replace />} />
-  </Routes></AppProvider>;
+  </Routes></Suspense></AppProvider>;
 }
