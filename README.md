@@ -451,7 +451,7 @@ main push 또는 PR merge
 5. GitHub Actions 운영 빌드의 Auth·Firestore 플래그 활성화
 6. Emulator에서 관리자·상담사·학생 전체 흐름 검증
 
-현재는 실제 사용자 도입 전 공개 테스트를 위해 배포 플래그만 데모 모드로 되돌렸습니다. Firebase Authentication, Firestore 데이터베이스와 보안 규칙은 유지되며, 실제 서비스 전환 때 세 플래그를 다시 복구합니다.
+현재 운영 빌드는 Firebase Authentication과 Firestore 동기화를 활성화하면서 공개 데모 역할 선택도 함께 제공하는 혼합 운영 단계입니다. 실제 계정은 Firebase 데이터를 사용하고, 로그인하지 않은 방문자는 브라우저 로컬 데모 데이터만 사용합니다. 실제 사용자 도입이 확정되면 `VITE_DEMO_MODE_ENABLED=false`로 바꿔 로그인 필수 서비스로 전환합니다.
 
 인증 제공업체나 Firestore 규칙을 변경한 경우 `npm run firebase:deploy:backend-config`를 별도로 실행해야 합니다. 일반 `main` 배포는 Hosting 자산만 자동 배포합니다.
 
