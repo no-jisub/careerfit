@@ -209,6 +209,7 @@ export default function App() {
     <Route path="/student/withdrawal" element={role === 'student' ? <StudentWithdrawalPage /> : <Navigate to="/login" replace />} />
     <Route path="/student/appointments" element={role === 'student' ? <StudentAppointmentSlotsPage /> : <Navigate to="/login" replace />} />
     <Route path="/student/appointments/request/:availabilityId" element={role === 'student' ? <StudentAppointmentRequestPage /> : <Navigate to="/login" replace />} />
+    <Route path="/student/appointments/change/:appointmentId/:availabilityId" element={role === 'student' ? <StudentAppointmentRequestPage /> : <Navigate to="/login" replace />} />
     <Route path="/*" element={isOperationsStaff(role) ? <CounselorRoutes /> : <Navigate to="/login" replace />} />
   </Routes></Suspense></AppProvider>;
 }

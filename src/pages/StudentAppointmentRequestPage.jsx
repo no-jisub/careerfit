@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../App';
 import { useAuth } from '../auth/AuthContext';
 import Icon from '../components/Icon';
-import { isAvailabilityBookable, upsertAppointmentById } from '../utils/appointments';
+import { createRescheduleRequest, holdAvailabilityForReschedule, isAvailabilityBookable, upsertAppointmentById } from '../utils/appointments';
 import { getTimeRangeEnd, toDateKey } from '../utils/date';
 import { validateStudentAppointmentRequest } from '../utils/validation';
 
@@ -11,7 +11,7 @@ const initialForm = { type: '진로 상담', subject: '', requestMessage: '', pr
 const consultationTypes = ['진로 상담', '취업 상담', '자기소개서 상담', '면접 상담', '기타 상담'];
 
 export default function StudentAppointmentRequestPage() {
-  const { availabilityId } = useParams();
+  const { availabilityId, appointmentId } = useParams();
   const navigate = useNavigate();
   const { students, counselorAvailability, setCounselorAvailability, appointments, setAppointments, persistDocumentGroup, notify } = useApp();
   const { user, logout } = useAuth();
@@ -20,7 +20,8 @@ export default function StudentAppointmentRequestPage() {
     return !user && matched ? { ...matched, counselorUid: 'demo-counselor' } : matched;
   }, [students, user]);
   const slot = counselorAvailability.find(item => item.id === availabilityId);
-  const [form, setForm] = useState(initialForm);
+  const changingAppointment = appointments.find(item => item.id === appointmentId);
+  const [form, setForm] = useState(() => changingAppointment ? { type: changingAppointment.type, subject: changingAppointment.subject || '', requestMessage: changingAppointment.requestMessage || '', preferredOutcome: changingAppointment.preferredOutcome || '' } : initialForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const now = new Date();
@@ -40,6 +41,23 @@ export default function StudentAppointmentRequestPage() {
     const validated = validateStudentAppointmentRequest(form);
     if (validated.error) { setError(validated.error); return; }
     const createdAt = new Date().toISOString();
+    if (changingAppointment) {
+      const requested = createRescheduleRequest({ ...changingAppointment, subject: validated.value.subject, requestMessage: validated.value.requestMessage }, slot, 'student');
+      if (requested.error) { setError(requested.error); return; }
+      requested.value.rescheduleRequest.subject = validated.value.subject;
+      requested.value.rescheduleRequest.requestMessage = validated.value.requestMessage;
+      const heldSlot = holdAvailabilityForReschedule(slot, changingAppointment);
+      setSaving(true);
+      try {
+        await persistDocumentGroup([{ name: 'appointments', record: requested.value }, { name: 'counselorAvailability', record: heldSlot }]);
+        setAppointments(items => items.map(item => item.id === changingAppointment.id ? requested.value : item));
+        setCounselorAvailability(items => items.map(item => item.id === slot.id ? heldSlot : item));
+        notify('일정 변경을 요청했습니다. 기존 예약은 상담사가 결정할 때까지 유지됩니다.');
+        navigate('/student/appointments', { replace: true });
+      } catch { setError('일정 변경 요청을 저장하지 못했습니다.'); }
+      finally { setSaving(false); }
+      return;
+    }
     const appointmentId = `appointment-request-${Date.now()}`;
     const appointment = {
       id: appointmentId,
@@ -78,11 +96,11 @@ export default function StudentAppointmentRequestPage() {
   return <div className="student-portal student-booking-page">
     <header><Link className="brand" to="/student"><span className="brand-mark"><Icon name="target" size={22} /></span><span>커리어<span>핏</span></span></Link><div><strong>{student.name}</strong><button className="text-button" onClick={logout}>로그아웃</button></div></header>
     <main>
-      <Link className="withdrawal-back-link" to="/student/appointments"><Icon name="arrow" size={16} />다른 시간 선택하기</Link>
+      <Link className="withdrawal-back-link" to={changingAppointment ? `/student/appointments?change=${changingAppointment.id}` : '/student/appointments'}><Icon name="arrow" size={16} />다른 시간 선택하기</Link>
       <div className="student-request-layout">
         <aside className="student-selected-slot"><span className="eyebrow light">선택한 상담 시간</span><strong>{slot.date}</strong><b>{slot.time}–{getTimeRangeEnd(slot)}</b><p>{slot.duration}분 · {slot.location}</p><small>{student.counselor || '담당 상담사'} 상담사</small></aside>
         <section className="card student-request-card">
-          <span className="eyebrow">상담 사전 내용</span><h1>상담사에게 미리 알려주세요</h1><p>작성한 내용은 담당 상담사만 확인하며, 상담 준비를 위해 사용됩니다.</p>
+          <span className="eyebrow">{changingAppointment ? '일정 변경 요청' : '상담 사전 내용'}</span><h1>{changingAppointment ? '상담 내용도 함께 확인하세요' : '상담사에게 미리 알려주세요'}</h1><p>{changingAppointment ? '기존 상담 내용이 유지되며 필요한 경우 수정할 수 있습니다.' : '작성한 내용은 담당 상담사만 확인하며, 상담 준비를 위해 사용됩니다.'}</p>
           {!bookable && <p className="student-slot-warning" role="alert">선택한 시간이 더 이상 신청 가능하지 않습니다. 다른 시간을 선택해 주세요.</p>}
           <form onSubmit={submit}>
             <label>상담 유형<select value={form.type} onChange={event => update('type', event.target.value)}>{consultationTypes.map(type => <option key={type}>{type}</option>)}</select></label>
@@ -90,7 +108,7 @@ export default function StudentAppointmentRequestPage() {
             <label>상담사에게 전달할 내용<textarea rows="6" maxLength="2000" value={form.requestMessage} onChange={event => update('requestMessage', event.target.value)} placeholder="현재 상황, 고민하고 있는 점, 이미 준비한 내용을 구체적으로 적어 주세요." required /><small>{form.requestMessage.length}/2000자 · 10자 이상 입력</small></label>
             <label>상담 후 얻고 싶은 결과 <small>선택</small><textarea rows="3" maxLength="1000" value={form.preferredOutcome} onChange={event => update('preferredOutcome', event.target.value)} placeholder="예: 앞으로 한 달 동안 준비할 순서를 정하고 싶어요." /></label>
             {error && <p className="field-error" role="alert">{error}</p>}
-            <div className="student-request-actions"><Link className="button secondary" to="/student/appointments">취소</Link><button className="button primary" disabled={saving || !bookable}>{saving ? '신청 중...' : '상담 신청하기'}</button></div>
+            <div className="student-request-actions"><Link className="button secondary" to="/student/appointments">취소</Link><button className="button primary" disabled={saving || !bookable}>{saving ? '저장 중...' : changingAppointment ? '일정 변경 요청하기' : '상담 신청하기'}</button></div>
           </form>
         </section>
       </div>

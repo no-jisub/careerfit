@@ -72,6 +72,67 @@ export function createRescheduleRequest(appointment, availability, role, message
   };
 }
 
+export function holdAvailabilityForReschedule(availability, appointment, now = new Date()) {
+  return {
+    ...availability,
+    status: 'booked',
+    appointmentId: appointment.id,
+    bookedByUid: appointment.studentUid || '',
+    holdReason: 'reschedule',
+    updatedAt: now.toISOString(),
+  };
+}
+
+export function resolveRescheduleRequest(appointment, originalAvailability, proposedAvailability, { approve, originalAction = 'keep', actorUid = '' }, now = new Date()) {
+  const request = appointment?.rescheduleRequest;
+  if (!request || request.status !== 'pending') return { error: '처리할 일정 변경 요청이 없습니다.' };
+  const historyItem = {
+    id: request.id,
+    initiatedByRole: request.initiatedByRole,
+    previousDate: appointment.date,
+    previousTime: appointment.time,
+    requestedDate: request.date,
+    requestedTime: request.time,
+    result: approve ? 'approved' : `rejected-${originalAction}`,
+    decidedBy: actorUid,
+    decidedAt: now.toISOString(),
+  };
+  const releasedProposed = proposedAvailability ? { ...proposedAvailability, status: approve ? 'booked' : 'open', updatedAt: now.toISOString() } : null;
+  if (releasedProposed && !approve) {
+    delete releasedProposed.appointmentId;
+    delete releasedProposed.bookedByUid;
+    delete releasedProposed.holdReason;
+  }
+  if (approve && releasedProposed) delete releasedProposed.holdReason;
+  const releasedOriginal = originalAvailability && (approve || originalAction === 'cancel')
+    ? { ...originalAvailability, status: 'open', updatedAt: now.toISOString() }
+    : originalAvailability;
+  if (releasedOriginal && releasedOriginal.status === 'open') {
+    delete releasedOriginal.appointmentId;
+    delete releasedOriginal.bookedByUid;
+  }
+  const nextStatus = !approve && originalAction === 'cancel' ? 'cancelled' : appointment.status;
+  const updatedAppointment = {
+    ...appointment,
+    ...(approve ? {
+      availabilityId: request.availabilityId,
+      date: request.date,
+      time: request.time,
+      endTime: request.endTime,
+      duration: request.duration,
+      location: request.location,
+      subject: request.subject || appointment.subject,
+      requestMessage: request.requestMessage || appointment.requestMessage,
+    } : {}),
+    status: nextStatus,
+    rescheduleRequest: { ...request, status: approve ? 'approved' : 'rejected', originalAction, decidedAt: now.toISOString(), decidedBy: actorUid },
+    rescheduleHistory: [...(appointment.rescheduleHistory || []), historyItem],
+    ...(!approve && originalAction === 'cancel' ? { cancelledAt: now.toISOString(), cancelledBy: actorUid } : {}),
+    updatedAt: now.toISOString(),
+  };
+  return { value: { appointment: updatedAppointment, originalAvailability: releasedOriginal, proposedAvailability: releasedProposed } };
+}
+
 export function upsertAppointmentById(items, appointment) {
   return items.some(item => item.id === appointment.id)
     ? items.map(item => item.id === appointment.id ? appointment : item)

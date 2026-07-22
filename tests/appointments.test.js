@@ -6,11 +6,13 @@ import {
   canRescheduleAppointment,
   closeAvailabilityAfterCancellation,
   createRescheduleRequest,
+  holdAvailabilityForReschedule,
   getAppointmentCancellationLabel,
   hasCounselorAppointmentConflict,
   hasCounselorAvailabilityConflict,
   restoreCounselorAvailabilityStore,
   resolveCancelledAvailability,
+  resolveRescheduleRequest,
   upsertAppointmentById,
 } from '../src/utils/appointments.js';
 
@@ -44,6 +46,18 @@ test('reschedule is blocked within 24 hours and creates a pending request otherw
   const result = createRescheduleRequest(appointment, { id: 'slot-2', counselorUid: 'counselor-1', date: '2026-07-27', time: '14:00', endTime: '15:00', duration: 60, location: '상담실', status: 'open' }, 'student', '', new Date('2026-07-23T00:00:00'));
   assert.equal(result.value.rescheduleRequest.status, 'pending');
   assert.equal(result.value.rescheduleRequest.date, '2026-07-27');
+});
+
+test('approved reschedule moves booking and preserves a visible history', () => {
+  const appointment = { id: 'appointment-1', studentUid: 'student-1', counselorUid: 'counselor-1', availabilityId: 'slot-1', date: '2026-07-25', time: '12:00', status: 'confirmed' };
+  const slot = { id: 'slot-2', counselorUid: 'counselor-1', date: '2026-07-27', time: '14:00', endTime: '15:00', duration: 60, location: '상담실', status: 'open' };
+  const requested = createRescheduleRequest(appointment, slot, 'student', '', new Date('2026-07-23T00:00:00')).value;
+  const held = holdAvailabilityForReschedule(slot, appointment, new Date('2026-07-23T00:00:00'));
+  const result = resolveRescheduleRequest(requested, { id: 'slot-1', status: 'booked', appointmentId: appointment.id }, held, { approve: true, actorUid: 'counselor-1' }, new Date('2026-07-23T01:00:00')).value;
+  assert.equal(result.appointment.date, '2026-07-27');
+  assert.equal(result.originalAvailability.status, 'open');
+  assert.equal(result.proposedAvailability.status, 'booked');
+  assert.equal(result.appointment.rescheduleHistory[0].previousDate, '2026-07-25');
 });
 
 test('bulk availability creates one-hour slots and skips existing or booked times', () => {

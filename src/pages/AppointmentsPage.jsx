@@ -5,7 +5,7 @@ import Icon from '../components/Icon';
 import { EmptyState, PageIntro } from '../components/UI';
 import { getTimeRangeEnd, parseDateKey, toDateKey } from '../utils/date';
 import { validateAppointmentInput } from '../utils/validation';
-import { activeAppointmentStatuses, buildHourlyAvailabilitySlots, buildMonthCalendar, closeAvailabilityAfterCancellation, getAppointmentCancellationLabel, hasCounselorAppointmentConflict, resolveCancelledAvailability, upsertAppointmentById } from '../utils/appointments';
+import { activeAppointmentStatuses, buildHourlyAvailabilitySlots, buildMonthCalendar, canRescheduleAppointment, closeAvailabilityAfterCancellation, createRescheduleRequest, getAppointmentCancellationLabel, hasCounselorAppointmentConflict, holdAvailabilityForReschedule, resolveCancelledAvailability, resolveRescheduleRequest, upsertAppointmentById } from '../utils/appointments';
 import { useAuth } from '../auth/AuthContext';
 
 const emptyForm = () => ({ studentId: '', date: toDateKey(), time: '10:00', endTime: '10:50', type: '진로 상담', location: '대학일자리플러스센터 상담실 2', preparation: '' });
@@ -35,6 +35,8 @@ export default function AppointmentsPage() {
   const [availabilitySaving, setAvailabilitySaving] = useState(false);
   const [availabilityError, setAvailabilityError] = useState('');
   const [expandedAvailabilityDates, setExpandedAvailabilityDates] = useState([]);
+  const [proposalFor, setProposalFor] = useState(null);
+  const [proposalSlotId, setProposalSlotId] = useState('');
   const myAvailability = useMemo(() => counselorAvailability
     .filter(item => item.counselorUid === counselorUid)
     .sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)), [counselorAvailability, counselorUid]);
@@ -198,6 +200,41 @@ export default function AppointmentsPage() {
 
   const keepCancelledAvailabilityClosed = availability => updateAvailabilityStatus(availability, 'closed');
 
+  const submitRescheduleProposal = async event => {
+    event.preventDefault();
+    const slot = counselorAvailability.find(item => item.id === proposalSlotId);
+    const result = createRescheduleRequest(proposalFor, slot, 'counselor');
+    if (result.error) { notify(result.error); return; }
+    const heldSlot = holdAvailabilityForReschedule(slot, proposalFor);
+    try {
+      await persistDocumentGroup([{ name: 'appointments', record: result.value }, { name: 'counselorAvailability', record: heldSlot }]);
+      setAppointments(items => items.map(item => item.id === proposalFor.id ? result.value : item));
+      setCounselorAvailability(items => items.map(item => item.id === heldSlot.id ? heldSlot : item));
+      setProposalFor(null);
+      notify('학생에게 일정 변경을 제안했습니다. 기존 예약은 응답 전까지 유지됩니다.');
+    } catch { /* 공통 오류 메시지를 사용합니다. */ }
+  };
+
+  const decideStudentReschedule = async (appointment, approve) => {
+    const originalAction = approve ? 'keep' : (window.confirm('변경 요청을 거절하고 기존 예약도 취소할까요?\n확인: 기존 예약 취소 / 취소: 기존 예약 유지') ? 'cancel' : 'keep');
+    const original = counselorAvailability.find(item => item.id === appointment.availabilityId);
+    const proposed = counselorAvailability.find(item => item.id === appointment.rescheduleRequest?.availabilityId);
+    const result = resolveRescheduleRequest(appointment, original, proposed, { approve, originalAction, actorUid: counselorUid });
+    if (result.error) { notify(result.error); return; }
+    const value = result.value;
+    const student = students.find(item => item.id === appointment.studentId);
+    const updatedStudent = approve && student ? { ...student, appointmentDate: value.appointment.date, appointment: value.appointment.time, updatedAt: value.appointment.updatedAt } : null;
+    const entries = [{ name: 'appointments', record: value.appointment }, ...(value.originalAvailability ? [{ name: 'counselorAvailability', record: value.originalAvailability }] : []), ...(value.proposedAvailability ? [{ name: 'counselorAvailability', record: value.proposedAvailability }] : []), ...(updatedStudent ? [{ name: 'students', record: updatedStudent }] : [])];
+    try {
+      await persistDocumentGroup(entries);
+      setAppointments(items => items.map(item => item.id === appointment.id ? value.appointment : item));
+      const slots = new Map([value.originalAvailability, value.proposedAvailability].filter(Boolean).map(item => [item.id, item]));
+      setCounselorAvailability(items => items.map(item => slots.get(item.id) || item));
+      if (updatedStudent) setStudents(items => items.map(item => item.id === updatedStudent.id ? updatedStudent : item));
+      notify(approve ? '학생의 일정 변경 요청을 승인했습니다.' : `변경 요청을 거절하고 기존 예약을 ${originalAction === 'keep' ? '유지했습니다' : '취소했습니다'}.`);
+    } catch { /* 공통 오류 메시지를 사용합니다. */ }
+  };
+
   const updateAvailabilityDateStatus = async (date, status) => {
     const targets = myAvailability.filter(item => item.date === date && (status === 'closed' ? item.status === 'open' : item.status === 'closed'));
     if (!targets.length) return;
@@ -235,8 +272,9 @@ export default function AppointmentsPage() {
     <section className="filter-card" aria-label="상담 일정 검색 및 필터"><label className="search-field"><span className="sr-only">일정 검색</span><Icon name="search" size={19} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="학생, 학번, 상담 유형, 장소 검색" /></label><label><span>상태</span><select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="all">전체</option><option value="pending">대기</option><option value="confirmed">확정</option><option value="completed">완료</option><option value="cancelled">취소</option></select></label><button className="text-button" onClick={() => { setQuery(''); setStatusFilter('all'); }}>필터 초기화</button></section>
     <section className="card appointment-list-card">
       <div className="list-toolbar"><div><h2>조회된 일정 <span>{ordered.length}</span></h2><p>날짜와 시간순으로 표시됩니다.</p></div></div>
-      {ordered.length ? <div className="appointment-list">{ordered.map(item => { const student = students.find(candidate => candidate.id === item.studentId); const active = activeAppointmentStatuses.includes(item.status); const cancellationLabel = getAppointmentCancellationLabel(item); return <article key={item.id} className={item.status}><time><strong>{item.date}</strong><span>{item.time}–{getTimeRangeEnd(item)}</span></time><div><Link to={`/students/${item.studentId}`}>{student?.name || '학생'}</Link><p>{item.type} · {item.location}</p>{item.requestedBy === 'student' ? <details className="appointment-request-details"><summary>학생 사전 상담 내용 보기</summary><dl><div><dt>상담 주제</dt><dd>{item.subject}</dd></div><div><dt>전달 내용</dt><dd>{item.requestMessage}</dd></div>{item.preferredOutcome && <div><dt>원하는 결과</dt><dd>{item.preferredOutcome}</dd></div>}</dl></details> : <small>{item.preparation ? `준비사항: ${item.preparation}` : '별도 준비사항 없음'}</small>}</div><span className={`appointment-status ${item.status}`}>{item.status === 'cancelled' ? cancellationLabel : appointmentStatusLabels[item.status] || item.status}</span><div className="appointment-actions">{active && <><button className="button secondary small" onClick={() => openEdit(item)}>변경</button>{item.status === 'pending' && <button className="button primary small" onClick={() => updateStatus(item, 'confirmed')}>확정</button>}{['confirmed', 'scheduled'].includes(item.status) && <button className="button primary small" onClick={() => updateStatus(item, 'completed')}>완료</button>}<button className="text-button danger" onClick={() => updateStatus(item, 'cancelled')}>취소</button></>}</div></article>; })}</div> : <EmptyState icon="calendar" title="등록된 상담 일정이 없습니다" description="상담 예약 버튼으로 첫 일정을 등록해 주세요." />}
+      {ordered.length ? <div className="appointment-list">{ordered.map(item => { const student = students.find(candidate => candidate.id === item.studentId); const active = activeAppointmentStatuses.includes(item.status); const cancellationLabel = getAppointmentCancellationLabel(item); const studentChange = item.rescheduleRequest?.status === 'pending' && item.rescheduleRequest.initiatedByRole === 'student'; return <article key={item.id} className={item.status}><time><strong>{item.date}</strong><span>{item.time}–{getTimeRangeEnd(item)}</span></time><div><Link to={`/students/${item.studentId}`}>{student?.name || '학생'}</Link><p>{item.type} · {item.location}</p>{item.requestedBy === 'student' ? <details className="appointment-request-details"><summary>학생 사전 상담 내용 보기</summary><dl><div><dt>상담 주제</dt><dd>{item.subject}</dd></div><div><dt>전달 내용</dt><dd>{item.requestMessage}</dd></div>{item.preferredOutcome && <div><dt>원하는 결과</dt><dd>{item.preferredOutcome}</dd></div>}</dl></details> : <small>{item.preparation ? `준비사항: ${item.preparation}` : '별도 준비사항 없음'}</small>}{item.rescheduleRequest?.status === 'pending' && <small>변경 요청 · {item.rescheduleRequest.date} {item.rescheduleRequest.time}</small>}</div><span className={`appointment-status ${item.status}`}>{item.status === 'cancelled' ? cancellationLabel : studentChange ? '변경 승인 대기' : appointmentStatusLabels[item.status] || item.status}</span><div className="appointment-actions">{studentChange ? <><button className="button primary small" onClick={() => decideStudentReschedule(item, true)}>변경 승인</button><button className="button secondary small" onClick={() => decideStudentReschedule(item, false)}>거절</button></> : active && <>{canRescheduleAppointment(item) && <button className="button secondary small" onClick={() => { setProposalFor(item); setProposalSlotId(''); }}>변경 제안</button>}{item.status === 'pending' && <button className="button primary small" onClick={() => updateStatus(item, 'confirmed')}>확정</button>}{['confirmed', 'scheduled'].includes(item.status) && <button className="button primary small" onClick={() => updateStatus(item, 'completed')}>완료</button>}<button className="text-button danger" onClick={() => updateStatus(item, 'cancelled')}>취소</button></>}</div></article>; })}</div> : <EmptyState icon="calendar" title="등록된 상담 일정이 없습니다" description="상담 예약 버튼으로 첫 일정을 등록해 주세요." />}
     </section>
+    {proposalFor && <div className="modal-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && setProposalFor(null)}><section className="modal" role="dialog" aria-modal="true"><button className="modal-close" aria-label="닫기" onClick={() => setProposalFor(null)}><Icon name="close" size={19} /></button><span className="eyebrow">일정 변경 제안</span><h2>학생에게 새 시간을 제안합니다</h2><p>학생이 응답할 때까지 기존 시간과 새 시간이 모두 마감됩니다.</p><form onSubmit={submitRescheduleProposal}><label>새 상담 시간<select value={proposalSlotId} onChange={event => setProposalSlotId(event.target.value)} required><option value="">시간을 선택하세요</option>{myAvailability.filter(item => item.status === 'open').map(item => <option key={item.id} value={item.id}>{item.date} {item.time}–{getTimeRangeEnd(item)} · {item.location}</option>)}</select></label><div className="modal-actions"><button type="button" className="button secondary" onClick={() => setProposalFor(null)}>취소</button><button className="button primary">변경 제안 보내기</button></div></form></section></div>}
     {showForm && <div className="modal-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && !saving && setShowForm(false)}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="appointment-form-title"><button className="modal-close" aria-label="닫기" disabled={saving} onClick={() => setShowForm(false)}><Icon name="close" size={19} /></button><span className="eyebrow">상담 일정</span><h2 id="appointment-form-title">{editingId ? '예약 변경' : '새 상담 예약'}</h2><form onSubmit={save}><label>학생<select autoFocus value={form.studentId} onChange={event => setForm(current => ({ ...current, studentId: event.target.value }))} required disabled={Boolean(editingId)}><option value="">학생을 선택하세요</option>{students.map(item => <option key={item.id} value={item.id}>{item.name} · {item.department}</option>)}</select></label><label>날짜<input type="date" value={form.date} min={toDateKey()} onChange={event => setForm(current => ({ ...current, date: event.target.value }))} required /></label><div className="form-row"><label>상담 시작 시간<input type="time" value={form.time} onChange={event => setForm(current => ({ ...current, time: event.target.value }))} required /></label><label>종료 예정 시간<input type="time" value={form.endTime} onChange={event => setForm(current => ({ ...current, endTime: event.target.value }))} required /></label></div><label>상담 유형<select value={form.type} onChange={event => setForm(current => ({ ...current, type: event.target.value }))}>{['진로 상담','취업 상담','자기소개서 상담','면접 상담','기타 상담'].map(type => <option key={type}>{type}</option>)}</select></label><label>장소<input value={form.location} onChange={event => setForm(current => ({ ...current, location: event.target.value }))} required /></label><label>학생 준비사항<textarea rows="3" value={form.preparation} onChange={event => setForm(current => ({ ...current, preparation: event.target.value }))} /></label>{error && <p className="field-error" role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="button secondary" disabled={saving} onClick={() => setShowForm(false)}>닫기</button><button className="button primary" disabled={saving}>{saving ? '저장 중...' : '일정 저장'}</button></div></form></section></div>}
     {showAvailabilityForm && <div className="modal-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && !availabilitySaving && setShowAvailabilityForm(false)}>
       <section className="modal availability-form-modal bulk-availability-modal" role="dialog" aria-modal="true" aria-labelledby="availability-form-title">
