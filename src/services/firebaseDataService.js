@@ -3,13 +3,15 @@ import { db, firestoreSyncEnabled } from '../lib/firebase';
 import { isOperationsStaff } from '../utils/roles';
 
 const collectionNamesFor = role => {
-  if (role === 'student') return ['students', 'consultationSummaries', 'followUps', 'appointments', 'counselorAvailability', 'notifications'];
-  return ['users', 'studentRegistrations', 'students', 'consultations', 'consultationSummaries', 'consultationNotes', 'consultationDrafts', 'followUps', 'appointments', 'counselorAvailability', 'notifications'];
+  if (role === 'student') return ['students', 'consultationSummaries', 'followUps', 'appointments', 'counselorAvailability', 'notifications', 'consultationFeedbacks', 'goals'];
+  return ['users', 'studentRegistrations', 'students', 'consultations', 'consultationSummaries', 'consultationNotes', 'consultationDrafts', 'followUps', 'appointments', 'counselorAvailability', 'notifications', 'consultationFeedbacks', 'goals'];
 };
 
 function constraintsFor(name, session) {
   if (name === 'consultationDrafts') return [where('counselorUid', '==', session.user.uid)];
   if (name === 'notifications') return [where('recipientUid', '==', session.user.uid)];
+  if (name === 'consultationFeedbacks') return [where(session.role === 'student' ? 'studentUid' : 'counselorUid', '==', session.user.uid)];
+  if (name === 'goals' && session.role === 'student') return [where('studentUid', '==', session.user.uid)];
   if (name === 'counselorAvailability' && session.role === 'student') return [or(where('status', '==', 'open'), where('bookedByUid', '==', session.user.uid))];
   if (isOperationsStaff(session.role)) return [];
   if (name === 'students') return [where('uid', '==', session.user.uid)];

@@ -8,6 +8,9 @@ import { validateAppointmentInput } from '../utils/validation';
 import { activeAppointmentStatuses, buildHourlyAvailabilitySlots, buildMonthCalendar, canBulkReopenAvailability, canRescheduleAppointment, closeAvailabilityAfterCancellation, createRescheduleRequest, getAppointmentCancellationLabel, hasCounselorAppointmentConflict, holdAvailabilityForReschedule, resolveCancelledAvailability, resolveRescheduleRequest, upsertAppointmentById } from '../utils/appointments';
 import { useAuth } from '../auth/AuthContext';
 import { buildEventNotification } from '../utils/notifications';
+import { buildFeedbackRequestNotification } from '../utils/feedback';
+import RecurringAvailabilityForm from '../components/RecurringAvailabilityForm';
+import { openAttachment } from '../services/attachmentService';
 
 const emptyForm = () => ({ studentId: '', date: toDateKey(), time: '10:00', endTime: '10:50', type: '진로 상담', location: '대학일자리플러스센터 상담실 2', preparation: '' });
 const emptyAvailabilityForm = () => ({ dates: [toDateKey()], startTime: '09:00', endTime: '18:00', exclusions: [], location: '대학일자리플러스센터 상담실 2' });
@@ -31,6 +34,7 @@ export default function AppointmentsPage() {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showAvailabilityForm, setShowAvailabilityForm] = useState(false);
+  const [showRecurringForm, setShowRecurringForm] = useState(false);
   const [availabilityForm, setAvailabilityForm] = useState(emptyAvailabilityForm);
   const [availabilityMonth, setAvailabilityMonth] = useState(`${toDateKey().slice(0, 7)}-01`);
   const [availabilitySaving, setAvailabilitySaving] = useState(false);
@@ -123,7 +127,7 @@ export default function AppointmentsPage() {
       : null;
     const linkedAvailability = status === 'cancelled' ? counselorAvailability.find(item => item.id === appointment.availabilityId) : null;
     const closedAvailability = closeAvailabilityAfterCancellation(linkedAvailability, appointment, now);
-    const eventNotification = ['confirmed', 'cancelled'].includes(status) && appointment.studentUid ? buildEventNotification({ eventId: `${appointment.id}-${status}`, recipientUid: appointment.studentUid, actorUid: counselorUid, type: 'appointment', title: status === 'confirmed' ? '상담 예약이 확정되었습니다' : '상담사가 예약을 취소했습니다', description: `${appointment.date} ${appointment.time} · ${appointment.location}`, to: '/student/appointments', createdAt: now }) : null;
+    const eventNotification = status === 'completed' && appointment.studentUid ? buildFeedbackRequestNotification(appointment, now) : ['confirmed', 'cancelled'].includes(status) && appointment.studentUid ? buildEventNotification({ eventId: `${appointment.id}-${status}`, recipientUid: appointment.studentUid, actorUid: counselorUid, type: 'appointment', title: status === 'confirmed' ? '상담 예약이 확정되었습니다' : '상담사가 예약을 취소했습니다', description: `${appointment.date} ${appointment.time} · ${appointment.location}`, to: '/student/appointments', createdAt: now }) : null;
     try {
       await persistDocumentGroup([{ name: 'appointments', record: updated }, ...(updatedStudent ? [{ name: 'students', record: updatedStudent }] : []), ...(closedAvailability ? [{ name: 'counselorAvailability', record: closedAvailability }] : []), ...(eventNotification ? [{ name: 'notifications', record: eventNotification }] : [])]);
       setAppointments(items => items.map(item => item.id === appointment.id ? updated : item));
@@ -259,7 +263,7 @@ export default function AppointmentsPage() {
   };
 
   return <>
-    <PageIntro eyebrow="상담 운영" title="상담 일정 관리" description="학생이 신청할 수 있는 시간을 열고, 접수된 상담 내용을 확인해 일정을 확정하세요." action={<div className="page-action-group"><button className="button secondary" onClick={() => { setAvailabilityError(''); setAvailabilityForm(emptyAvailabilityForm()); setAvailabilityMonth(`${toDateKey().slice(0, 7)}-01`); setShowAvailabilityForm(true); }}><Icon name="calendar" size={18} />가능 시간 일괄 등록</button><button className="button primary" onClick={openCreate}><Icon name="plus" size={18} />직접 예약</button></div>} />
+    <PageIntro eyebrow="상담 운영" title="상담 일정 관리" description="학생이 신청할 수 있는 시간을 열고, 접수된 상담 내용을 확인해 일정을 확정하세요." action={<div className="page-action-group"><button className="button secondary" onClick={() => setShowRecurringForm(true)}><Icon name="calendar" size={18} />주간 반복 등록</button><button className="button secondary" onClick={() => { setAvailabilityError(''); setAvailabilityForm(emptyAvailabilityForm()); setAvailabilityMonth(`${toDateKey().slice(0, 7)}-01`); setShowAvailabilityForm(true); }}><Icon name="calendar" size={18} />날짜별 일괄 등록</button><button className="button primary" onClick={openCreate}><Icon name="plus" size={18} />직접 예약</button></div>} />
     <section className="card availability-management-card">
       <div className="section-header"><div><span className="eyebrow">상담 신청 설정</span><h2>학생에게 공개된 상담 가능 시간</h2><p>열린 시간만 담당 학생의 상담 신청 화면에 표시됩니다.</p></div><span className="availability-open-count">신청 가능 {myAvailability.filter(item => item.status === 'open').length}개</span></div>
       {myAvailability.length ? <div className="availability-date-groups">{Object.entries(availabilityByDate).map(([date, slots]) => {
@@ -315,5 +319,6 @@ export default function AppointmentsPage() {
         </form>
       </section>
     </div>}
+    {showRecurringForm && <div className="modal-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && setShowRecurringForm(false)}><section className="modal recurring-availability-modal" role="dialog" aria-modal="true" aria-label="반복 상담 가능 시간"><button className="modal-close" aria-label="닫기" onClick={() => setShowRecurringForm(false)}><Icon name="close" size={19} /></button><RecurringAvailabilityForm counselorUid={counselorUid} existingAvailability={myAvailability} appointments={appointments} onCancel={() => setShowRecurringForm(false)} onSave={async slots => { await persistDocumentGroup(slots.map(record => ({ name: 'counselorAvailability', record }))); setCounselorAvailability(items => [...items, ...slots]); setShowRecurringForm(false); notify(`${slots.length}개의 반복 상담 가능 시간을 등록했습니다.`); }} /></section></div>}
   </>;
 }

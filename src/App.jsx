@@ -11,6 +11,7 @@ import { initialUsers } from './data/users';
 import { initialStudentRegistrations } from './data/studentRegistrations';
 import { initialPrograms } from './data/programs';
 import { initialProgramRecommendations } from './data/programRecommendations';
+import { initialGoals } from './data/goals';
 import { resolveFollowUpStatus, toDateKey } from './utils/date';
 import { useAuth } from './auth/AuthContext';
 import { deleteCareerDocument, saveCareerDocument, saveCareerDocumentGroup, subscribeCareerData } from './services/firebaseDataService';
@@ -38,6 +39,7 @@ const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const InsightsPage = lazy(() => import('./pages/InsightsPage'));
+const GoalsPage = lazy(() => import('./pages/GoalsPage'));
 
 const AppContext = createContext(null);
 const read = (key, fallback) => {
@@ -66,6 +68,8 @@ function AppProvider({ children }) {
   const [appointments, setAppointments] = useState(() => syncingRemoteData ? [] : read('careerfit_appointments', initialAppointments));
   const [counselorAvailability, setCounselorAvailability] = useState(() => syncingRemoteData ? [] : restoreCounselorAvailabilityStore(read('careerfit_counselor_availability', initialCounselorAvailability), initialCounselorAvailability));
   const [notifications, setNotifications] = useState(() => syncingRemoteData ? [] : read('careerfit_notifications', []));
+  const [consultationFeedbacks, setConsultationFeedbacks] = useState(() => syncingRemoteData ? [] : read('careerfit_consultation_feedbacks', []));
+  const [goals, setGoals] = useState(() => syncingRemoteData ? [] : read('careerfit_goals', initialGoals));
   const [programs, setPrograms] = useState(() => restoreProgramStore(read('careerfit_program_store', null), initialPrograms));
   const [programRecommendations, setProgramRecommendations] = useState(() => restoreProgramRecommendationStore(read('careerfit_program_recommendation_store', null), initialProgramRecommendations));
   const [toast, setToast] = useState('');
@@ -81,6 +85,8 @@ function AppProvider({ children }) {
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_appointments', JSON.stringify(appointments)); }, [appointments, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_counselor_availability', JSON.stringify(counselorAvailability)); }, [counselorAvailability, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_notifications', JSON.stringify(notifications)); }, [notifications, syncingRemoteData]);
+  useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_consultation_feedbacks', JSON.stringify(consultationFeedbacks)); }, [consultationFeedbacks, syncingRemoteData]);
+  useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_goals', JSON.stringify(goals)); }, [goals, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_users', JSON.stringify(users)); }, [users, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_student_registrations', JSON.stringify(studentRegistrations)); }, [studentRegistrations, syncingRemoteData]);
   useEffect(() => { localStorage.setItem('careerfit_program_store', JSON.stringify(createProgramStore(programs))); }, [programs]);
@@ -96,7 +102,7 @@ function AppProvider({ children }) {
     const loaded = new Set();
     const markLoaded = name => {
       loaded.add(name);
-      const expectedCount = isOperationsStaff(role) ? 11 : 6;
+      const expectedCount = isOperationsStaff(role) ? 13 : 8;
       if (loaded.size === expectedCount) setDataLoading(false);
     };
     return subscribeCareerData(
@@ -113,6 +119,8 @@ function AppProvider({ children }) {
         appointments: items => { setAppointments(items); markLoaded('appointments'); },
         counselorAvailability: items => { setCounselorAvailability(items); markLoaded('counselorAvailability'); },
         notifications: items => { setNotifications(items); markLoaded('notifications'); },
+        consultationFeedbacks: items => { setConsultationFeedbacks(items); markLoaded('consultationFeedbacks'); },
+        goals: items => { setGoals(items); markLoaded('goals'); },
       },
       () => { setDataLoading(false); setToast('Firebase 데이터를 불러오지 못했습니다. 권한을 확인해 주세요.'); },
     );
@@ -178,13 +186,15 @@ function AppProvider({ children }) {
     setAppointments(initialAppointments);
     setCounselorAvailability(initialCounselorAvailability);
     setNotifications([]);
+    setConsultationFeedbacks([]);
+    setGoals(initialGoals);
     setPrograms(initialPrograms);
     setProgramRecommendations(initialProgramRecommendations);
     setDraftForm(null);
     setToast('발표용 데모 데이터를 처음 상태로 되돌렸습니다.');
   };
 
-  const value = useMemo(() => ({ users, setUsers, studentRegistrations, setStudentRegistrations, students, setStudents, consultations, setConsultations, consultationSummaries, setConsultationSummaries, consultationNotes, setConsultationNotes, consultationDrafts, setConsultationDrafts, followUps, setFollowUps, appointments, setAppointments, counselorAvailability, setCounselorAvailability, notifications, setNotifications, programs, setPrograms, programRecommendations, setProgramRecommendations, resetProgramDemo, resetDemoData, persistDocument, persistDocumentGroup, removeDocument, toast, notify: setToast, draftForm, setDraftForm }), [users, studentRegistrations, students, consultations, consultationSummaries, consultationNotes, consultationDrafts, followUps, appointments, counselorAvailability, notifications, programs, programRecommendations, toast, draftForm, user]);
+  const value = useMemo(() => ({ users, setUsers, studentRegistrations, setStudentRegistrations, students, setStudents, consultations, setConsultations, consultationSummaries, setConsultationSummaries, consultationNotes, setConsultationNotes, consultationDrafts, setConsultationDrafts, followUps, setFollowUps, appointments, setAppointments, counselorAvailability, setCounselorAvailability, notifications, setNotifications, consultationFeedbacks, setConsultationFeedbacks, goals, setGoals, programs, setPrograms, programRecommendations, setProgramRecommendations, resetProgramDemo, resetDemoData, persistDocument, persistDocumentGroup, removeDocument, toast, notify: setToast, draftForm, setDraftForm }), [users, studentRegistrations, students, consultations, consultationSummaries, consultationNotes, consultationDrafts, followUps, appointments, counselorAvailability, notifications, consultationFeedbacks, goals, programs, programRecommendations, toast, draftForm, user]);
   if (dataLoading) return <main className="app-loading" role="status">상담 데이터를 불러오고 있어요...</main>;
   return <AppContext.Provider value={value}>{children}{toast && <div className="toast" role="status" aria-live="polite"><span>✓</span>{toast}</div>}</AppContext.Provider>;
 }
@@ -202,6 +212,7 @@ function CounselorRoutes() {
       <Route path="appointments" element={<AppointmentsPage />} />
       <Route path="notifications" element={<NotificationsPage />} />
       <Route path="insights" element={<InsightsPage />} />
+      <Route path="goals" element={<GoalsPage />} />
       <Route path="programs" element={<ProgramsPage />} />
       <Route path="settings" element={<SettingsPage />} />
       <Route path="admin/users" element={isOperationsStaff(role) ? <AdminUsersPage /> : <Navigate to="/dashboard" replace />} />
@@ -225,6 +236,7 @@ export default function App() {
     <Route path="/student/appointments/request/:availabilityId" element={role === 'student' ? <StudentAppointmentRequestPage /> : <Navigate to="/login" replace />} />
     <Route path="/student/appointments/change/:appointmentId/:availabilityId" element={role === 'student' ? <StudentAppointmentRequestPage /> : <Navigate to="/login" replace />} />
     <Route path="/student/notifications" element={role === 'student' ? <NotificationsPage /> : <Navigate to="/login" replace />} />
+    <Route path="/student/goals" element={role === 'student' ? <GoalsPage /> : <Navigate to="/login" replace />} />
     <Route path="/*" element={isOperationsStaff(role) ? <CounselorRoutes /> : <Navigate to="/login" replace />} />
   </Routes></Suspense></AppProvider>;
 }

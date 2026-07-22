@@ -1188,6 +1188,29 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
   .program-form-grid .span-2 { grid-column: 1; }
 }
 
+.recurring-availability-modal { width: min(760px, calc(100vw - 32px)); }
+.recurring-availability-form { display: grid; gap: 20px; }
+.recurring-availability-form header, .recurring-period-fields, .recurring-time-fields, .recurring-exclusion-row, .recurring-excluded-date-input { display: flex; gap: 12px; align-items: end; }
+.recurring-availability-form header { justify-content: space-between; align-items: start; }
+.recurring-availability-form fieldset { border: 1px solid var(--border-color, #dfe5ec); border-radius: 12px; padding: 14px; }
+.recurring-weekdays { display: flex; gap: 8px; flex-wrap: wrap; }
+.recurring-weekdays button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #d6dde7; background: white; }
+.recurring-weekdays button.selected { background: #2358d8; color: white; border-color: #2358d8; }
+.recurring-preview { background: #f5f8ff; border-radius: 12px; padding: 16px; }
+.recurring-preview dl, .outcome-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.recurring-preview dl div, .outcome-summary article { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; }
+.consultation-feedback-form { display: grid; gap: 18px; margin-top: 16px; }
+.feedback-score-field { border: 0; padding: 0; }
+.feedback-score-field [role="radiogroup"], .feedback-choice-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.feedback-score-field label span { display: inline-flex; padding: 9px 13px; border: 1px solid #d6dde7; border-radius: 10px; cursor: pointer; }
+.feedback-score-field input { position: absolute; opacity: 0; }
+.feedback-score-field input:checked + span { color: white; background: #2358d8; border-color: #2358d8; }
+.feedback-section { display: grid; gap: 16px; }
+.attachment-list { display: grid; justify-items: start; gap: 8px; }
+.outcome-summary { margin-bottom: 22px; }
+.outcome-summary article strong { display: block; font-size: 1.7rem; margin-top: 6px; }
+@media (max-width: 700px) { .recurring-availability-form header, .recurring-period-fields, .recurring-time-fields, .recurring-exclusion-row { align-items: stretch; flex-direction: column; } }
+
 /* Unified counselor search fields */
 .global-search, .search-field, .quick-search label {
   border-color:#cbd5e1;

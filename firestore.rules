@@ -126,6 +126,30 @@ service cloud.firestore {
         && validOptionalText(data, 'readAt', 40);
     }
 
+    function validFeedback(data) {
+      return validText(data.appointmentId, 128)
+        && validText(data.studentId, 128)
+        && validText(data.studentUid, 128)
+        && validText(data.counselorUid, 128)
+        && data.overallScore is int && data.overallScore >= 1 && data.overallScore <= 5
+        && data.helpfulnessScore is int && data.helpfulnessScore >= 1 && data.helpfulnessScore <= 5
+        && data.clarityScore is int && data.clarityScore >= 1 && data.clarityScore <= 5
+        && data.needsFollowUp is bool
+        && validOptionalText(data, 'comment', 1000);
+    }
+
+    function validGoal(data) {
+      return validText(data.studentId, 128)
+        && validText(data.studentUid, 128)
+        && validText(data.counselorUid, 128)
+        && validText(data.title, 80)
+        && validText(data.description, 500)
+        && validText(data.targetDate, 10)
+        && data.status in ['notStarted', 'inProgress', 'achieved', 'onHold']
+        && data.assigneeRole in ['student', 'counselor']
+        && data.visibility in ['public', 'private'];
+    }
+
     function validFollowUp(data) {
       return validText(data.studentId, 128)
         && validText(data.ownerUid, 128)
@@ -357,6 +381,41 @@ service cloud.firestore {
         && validNotification(request.resource.data)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt']);
       allow delete: if false;
+    }
+
+    match /consultationFeedbacks/{feedbackId} {
+      allow read: if isStaff() || (isStudent() && resource.data.studentUid == request.auth.uid);
+      allow create: if isStudent() && validFeedback(request.resource.data)
+        && request.resource.data.studentUid == request.auth.uid
+        && feedbackId == 'feedback-' + request.resource.data.appointmentId
+        && exists(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId))
+        && get(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId)).data.studentUid == request.auth.uid
+        && get(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId)).data.status == 'completed';
+      allow update: if isStudent() && validFeedback(request.resource.data)
+        && resource.data.studentUid == request.auth.uid
+        && request.resource.data.studentUid == resource.data.studentUid
+        && request.resource.data.counselorUid == resource.data.counselorUid
+        && request.resource.data.appointmentId == resource.data.appointmentId
+        && request.resource.data.submittedAt == resource.data.submittedAt;
+      allow delete: if false;
+    }
+
+    match /goals/{goalId} {
+      allow read: if isStaff() || (isStudent() && resource.data.studentUid == request.auth.uid && resource.data.visibility == 'public');
+      allow create: if validGoal(request.resource.data) && (isStaff() || (isStudent()
+        && request.resource.data.studentUid == request.auth.uid
+        && request.resource.data.visibility == 'public'
+        && request.resource.data.createdByUid == request.auth.uid));
+      allow update: if validGoal(request.resource.data) && (isStaff() || (isStudent()
+        && resource.data.studentUid == request.auth.uid
+        && resource.data.visibility == 'public'
+        && request.resource.data.studentUid == resource.data.studentUid
+        && request.resource.data.counselorUid == resource.data.counselorUid
+        && request.resource.data.studentId == resource.data.studentId
+        && request.resource.data.visibility == resource.data.visibility
+        && request.resource.data.status != 'achieved'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentProgress', 'status', 'updatedAt', 'lastModifiedByUid', 'lastModifiedByName', 'lastModifiedByRole', 'achievedAt'])));
+      allow delete: if isStaff();
     }
 
     match /followUps/{followUpId} {

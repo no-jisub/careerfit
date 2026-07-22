@@ -6,20 +6,21 @@ import { EmptyState, PageIntro } from '../components/UI';
 import { buildOperationalNotifications } from '../utils/operations';
 import { mergeNotifications } from '../utils/notifications';
 import { useAuth } from '../auth/AuthContext';
+import { buildGoalNotifications } from '../utils/goals';
 
 const readStoredIds = () => {
   try { return JSON.parse(localStorage.getItem('careerfit_read_notifications')) || []; } catch { return []; }
 };
 
 export default function NotificationsPage() {
-  const { students, followUps, appointments, notifications, setNotifications, persistDocument } = useApp();
+  const { students, followUps, appointments, goals, notifications, setNotifications, persistDocument } = useApp();
   const { user, role } = useAuth();
   const [readIds, setReadIds] = useState(readStoredIds);
   const [filter, setFilter] = useState('unread');
   const derived = useMemo(() => {
-    const items = buildOperationalNotifications(students, followUps, appointments);
+    const items = [...buildOperationalNotifications(students, followUps, appointments), ...buildGoalNotifications(goals || [], { role, uid: user?.uid || '' })];
     return role === 'student' ? items.filter(item => item.type !== 'appointment').map(item => ({ ...item, to: '/student' })) : items;
-  }, [students, followUps, appointments, role]);
+  }, [students, followUps, appointments, goals, role, user?.uid]);
   const notices = useMemo(() => mergeNotifications(notifications, derived), [notifications, derived]);
   const isRead = item => Boolean(item.readAt) || readIds.includes(item.id);
   const visible = notices.filter(item => filter === 'all' || !isRead(item));
