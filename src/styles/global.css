@@ -1043,6 +1043,21 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .metric-bars.departments i b { background: #8b5cf6; }
 .visibility-tag { margin-left: 8px; font-size: 11px; color: var(--green); }
 .visibility-tag.private { color: var(--muted); }
+.deletion-request-card { margin-bottom:20px; }
+.deletion-request-list, .student-record-list { display:grid; }
+.deletion-request-list article, .student-record-list article { padding:14px 0; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.deletion-request-list article > div:first-child, .student-record-list article > div { display:grid; gap:4px; }
+.deletion-request-list span, .student-record-list span { color:var(--muted); font-size:12px; }
+.deletion-request-list article > div:last-child { display:flex; gap:9px; align-items:center; }
+.student-record-management, .student-account-actions { margin-top:28px; }
+.student-account-actions { display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.student-account-actions h2 { margin:5px 0; }
+.student-account-actions p { margin:0; color:var(--muted); font-size:13px; }
+.request-status { padding:6px 9px; border-radius:999px; font-size:11px!important; font-weight:800; }
+.request-status.pending { color:#966614; background:#fff5df; }
+.request-status.approved { color:#177348; background:#eaf8f1; }
+.request-status.rejected { color:var(--red); background:var(--red-soft); }
+@media (max-width:600px) { .student-account-actions, .deletion-request-list article, .student-record-list article { align-items:flex-start; flex-direction:column; } }
 @media (max-width: 800px) {
   .insight-kpis, .insight-grid { grid-template-columns: 1fr; }
   .notification-list article { grid-template-columns: auto 1fr; }

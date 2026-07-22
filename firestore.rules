@@ -111,6 +111,15 @@ service cloud.firestore {
         && data.status in ['scheduled', 'completed', 'cancelled'];
     }
 
+    function validRecordDeletionRequest(data) {
+      return validText(data.consultationId, 128)
+        && validText(data.studentId, 128)
+        && validText(data.studentUid, 128)
+        && data.status in ['pending', 'approved', 'rejected']
+        && validOptionalText(data, 'reason', 1000)
+        && validOptionalText(data, 'resolutionReason', 1000);
+    }
+
     function isAdmin() {
       return hasRole('admin');
     }
@@ -169,7 +178,20 @@ service cloud.firestore {
           && request.resource.data.role in ['student', 'counselor']
           && request.resource.data.active == false
           && request.resource.data.approvalStatus == 'pending'));
-      allow update: if isStaff() && validUserProfile(request.resource.data);
+      allow update: if validUserProfile(request.resource.data) && (isStaff()
+        || (signedIn()
+          && request.auth.uid == userId
+          && resource.data.role == 'student'
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.displayName == resource.data.displayName
+          && resource.data.active == true
+          && request.resource.data.active == false
+          && request.resource.data.withdrawalStatus == 'pending'
+          && request.resource.data.withdrawalRequestedAt is string
+          && request.resource.data.deletionScheduledAt is string
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['active', 'withdrawalStatus', 'withdrawalRequestedAt', 'deletionScheduledAt', 'updatedAt'])));
       allow delete: if isStaff();
     }
 
@@ -298,6 +320,22 @@ service cloud.firestore {
           && request.resource.data.studentUid == resource.data.studentUid
           && request.resource.data.studentId == resource.data.studentId));
       allow delete: if isStaff();
+    }
+
+    match /recordDeletionRequests/{requestId} {
+      allow read: if isStaff()
+        || (signedIn() && resource.data.studentUid == request.auth.uid);
+      allow create: if isStudent()
+        && validRecordDeletionRequest(request.resource.data)
+        && request.resource.data.studentUid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && exists(/databases/$(database)/documents/consultations/$(request.resource.data.consultationId))
+        && get(/databases/$(database)/documents/consultations/$(request.resource.data.consultationId)).data.studentUid == request.auth.uid;
+      allow update: if isStaff()
+        && validRecordDeletionRequest(request.resource.data)
+        && resource.data.status == 'pending'
+        && request.resource.data.status in ['approved', 'rejected'];
+      allow delete: if false;
     }
 
     match /programs/{programId} {

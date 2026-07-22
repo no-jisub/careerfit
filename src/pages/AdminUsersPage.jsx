@@ -20,6 +20,7 @@ export default function AdminUsersPage() {
   const [selectedRegistrationIds, setSelectedRegistrationIds] = useState([]);
   const pendingRegistrations = useMemo(() => studentRegistrations.filter(item => item.status === 'pending' && !students.some(studentItem => studentItem.uid === item.uid)), [studentRegistrations, students]);
   const pendingCounselors = useMemo(() => users.filter(item => item.role === 'counselor' && item.approvalStatus === 'pending'), [users]);
+  const withdrawalUsers = useMemo(() => users.filter(item => item.role === 'student' && item.withdrawalStatus === 'pending'), [users]);
   const currentCounselorUid = user?.uid || profile?.id || '';
 
   const updateAccount = (key, value) => setAccount(current => ({ ...current, [key]: value }));
@@ -135,6 +136,22 @@ export default function AdminUsersPage() {
     } catch { /* 공통 오류 메시지를 사용합니다. */ }
   };
 
+  const restoreStudentAccount = async candidate => {
+    const now = new Date().toISOString();
+    const restoredUser = { ...candidate, active: true, withdrawalStatus: 'restored', restoredAt: now, restoredBy: currentCounselorUid, updatedAt: now };
+    const studentRecord = students.find(item => item.uid === candidate.id);
+    const restoredStudent = studentRecord ? { ...studentRecord, accountStatus: 'active', updatedAt: now } : null;
+    try {
+      await persistDocumentGroup([
+        { name: 'users', record: restoredUser },
+        ...(restoredStudent ? [{ name: 'students', record: restoredStudent }] : []),
+      ]);
+      setUsers(items => items.map(item => item.id === restoredUser.id ? restoredUser : item));
+      if (restoredStudent) setStudents(items => items.map(item => item.id === restoredStudent.id ? restoredStudent : item));
+      notify(`${candidate.displayName} 학생 계정을 복구했습니다.`);
+    } catch { /* 공통 오류 메시지를 사용합니다. */ }
+  };
+
   const resetPassword = async user => {
     try {
       await sendManagedPasswordReset(user.email);
@@ -201,6 +218,10 @@ export default function AdminUsersPage() {
       {pendingCounselors.length ? <div className="pending-registration-list counselor-approval-list">
         {pendingCounselors.map(item => <article key={item.id}><span className="approval-avatar">{item.displayName.slice(0, 1)}</span><div><strong>{item.displayName}</strong><small>{item.email}</small></div><div className="approval-actions"><button className="button primary small" onClick={() => reviewCounselor(item, 'approved')}>승인</button><button className="text-button danger" onClick={() => reviewCounselor(item, 'rejected')}>거절</button></div></article>)}
       </div> : <p className="empty-assignment">현재 승인 대기 중인 상담사가 없습니다.</p>}
+    </section>
+    <section className="card pending-assignment-card">
+      <div className="section-header"><div><span className="eyebrow">회원 탈퇴 관리</span><h2>30일 보관 중 {withdrawalUsers.length}명</h2><p>해커톤 버전에서는 삭제 예정일을 표시하고 필요할 때 상담사가 계정을 복구합니다.</p></div></div>
+      {withdrawalUsers.length ? <div className="pending-registration-list">{withdrawalUsers.map(item => <article key={item.id}><span className="approval-avatar">{item.displayName.slice(0, 1)}</span><div><strong>{item.displayName}</strong><span>삭제 예정 {item.deletionScheduledAt?.slice(0, 10) || '-'}</span><small>{item.email}</small></div><button className="button secondary small" onClick={() => restoreStudentAccount(item)}>계정 복구</button></article>)}</div> : <p className="empty-assignment">현재 탈퇴 보관 중인 학생이 없습니다.</p>}
     </section>
     <section className="card pending-assignment-card">
       <div className="section-header"><div><span className="eyebrow">회원가입 학생</span><h2>배정 대기 {pendingRegistrations.length}명</h2><p>이메일 인증을 마친 학생을 선택해 내 담당 학생으로 배정하세요.</p></div><button className="button primary" onClick={assignSelectedToMe} disabled={assigning || !selectedRegistrationIds.length}>{assigning ? '배정 중...' : `선택 학생 내게 배정 (${selectedRegistrationIds.length})`}</button></div>

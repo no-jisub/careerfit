@@ -37,6 +37,7 @@ async function resolveProfile(user) {
 }
 
 function resolveAccountStatus(user, profile) {
+  if (profile?.withdrawalStatus === 'pending') return 'withdrawalPending';
   if (!user.emailVerified) return 'emailVerificationRequired';
   if (!profile?.role) return 'profileMissing';
   if (profile.approvalStatus === 'rejected') return 'rejected';
@@ -200,6 +201,22 @@ export function AuthProvider({ children }) {
     await sendPasswordResetEmail(auth, normalizedEmail);
   };
 
+  const requestAccountWithdrawal = async () => {
+    if (!auth?.currentUser || !db) throw new Error('로그인된 학생 계정이 없습니다.');
+    const requestedAt = new Date();
+    const deletionScheduledAt = new Date(requestedAt);
+    deletionScheduledAt.setDate(deletionScheduledAt.getDate() + 30);
+    await setDoc(doc(db, 'users', auth.currentUser.uid), {
+      active: false,
+      withdrawalStatus: 'pending',
+      withdrawalRequestedAt: requestedAt.toISOString(),
+      deletionScheduledAt: deletionScheduledAt.toISOString(),
+      updatedAt: requestedAt.toISOString(),
+    }, { merge: true });
+    await signOut(auth);
+    return { deletionScheduledAt: deletionScheduledAt.toISOString() };
+  };
+
   const logout = async () => {
     if (user && auth) await signOut(auth);
     localStorage.removeItem('careerfit_role');
@@ -209,7 +226,7 @@ export function AuthProvider({ children }) {
     setAccountStatus(null);
   };
 
-  const value = useMemo(() => ({ user, role, profile, accountStatus, loading, demoModeEnabled, firebaseAuthEnabled, loginWithEmail, loginDemo, registerStudent, registerCounselor, refreshAccount, resendVerificationEmail, requestPasswordReset, logout }), [user, role, profile, accountStatus, loading]);
+  const value = useMemo(() => ({ user, role, profile, accountStatus, loading, demoModeEnabled, firebaseAuthEnabled, loginWithEmail, loginDemo, registerStudent, registerCounselor, refreshAccount, resendVerificationEmail, requestPasswordReset, requestAccountWithdrawal, logout }), [user, role, profile, accountStatus, loading]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
