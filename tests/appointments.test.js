@@ -1,11 +1,45 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  buildHourlyAvailabilitySlots,
+  buildMonthCalendar,
   getAppointmentCancellationLabel,
   hasCounselorAppointmentConflict,
   hasCounselorAvailabilityConflict,
   upsertAppointmentById,
 } from '../src/utils/appointments.js';
+
+test('month calendar includes six complete weeks and marks past dates', () => {
+  const days = buildMonthCalendar('2026-07-01', '2026-07-22');
+  assert.equal(days.length, 42);
+  assert.equal(days.find(day => day.date === '2026-07-21').isPast, true);
+  assert.equal(days.find(day => day.date === '2026-07-22').isPast, false);
+  assert.equal(days.filter(day => day.inMonth).length, 31);
+});
+
+test('bulk availability creates one-hour slots and skips existing or booked times', () => {
+  const result = buildHourlyAvailabilitySlots({
+    dates: ['2026-07-22', '2026-07-23'],
+    startTime: '09:00',
+    endTime: '12:00',
+    location: '상담실 1',
+    counselorUid: 'counselor-1',
+    nowDate: '2026-07-20',
+    existingAvailability: [{ counselorUid: 'counselor-1', date: '2026-07-22', time: '10:00', endTime: '11:00', status: 'closed' }],
+    appointments: [{ counselorUid: 'counselor-1', date: '2026-07-23', time: '09:00', endTime: '10:00', status: 'confirmed' }],
+    createdAt: '2026-07-20T00:00:00.000Z',
+  });
+  assert.equal(result.error, '');
+  assert.equal(result.slots.length, 4);
+  assert.equal(result.skipped, 2);
+  assert.deepEqual(result.slots.map(slot => `${slot.date} ${slot.time}-${slot.endTime}`), [
+    '2026-07-22 09:00-10:00',
+    '2026-07-22 11:00-12:00',
+    '2026-07-23 10:00-11:00',
+    '2026-07-23 11:00-12:00',
+  ]);
+  assert.ok(result.slots.every(slot => slot.duration === 60 && slot.status === 'open'));
+});
 
 test('appointment cancellation label identifies student and counselor cancellations', () => {
   assert.equal(getAppointmentCancellationLabel({ status: 'cancelled', cancelledByRole: 'student' }), '학생이 취소');

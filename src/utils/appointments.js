@@ -1,4 +1,4 @@
-import { getTimeRangeEnd, timeToMinutes } from './date.js';
+import { addMinutesToTime, getTimeRangeEnd, parseDateKey, timeToMinutes, toDateKey } from './date.js';
 
 export const activeAppointmentStatuses = ['pending', 'confirmed', 'scheduled'];
 
@@ -23,6 +23,76 @@ function timeRangesOverlap(left, right) {
   return [leftStart, leftEnd, rightStart, rightEnd].every(Number.isFinite)
     && leftStart < rightEnd
     && rightStart < leftEnd;
+}
+
+export function buildMonthCalendar(monthKey, today = toDateKey()) {
+  const monthDate = parseDateKey(monthKey);
+  const firstDate = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+  const startDate = new Date(firstDate);
+  startDate.setDate(firstDate.getDate() - firstDate.getDay());
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + index);
+    const dateKey = toDateKey(date);
+    return {
+      date: dateKey,
+      day: date.getDate(),
+      inMonth: date.getMonth() === firstDate.getMonth(),
+      isPast: dateKey < today,
+    };
+  });
+}
+
+export function buildHourlyAvailabilitySlots({
+  dates = [],
+  startTime,
+  endTime,
+  location,
+  counselorUid,
+  existingAvailability = [],
+  appointments = [],
+  nowDate = toDateKey(),
+  nowTime = '00:00',
+  createdAt = new Date().toISOString(),
+}) {
+  const startMinutes = timeToMinutes(startTime);
+  const endMinutes = timeToMinutes(endTime);
+  const selectedDates = [...new Set(dates)].sort();
+  if (!selectedDates.length) return { slots: [], skipped: 0, error: '상담 가능한 날짜를 한 개 이상 선택해 주세요.' };
+  if (!counselorUid) return { slots: [], skipped: 0, error: '상담사 정보를 확인할 수 없습니다.' };
+  if (!String(location || '').trim()) return { slots: [], skipped: 0, error: '상담 장소를 입력해 주세요.' };
+  if (![startMinutes, endMinutes].every(Number.isFinite) || endMinutes <= startMinutes || (endMinutes - startMinutes) % 60 !== 0) {
+    return { slots: [], skipped: 0, error: '시작과 종료 시간은 1시간 단위로 맞춰 주세요.' };
+  }
+
+  const slots = [];
+  let skipped = 0;
+  selectedDates.forEach(date => {
+    for (let minutes = startMinutes; minutes + 60 <= endMinutes; minutes += 60) {
+      const time = addMinutesToTime('00:00', minutes);
+      const end = addMinutesToTime(time, 60);
+      const candidate = { date, time, endTime: end, duration: 60, counselorUid };
+      const isPast = date < nowDate || (date === nowDate && time <= nowTime);
+      const availabilityConflict = existingAvailability.some(item => item.counselorUid === counselorUid
+        && item.date === date && timeRangesOverlap(item, candidate));
+      const appointmentConflict = appointments.some(item => activeAppointmentStatuses.includes(item.status)
+        && item.counselorUid === counselorUid && item.date === date && timeRangesOverlap(item, candidate));
+      if (isPast || availabilityConflict || appointmentConflict) {
+        skipped += 1;
+        continue;
+      }
+      const safeCounselorId = counselorUid.replace(/[^A-Za-z0-9_-]/g, '-');
+      slots.push({
+        id: `availability-${safeCounselorId}-${date}-${time.replace(':', '')}`,
+        ...candidate,
+        location: String(location).trim(),
+        status: 'open',
+        createdAt,
+        updatedAt: createdAt,
+      });
+    }
+  });
+  return { slots, skipped, error: slots.length ? '' : '선택한 범위에 새로 등록할 수 있는 시간이 없습니다.' };
 }
 
 export function hasCounselorAppointmentConflict(appointments, students, candidate, ignoredId = '') {

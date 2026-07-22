@@ -1318,8 +1318,14 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .availability-management-card { margin-bottom:20px; padding:26px; }
 .availability-management-card .section-header { align-items:center; }
 .availability-open-count { flex:0 0 auto; padding:7px 11px; border-radius:999px; color:var(--green); background:var(--green-soft); font-size:11px; font-weight:800; }
+.availability-date-groups { display:grid; gap:16px; }
+.availability-date-group { padding:16px; border:1px solid var(--border); border-radius:15px; background:#fbfcfe; }
+.availability-date-header { margin-bottom:11px; display:flex; align-items:center; justify-content:space-between; gap:14px; }
+.availability-date-header > div { display:grid; gap:4px; }
+.availability-date-header strong { color:var(--navy); font-size:15px; }
+.availability-date-header span { color:var(--muted); font-size:11px; }
 .availability-slot-list { display:grid; gap:10px; }
-.availability-slot-list article { min-height:74px; padding:13px 16px; border:1px solid var(--border); border-radius:13px; display:grid; grid-template-columns:150px minmax(0,1fr) auto auto; align-items:center; gap:16px; background:#fbfcfe; }
+.availability-slot-list article { min-height:74px; padding:13px 16px; border:1px solid var(--border); border-radius:13px; display:grid; grid-template-columns:150px minmax(0,1fr) auto auto; align-items:center; gap:16px; background:#fff; }
 .availability-slot-list article.closed { opacity:.68; background:#f4f6f9; }
 .availability-slot-list time, .availability-slot-list article > div { display:grid; gap:4px; }
 .availability-slot-list time strong, .availability-slot-list article > div strong { color:var(--navy); font-size:13px; }
@@ -1331,13 +1337,39 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .availability-form-description { margin:-10px 0 20px; color:var(--muted); font-size:12px; line-height:1.6; }
 .availability-form-modal form { display:grid; gap:15px; }
 .availability-form-modal form label { margin:0; }
+.bulk-availability-modal { width:min(920px, calc(100% - 32px)); max-height:calc(100vh - 32px); overflow-y:auto; }
+.bulk-availability-layout { display:grid; grid-template-columns:minmax(0, 1.05fr) minmax(280px, .95fr); gap:22px; }
+.availability-calendar-panel { padding:18px; border:1px solid var(--border); border-radius:15px; background:#fff; }
+.calendar-toolbar { min-height:38px; margin-bottom:12px; display:grid; grid-template-columns:36px 1fr 36px; align-items:center; gap:8px; }
+.calendar-toolbar strong { color:var(--navy); font-size:16px; text-align:center; }
+.calendar-toolbar button { width:36px; height:36px; padding:0; border:1px solid var(--border); border-radius:10px; display:grid; place-items:center; color:var(--muted); background:#fff; }
+.calendar-toolbar button:first-child svg { transform:rotate(180deg); }
+.calendar-weekdays, .availability-calendar-grid, .student-calendar-grid { display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:6px; }
+.calendar-weekdays { margin-bottom:6px; }
+.calendar-weekdays span { padding:5px 0; color:var(--muted); font-size:10px; font-weight:800; text-align:center; }
+.availability-calendar-grid button, .student-calendar-grid button { aspect-ratio:1; min-width:0; padding:0; border:1px solid transparent; border-radius:11px; position:relative; display:grid; place-items:center; color:var(--navy); background:#f6f8fb; font-size:12px; font-weight:800; }
+.availability-calendar-grid button:hover:not(:disabled), .student-calendar-grid button:hover:not(:disabled) { border-color:#a9c2f4; background:#edf3ff; }
+.availability-calendar-grid button.selected, .student-calendar-grid button.selected { border-color:var(--blue); color:#fff; background:var(--blue); box-shadow:0 5px 12px rgba(37,99,235,.2); }
+.availability-calendar-grid button.outside, .student-calendar-grid button.outside { opacity:.25; }
+.availability-calendar-grid button:disabled, .student-calendar-grid button:disabled { cursor:not-allowed; }
+.availability-calendar-grid button i { width:5px; height:5px; position:absolute; right:6px; bottom:5px; border-radius:50%; background:#ef9d32; }
+.availability-calendar-panel > p { margin:12px 0 0; color:var(--muted); font-size:10px; line-height:1.6; }
+.bulk-availability-settings { display:grid; align-content:start; gap:16px; }
+.bulk-availability-settings > label { display:grid; gap:7px; color:var(--navy); font-size:12px; font-weight:800; }
+.selected-date-summary, .availability-preview { padding:16px; border:1px solid #dce7f8; border-radius:13px; display:grid; gap:6px; background:#f6f9ff; }
+.selected-date-summary span, .availability-preview span { color:var(--blue); font-size:10px; font-weight:800; }
+.selected-date-summary strong, .availability-preview strong { color:var(--navy); font-size:20px; }
+.selected-date-summary p { max-height:70px; margin:0; overflow-y:auto; color:var(--muted); font-size:11px; line-height:1.6; }
+.availability-preview small { color:var(--muted); font-size:10px; }
 
 @media (max-width:700px) {
   .availability-management-card { padding:21px 17px; }
   .availability-management-card .section-header { align-items:flex-start; }
+  .availability-date-header { align-items:flex-start; flex-direction:column; }
   .availability-slot-list article { grid-template-columns:1fr auto; gap:10px 14px; }
   .availability-slot-list article > div { grid-column:1 / -1; }
   .availability-slot-list article > button { justify-self:end; }
+  .bulk-availability-layout { grid-template-columns:1fr; }
 }
 
 /* Student appointment request flow */
@@ -1358,6 +1390,25 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .student-appointment-history time, .student-appointment-history article > div { display:grid; gap:4px; }
 .student-appointment-history time strong, .student-appointment-history article > div strong { color:var(--navy); font-size:13px; }
 .student-appointment-history time span, .student-appointment-history article > div span { color:var(--muted); font-size:11px; }
+.student-scheduler { padding:0; display:grid; grid-template-columns:minmax(0, 1.05fr) minmax(300px, .95fr); overflow:hidden; }
+.student-scheduler-calendar, .student-scheduler-times { min-width:0; padding:28px; }
+.student-scheduler-times { border-left:1px solid var(--border); background:#fbfcfe; }
+.student-calendar-grid button { background:#fff; }
+.student-calendar-grid button.unavailable { opacity:.38; color:#94a0b2; background:#eef1f5; }
+.student-calendar-grid button i { width:5px; height:5px; position:absolute; bottom:5px; border-radius:50%; background:var(--green); }
+.student-calendar-grid button.selected i { background:#fff; }
+.scheduler-legend { margin-top:15px; display:flex; align-items:center; gap:16px; color:var(--muted); font-size:10px; }
+.scheduler-legend span { display:flex; align-items:center; gap:6px; }
+.scheduler-legend i { width:8px; height:8px; border-radius:50%; background:#c9d0da; }
+.scheduler-legend i.available { background:var(--green); }
+.student-scheduler-times > div:first-child h2 { margin:6px 0; color:var(--navy); font-size:20px; }
+.student-scheduler-times > div:first-child p { margin:0 0 18px; color:var(--muted); font-size:11px; line-height:1.6; }
+.student-time-grid { display:grid; gap:9px; }
+.student-time-grid a, .student-time-grid button { min-height:48px; padding:0 14px; border:1px solid #bdd0f6; border-radius:11px; display:flex; align-items:center; justify-content:space-between; gap:12px; color:var(--blue); background:#fff; font-size:12px; font-weight:800; }
+.student-time-grid a:hover { color:#fff; background:var(--blue); }
+.student-time-grid a strong, .student-time-grid button strong { font-size:10px; }
+.student-time-grid button:disabled { border-color:#e0e4ea; color:#98a2b2; background:#eef1f5; cursor:not-allowed; opacity:.65; }
+.student-scheduler-empty { min-height:240px; display:grid; place-items:center; align-content:center; gap:10px; color:var(--muted); font-size:12px; text-align:center; }
 .student-slot-groups { display:grid; gap:16px; }
 .student-slot-group { padding:22px; border:1px solid var(--border); border-radius:17px; background:#fff; box-shadow:var(--shadow); }
 .student-slot-group > div:first-child { margin-bottom:15px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
@@ -1398,6 +1449,9 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
   .student-appointment-history { padding:19px 16px; }
   .student-appointment-history article { grid-template-columns:1fr auto; gap:8px; }
   .student-appointment-history article > div { grid-column:1 / -1; }
+  .student-scheduler { grid-template-columns:1fr; }
+  .student-scheduler-calendar, .student-scheduler-times { padding:21px 16px; }
+  .student-scheduler-times { border-top:1px solid var(--border); border-left:0; }
   .student-slot-group { padding:18px 15px; }
   .student-slot-group article { grid-template-columns:70px 1fr; gap:10px; }
   .student-slot-group article .button { grid-column:1 / -1; width:100%; }

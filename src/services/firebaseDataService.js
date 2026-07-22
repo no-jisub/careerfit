@@ -39,11 +39,13 @@ export async function saveCareerDocument(name, record) {
 
 export async function saveCareerDocumentGroup(entries) {
   if (!firestoreSyncEnabled || !entries.length) return;
-  const batch = writeBatch(db);
-  entries.forEach(({ name, record }) => {
-    if (!record?.id) throw new Error(`Firestore document id is required for ${name}.`);
-    const { id, ...data } = record;
-    batch.set(doc(db, name, id), data, { merge: true });
-  });
-  await batch.commit();
+  for (let offset = 0; offset < entries.length; offset += 400) {
+    const batch = writeBatch(db);
+    entries.slice(offset, offset + 400).forEach(({ name, record }) => {
+      if (!record?.id) throw new Error(`Firestore document id is required for ${name}.`);
+      const { id, ...data } = record;
+      batch.set(doc(db, name, id), data, { merge: true });
+    });
+    await batch.commit();
+  }
 }
