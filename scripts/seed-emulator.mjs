@@ -22,11 +22,11 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const password = 'CareerFit123!';
 
-async function upsertUser({ email, displayName, role }) {
+async function upsertUser({ email, displayName, role, active = true, approvalStatus = 'approved' }) {
   let user;
   try {
     user = await auth.getUserByEmail(email);
-    user = await auth.updateUser(user.uid, { displayName, password, disabled: false });
+    user = await auth.updateUser(user.uid, { displayName, password, disabled: false, emailVerified: true });
   } catch (error) {
     if (error.code !== 'auth/user-not-found') throw error;
     user = await auth.createUser({ email, displayName, password, emailVerified: true });
@@ -36,6 +36,8 @@ async function upsertUser({ email, displayName, role }) {
     email,
     displayName,
     role,
+    active,
+    approvalStatus,
     updatedAt: new Date().toISOString(),
   }, { merge: true });
   return user;
@@ -66,10 +68,36 @@ const otherStudent = await upsertUser({
   displayName: '이서준 학생',
   role: 'student',
 });
+const pendingStudent = await upsertUser({
+  email: 'pending-student@careerfit.local',
+  displayName: '오지우 학생',
+  role: 'student',
+  active: false,
+  approvalStatus: 'pending',
+});
 
 const now = new Date().toISOString();
 const batch = db.batch();
 const documents = {
+  studentRegistrations: {
+    [pendingStudent.uid]: {
+      uid: pendingStudent.uid,
+      email: pendingStudent.email,
+      displayName: '오지우',
+      studentNo: '20261307',
+      department: '경영학과',
+      grade: '1학년',
+      phone: '010-3100-7700',
+      interests: ['마케팅', '창업'],
+      goal: '브랜드 마케터',
+      concern: '대학생활 동안 준비할 경험의 우선순위를 정하고 싶어요.',
+      emailVerified: true,
+      status: 'pending',
+      counselorUid: '',
+      createdAt: now,
+      updatedAt: now,
+    },
+  },
   students: {
     s1: {
       uid: student.uid,

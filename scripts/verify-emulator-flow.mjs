@@ -1,5 +1,5 @@
 import { deleteApp, initializeApp } from 'firebase/app';
-import { connectAuthEmulator, getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { connectAuthEmulator, createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { collection, connectFirestoreEmulator, doc, getDoc, getDocs, getFirestore, query, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 
 const app = initializeApp({
@@ -18,6 +18,53 @@ function assert(condition, message) {
 }
 
 try {
+  const signupCredential = await createUserWithEmailAndPassword(
+    auth,
+    'self-signup@careerfit.local',
+    'CareerFit123!',
+  );
+  const signupAt = new Date().toISOString();
+  const signupBatch = writeBatch(db);
+  signupBatch.set(doc(db, 'users', signupCredential.user.uid), {
+    email: 'self-signup@careerfit.local',
+    displayName: '회원가입 검증 학생',
+    role: 'student',
+    active: false,
+    approvalStatus: 'pending',
+    createdAt: signupAt,
+    updatedAt: signupAt,
+  });
+  signupBatch.set(doc(db, 'studentRegistrations', signupCredential.user.uid), {
+    uid: signupCredential.user.uid,
+    email: 'self-signup@careerfit.local',
+    displayName: '회원가입 검증 학생',
+    studentNo: 'VERIFY-SIGNUP',
+    department: '검증학과',
+    grade: '1학년',
+    phone: '',
+    interests: ['진로 탐색'],
+    goal: '',
+    concern: '',
+    emailVerified: false,
+    status: 'pending',
+    counselorUid: '',
+    createdAt: signupAt,
+    updatedAt: signupAt,
+  });
+  await signupBatch.commit();
+  assert((await getDoc(doc(db, 'studentRegistrations', signupCredential.user.uid))).exists(), '학생 셀프 회원가입 문서가 저장되지 않았습니다.');
+  let blockedFakeEmailVerification = false;
+  try {
+    await updateDoc(doc(db, 'studentRegistrations', signupCredential.user.uid), {
+      emailVerified: true,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    blockedFakeEmailVerification = error.code === 'permission-denied';
+  }
+  assert(blockedFakeEmailVerification, '이메일 미인증 사용자가 인증 상태를 직접 변경할 수 있습니다.');
+  await signOut(auth);
+
   const adminCredential = await signInWithEmailAndPassword(
     auth,
     'admin@careerfit.local',
@@ -56,6 +103,49 @@ try {
   const allStudentsForCounselor = await getDocs(collection(db, 'students'));
   assert(allStudentsForCounselor.size === 2, '상담 담당자가 운영 관리를 위해 전체 학생을 조회하지 못했습니다.');
   assert((await getDoc(doc(db, 'students', 's2'))).exists(), '상담 담당자가 다른 담당자의 학생을 조회하지 못했습니다.');
+
+  const pendingRegistrationSnapshot = await getDocs(query(
+    collection(db, 'studentRegistrations'),
+    where('email', '==', 'pending-student@careerfit.local'),
+  ));
+  assert(pendingRegistrationSnapshot.size === 1, '배정 대기 학생을 조회하지 못했습니다.');
+  const pendingRegistrationDocument = pendingRegistrationSnapshot.docs[0];
+  const pendingRegistration = pendingRegistrationDocument.data();
+  const assignmentAt = new Date().toISOString();
+  const assignmentBatch = writeBatch(db);
+  assignmentBatch.set(doc(db, 'students', `student-${pendingRegistration.uid}`), {
+    uid: pendingRegistration.uid,
+    counselorUid: counselorCredential.user.uid,
+    counselor: '박지현',
+    name: pendingRegistration.displayName,
+    studentNo: pendingRegistration.studentNo,
+    department: pendingRegistration.department,
+    grade: pendingRegistration.grade,
+    phone: pendingRegistration.phone,
+    interests: pendingRegistration.interests,
+    goal: pendingRegistration.goal,
+    concern: pendingRegistration.concern,
+    status: 'scheduled',
+    appointmentDate: '',
+    appointment: '',
+    lastConsultation: '',
+    createdAt: assignmentAt,
+    updatedAt: assignmentAt,
+  });
+  assignmentBatch.set(doc(db, 'users', pendingRegistration.uid), {
+    active: true,
+    approvalStatus: 'approved',
+    updatedAt: assignmentAt,
+  }, { merge: true });
+  assignmentBatch.set(pendingRegistrationDocument.ref, {
+    status: 'approved',
+    counselorUid: counselorCredential.user.uid,
+    assignedAt: assignmentAt,
+    updatedAt: assignmentAt,
+  }, { merge: true });
+  await assignmentBatch.commit();
+  assert((await getDoc(doc(db, 'students', `student-${pendingRegistration.uid}`))).data().counselorUid === counselorCredential.user.uid, '상담사의 학생 본인 배정이 저장되지 않았습니다.');
+  assert((await getDoc(pendingRegistrationDocument.ref)).data().status === 'approved', '학생 가입 승인 상태가 변경되지 않았습니다.');
 
   const managedStudentUid = 'verification-counselor-managed-student';
   const managedStudentId = 'verification-counselor-managed-profile';
@@ -217,6 +307,8 @@ try {
   console.log('- assigned student query (s1 only)');
   console.log('- counselor global student access for combined operations role');
   console.log('- counselor managed user and student creation');
+  console.log('- student self-signup and protected email verification status');
+  console.log('- counselor self-assignment for verified pending students');
   console.log('- student login and own profile query');
   console.log('- student profile update limited to self-managed fields');
   console.log('- atomic consultation/note/follow-up document save');
