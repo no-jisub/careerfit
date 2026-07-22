@@ -28,7 +28,8 @@ export function subscribeCareerData(session, handlers, onError) {
 export async function saveCareerDocument(name, record) {
   if (!firestoreSyncEnabled) return;
   if (!record?.id) throw new Error(`Firestore document id is required for ${name}.`);
-  await setDoc(doc(db, name, record.id), record, { merge: true });
+  const { id, ...data } = record;
+  await setDoc(doc(db, name, id), data, { merge: true });
 }
 
 export async function saveCareerDocumentGroup(entries) {
@@ -36,7 +37,8 @@ export async function saveCareerDocumentGroup(entries) {
   const batch = writeBatch(db);
   entries.forEach(({ name, record }) => {
     if (!record?.id) throw new Error(`Firestore document id is required for ${name}.`);
-    batch.set(doc(db, name, record.id), record, { merge: true });
+    const { id, ...data } = record;
+    batch.set(doc(db, name, id), data, { merge: true });
   });
   await batch.commit();
 }

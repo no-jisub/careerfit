@@ -3,18 +3,19 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../App';
 import { programs } from '../data/programs';
 import Icon from '../components/Icon';
-import { PageIntro } from '../components/UI';
+import { EmptyState, PageIntro } from '../components/UI';
 
 export default function ProgramsPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { students, draftForm, setDraftForm, notify } = useApp();
-  const studentId = params.get('student') || 's1';
-  const student = students.find(s => s.id === studentId) || students[0];
+  const studentId = params.get('student') || students[0]?.id;
+  const student = students.find(s => s.id === studentId);
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState('전체');
   const [selected, setSelected] = useState(() => draftForm?.form?.programs || []);
-  const recommended = useMemo(() => programs.filter(p => (p.grades.includes(student.grade) || p.target.includes('전 학과')) && (!query || p.name.includes(query) || p.tags.some(t => t.includes(query))) && (mode === '전체' || p.mode === mode)).sort((a, b) => b.score - a.score), [student, query, mode]);
+  const recommended = useMemo(() => student ? programs.filter(p => (p.grades.includes(student.grade) || p.target.includes('전 학과')) && (!query || p.name.includes(query) || p.tags.some(t => t.includes(query))) && (mode === '전체' || p.mode === mode)).sort((a, b) => b.score - a.score) : [], [student, query, mode]);
+  if (!student) return <section className="card"><EmptyState title="프로그램을 추천할 학생을 찾을 수 없습니다" description="먼저 담당 학생을 선택해 주세요." action={<Link className="button secondary" to="/students">담당 학생 목록으로</Link>} /></section>;
   const toggle = p => { setSelected(prev => prev.includes(p.name) ? prev.filter(x => x !== p.name) : [...prev, p.name]); };
   const apply = () => { if (!selected.length) return; if (draftForm?.studentId === student.id) setDraftForm({ ...draftForm, form: { ...draftForm.form, programs: selected } }); notify('비교과 프로그램을 상담 기록에 추가했습니다.'); navigate(params.get('return') === 'form' ? `/students/${student.id}/consultation/new` : `/students/${student.id}`); };
   return <>

@@ -2,21 +2,25 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../App';
 import Icon from '../components/Icon';
-import { StatusBadge } from '../components/UI';
+import { EmptyState, StatusBadge } from '../components/UI';
 import { generateConsultationDraft } from '../services/consultationAiService';
 import { addDays, toDateKey } from '../utils/date';
 import { useAuth } from '../auth/AuthContext';
 
 const createEmptyForm = () => { const today = toDateKey(); return { date: today, type: '진로 탐색', purpose: '관심 직무 구체화 및 경험 계획 수립', currentConcern: '', rawMemo: '', guidance: '', programs: [], studentActions: '', counselorActions: '', nextCheckItems: '', nextDate: addDays(today, 14), studentVisible: true }; };
+const appendMissingDocuments = (current, additions) => [
+  ...current,
+  ...additions.filter(addition => !current.some(item => item.id === addition.id)),
+];
 
 export default function ConsultationFormPage() {
   const { studentId } = useParams();
   const navigate = useNavigate();
   const { profile, user } = useAuth();
   const { students, consultations, setConsultations, setConsultationNotes, setFollowUps, persistDocumentGroup, notify, draftForm, setDraftForm } = useApp();
-  const student = students.find(s => s.id === studentId) || students[0];
-  const latest = consultations.filter(c => c.studentId === student.id).sort((a, b) => b.date.localeCompare(a.date))[0];
-  const [form, setForm] = useState(() => draftForm?.studentId === student.id ? draftForm.form : { ...createEmptyForm(), currentConcern: student.concern, rawMemo: '개발 수업 경험을 되짚어 보니 문제를 정의하고 팀의 의견을 정리하는 과정에 흥미를 느꼈다고 함. 서비스 기획 직무를 직접 경험해 본 뒤 개발 직무와 비교하고 싶어 함.', studentActions: '관심 직무 비교표 작성 및 UX 서비스 기획 캠프 신청', counselorActions: '직무 비교표 양식과 캠프 상세 일정 전달', nextCheckItems: '직무 비교 결과와 캠프 신청 여부' });
+  const student = students.find(s => s.id === studentId);
+  const latest = student ? consultations.filter(c => c.studentId === student.id).sort((a, b) => b.date.localeCompare(a.date))[0] : null;
+  const [form, setForm] = useState(() => draftForm?.studentId === student?.id ? draftForm.form : { ...createEmptyForm(), currentConcern: student?.concern || '', rawMemo: '개발 수업 경험을 되짚어 보니 문제를 정의하고 팀의 의견을 정리하는 과정에 흥미를 느꼈다고 함. 서비스 기획 직무를 직접 경험해 본 뒤 개발 직무와 비교하고 싶어 함.', studentActions: '관심 직무 비교표 작성 및 UX 서비스 기획 캠프 신청', counselorActions: '직무 비교표 양식과 캠프 상세 일정 전달', nextCheckItems: '직무 비교 결과와 캠프 신청 여부' });
   const [aiDraft, setAiDraft] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -25,10 +29,13 @@ export default function ConsultationFormPage() {
   const [counselorTask, setCounselorTask] = useState('직무 비교표 양식 전달');
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
   useEffect(() => {
+    if (!student) return undefined;
     // Remove drafts saved by older builds; counseling notes must not persist in
     // long-lived, script-readable browser storage.
     localStorage.removeItem(`draft_${student.id}`);
-  }, [student.id]);
+  }, [student?.id]);
+
+  if (!student) return <section className="card"><EmptyState title="상담을 작성할 학생을 찾을 수 없습니다" description="현재 계정에 배정된 학생인지 확인해 주세요." action={<Link className="button secondary" to="/students?select=consultation">담당 학생 선택</Link>} /></section>;
 
   const openPrograms = () => { setDraftForm({ studentId: student.id, form }); navigate(`/programs?student=${student.id}&return=form`); };
   const generate = () => {
@@ -54,9 +61,9 @@ export default function ConsultationFormPage() {
         { name: 'consultationNotes', record: internalNote },
         ...newTasks.map(record => ({ name: 'followUps', record })),
       ]);
-      setConsultations(prev => [...prev, consultation]);
-      setConsultationNotes(prev => [...prev, internalNote]);
-      setFollowUps(prev => [...prev, ...newTasks]);
+      setConsultations(current => appendMissingDocuments(current, [consultation]));
+      setConsultationNotes(current => appendMissingDocuments(current, [internalNote]));
+      setFollowUps(current => appendMissingDocuments(current, newTasks));
       setDraftForm(null);
       notify('상담 기록을 저장했습니다.');
       navigate(`/students/${student.id}`);

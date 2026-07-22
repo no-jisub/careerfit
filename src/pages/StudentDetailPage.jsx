@@ -8,9 +8,9 @@ import { addDays, toDateKey } from '../utils/date';
 export default function StudentDetailPage() {
   const { studentId } = useParams();
   const { students, setStudents, consultations, consultationNotes, followUps, setFollowUps, persistDocument, notify } = useApp();
-  const student = students.find(s => s.id === studentId) || students[0];
-  const history = consultations.filter(c => c.studentId === student.id).sort((a, b) => b.date.localeCompare(a.date));
-  const tasks = followUps.filter(f => f.studentId === student.id && f.status !== 'complete');
+  const student = students.find(s => s.id === studentId);
+  const history = student ? consultations.filter(c => c.studentId === student.id).sort((a, b) => b.date.localeCompare(a.date)) : [];
+  const tasks = student ? followUps.filter(f => f.studentId === student.id && f.status !== 'complete') : [];
   const [expanded, setExpanded] = useState(history[0]?.id);
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -29,6 +29,7 @@ export default function StudentDetailPage() {
     window.addEventListener('keydown', closeModal);
     return () => window.removeEventListener('keydown', closeModal);
   }, [showAdd, showEdit, savingStudent]);
+  if (!student) return <section className="card"><EmptyState title="담당 학생을 찾을 수 없습니다" description="배정이 해제되었거나 현재 계정에서 조회할 수 없는 학생입니다." action={<Link className="button secondary" to="/students">담당 학생 목록으로</Link>} /></section>;
   const openEdit = () => {
     setEditForm({
       name: student.name,
@@ -74,7 +75,7 @@ export default function StudentDetailPage() {
     const nextTask = { id: `f${Date.now()}`, studentId: student.id, content: taskText.trim(), owner: taskOwner, dueDate, status: 'scheduled', consultationDate: toDateKey() };
     try {
       await persistDocument('followUps', nextTask);
-      setFollowUps(items => [...items, nextTask]);
+      setFollowUps(items => items.some(item => item.id === nextTask.id) ? items : [...items, nextTask]);
       setTaskText('');
       setTaskOwner('학생');
       setShowAdd(false);
