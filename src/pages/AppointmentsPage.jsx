@@ -34,6 +34,7 @@ export default function AppointmentsPage() {
   const [availabilityMonth, setAvailabilityMonth] = useState(`${toDateKey().slice(0, 7)}-01`);
   const [availabilitySaving, setAvailabilitySaving] = useState(false);
   const [availabilityError, setAvailabilityError] = useState('');
+  const [expandedAvailabilityDates, setExpandedAvailabilityDates] = useState([]);
   const myAvailability = useMemo(() => counselorAvailability
     .filter(item => item.counselorUid === counselorUid)
     .sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)), [counselorAvailability, counselorUid]);
@@ -148,6 +149,12 @@ export default function AppointmentsPage() {
     setAvailabilityError('');
   };
 
+  const toggleAvailabilityDateDetails = date => {
+    setExpandedAvailabilityDates(current => current.includes(date)
+      ? current.filter(item => item !== date)
+      : [...current, date]);
+  };
+
   const updateAvailabilityStatus = async (availability, status) => {
     const updated = { ...availability, status, updatedAt: new Date().toISOString() };
     if (status === 'open') {
@@ -178,7 +185,22 @@ export default function AppointmentsPage() {
     <PageIntro eyebrow="상담 운영" title="상담 일정 관리" description="학생이 신청할 수 있는 시간을 열고, 접수된 상담 내용을 확인해 일정을 확정하세요." action={<div className="page-action-group"><button className="button secondary" onClick={() => { setAvailabilityError(''); setAvailabilityForm(emptyAvailabilityForm()); setAvailabilityMonth(`${toDateKey().slice(0, 7)}-01`); setShowAvailabilityForm(true); }}><Icon name="calendar" size={18} />가능 시간 일괄 등록</button><button className="button primary" onClick={openCreate}><Icon name="plus" size={18} />직접 예약</button></div>} />
     <section className="card availability-management-card">
       <div className="section-header"><div><span className="eyebrow">상담 신청 설정</span><h2>학생에게 공개된 상담 가능 시간</h2><p>열린 시간만 담당 학생의 상담 신청 화면에 표시됩니다.</p></div><span className="availability-open-count">신청 가능 {myAvailability.filter(item => item.status === 'open').length}개</span></div>
-      {myAvailability.length ? <div className="availability-date-groups">{Object.entries(availabilityByDate).map(([date, slots]) => { const openCount = slots.filter(item => item.status === 'open').length; const closedCount = slots.filter(item => item.status === 'closed').length; return <section key={date} className="availability-date-group"><div className="availability-date-header"><div><strong>{date}</strong><span>신청 가능 {openCount}개 · 예약/마감 {slots.length - openCount}개</span></div>{openCount > 0 ? <button className="text-button danger" onClick={() => updateAvailabilityDateStatus(date, 'closed')}>이 날짜 전체 마감</button> : closedCount > 0 && <button className="text-button" onClick={() => updateAvailabilityDateStatus(date, 'open')}>닫힌 시간 다시 열기</button>}</div><div className="availability-slot-list">{slots.map(item => { const linkedAppointment = appointments.find(appointment => appointment.id === item.appointmentId); const linkedStudent = linkedAppointment ? students.find(student => student.id === linkedAppointment.studentId) : null; const canReopen = item.status === 'booked' && linkedAppointment?.status === 'cancelled'; const cancellationLabel = getAppointmentCancellationLabel(linkedAppointment); return <article key={item.id} className={item.status}><time><strong>{item.time}–{getTimeRangeEnd(item)}</strong><span>{item.duration}분</span></time><div><strong>{item.location}</strong><span>{item.status === 'booked' ? `${linkedStudent?.name || '학생'} ${linkedAppointment?.status === 'cancelled' ? `신청 취소 · ${cancellationLabel}` : '상담 신청 접수'}` : item.status === 'closed' ? '학생에게 표시되지 않음' : '학생 신청 가능'}</span></div><span className={`availability-status ${item.status}`}>{item.status === 'open' ? '신청 가능' : item.status === 'booked' ? linkedAppointment?.status === 'cancelled' ? cancellationLabel : '신청 접수' : '마감'}</span>{(item.status !== 'booked' || canReopen) && <button className="text-button" onClick={() => updateAvailabilityStatus(item, item.status === 'open' ? 'closed' : 'open')}>{item.status === 'open' ? '마감' : '다시 열기'}</button>}</article>; })}</div></section>; })}</div> : <EmptyState icon="calendar" title="등록한 상담 가능 시간이 없습니다" description="가능 시간 일괄 등록 버튼으로 학생이 신청할 날짜와 시간을 열어 주세요." />}
+      {myAvailability.length ? <div className="availability-date-groups">{Object.entries(availabilityByDate).map(([date, slots]) => {
+        const openCount = slots.filter(item => item.status === 'open').length;
+        const closedCount = slots.filter(item => item.status === 'closed').length;
+        const expanded = expandedAvailabilityDates.includes(date);
+        const contentId = `availability-date-${date}`;
+        return <section key={date} className={`availability-date-group ${expanded ? 'expanded' : ''}`}>
+          <button type="button" className="availability-date-toggle" aria-expanded={expanded} aria-controls={contentId} onClick={() => toggleAvailabilityDateDetails(date)}>
+            <span><strong>{date}</strong><small>신청 가능 {openCount}개 · 예약/마감 {slots.length - openCount}개</small></span>
+            <span className="availability-date-toggle-label">{expanded ? '시간 접기' : '시간 보기'}<Icon name="chevron" size={17} /></span>
+          </button>
+          {expanded && <div id={contentId} className="availability-date-content">
+            <div className="availability-date-actions">{openCount > 0 ? <button className="text-button danger" onClick={() => updateAvailabilityDateStatus(date, 'closed')}>이 날짜 전체 마감</button> : closedCount > 0 && <button className="text-button" onClick={() => updateAvailabilityDateStatus(date, 'open')}>닫힌 시간 다시 열기</button>}</div>
+            <div className="availability-slot-list">{slots.map(item => { const linkedAppointment = appointments.find(appointment => appointment.id === item.appointmentId); const linkedStudent = linkedAppointment ? students.find(student => student.id === linkedAppointment.studentId) : null; const canReopen = item.status === 'booked' && linkedAppointment?.status === 'cancelled'; const cancellationLabel = getAppointmentCancellationLabel(linkedAppointment); return <article key={item.id} className={item.status}><time><strong>{item.time}–{getTimeRangeEnd(item)}</strong><span>{item.duration}분</span></time><div><strong>{item.location}</strong><span>{item.status === 'booked' ? `${linkedStudent?.name || '학생'} ${linkedAppointment?.status === 'cancelled' ? `신청 취소 · ${cancellationLabel}` : '상담 신청 접수'}` : item.status === 'closed' ? '학생에게 표시되지 않음' : '학생 신청 가능'}</span></div><span className={`availability-status ${item.status}`}>{item.status === 'open' ? '신청 가능' : item.status === 'booked' ? linkedAppointment?.status === 'cancelled' ? cancellationLabel : '신청 접수' : '마감'}</span>{(item.status !== 'booked' || canReopen) && <button className="text-button" onClick={() => updateAvailabilityStatus(item, item.status === 'open' ? 'closed' : 'open')}>{item.status === 'open' ? '마감' : '다시 열기'}</button>}</article>; })}</div>
+          </div>}
+        </section>;
+      })}</div> : <EmptyState icon="calendar" title="등록한 상담 가능 시간이 없습니다" description="가능 시간 일괄 등록 버튼으로 학생이 신청할 날짜와 시간을 열어 주세요." />}
     </section>
     <section className="filter-card" aria-label="상담 일정 검색 및 필터"><label className="search-field"><span className="sr-only">일정 검색</span><Icon name="search" size={19} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="학생, 학번, 상담 유형, 장소 검색" /></label><label><span>상태</span><select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="all">전체</option><option value="pending">대기</option><option value="confirmed">확정</option><option value="completed">완료</option><option value="cancelled">취소</option></select></label><button className="text-button" onClick={() => { setQuery(''); setStatusFilter('all'); }}>필터 초기화</button></section>
     <section className="card appointment-list-card">
