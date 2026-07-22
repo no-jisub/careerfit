@@ -29,6 +29,7 @@ const ConsultationsPage = lazy(() => import('./pages/ConsultationsPage'));
 const FollowUpsPage = lazy(() => import('./pages/FollowUpsPage'));
 const ProgramsPage = lazy(() => import('./pages/ProgramsPage'));
 const StudentMyPage = lazy(() => import('./pages/StudentMyPage'));
+const StudentWithdrawalPage = lazy(() => import('./pages/StudentWithdrawalPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage'));
@@ -195,6 +196,7 @@ export default function App() {
     <Route path="/signup" element={<SignupPage />} />
     <Route path="/account-status" element={<AccountStatusPage />} />
     <Route path="/student" element={role === 'student' ? <StudentMyPage /> : <Navigate to="/login" replace />} />
+    <Route path="/student/withdrawal" element={role === 'student' ? <StudentWithdrawalPage /> : <Navigate to="/login" replace />} />
     <Route path="/*" element={isOperationsStaff(role) ? <CounselorRoutes /> : <Navigate to="/login" replace />} />
   </Routes></Suspense></AppProvider>;
 }

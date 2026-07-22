@@ -1222,3 +1222,74 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
   background:transparent;
   box-shadow:none !important;
 }
+
+/* Student record and account management */
+.student-record-management { padding:28px; overflow:hidden; }
+.student-record-management .section-header { align-items:center; margin-bottom:22px; }
+.student-record-management .section-header p { max-width:650px; line-height:1.65; }
+.student-record-count { flex:0 0 auto; padding:7px 11px; border-radius:999px; color:var(--blue); background:var(--blue-soft); font-size:11px; font-weight:800; }
+.student-record-list { display:grid; gap:10px; }
+.student-record-list article {
+  min-height:76px;
+  padding:14px 16px;
+  border:1px solid var(--border);
+  border-radius:13px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  background:#fbfcfe;
+}
+.student-record-info { min-width:0; display:flex!important; align-items:center; gap:14px!important; }
+.student-record-info > div { min-width:0; display:grid; gap:5px; }
+.student-record-info strong { color:var(--navy); font-size:14px; line-height:1.45; }
+.student-record-info > div > span { color:var(--muted); font-size:11px; line-height:1.5; }
+.student-record-date { flex:0 0 auto; padding:8px 10px; border-radius:9px; color:var(--blue)!important; background:var(--blue-soft); font-size:11px!important; font-weight:800; }
+.student-record-delete { min-height:36px; padding:0 8px; white-space:nowrap; }
+.student-portal footer > div { display:grid; gap:4px; }
+.student-portal footer strong { color:#64748b; font-size:11px; }
+.student-portal footer > div span { color:#8e98a9; font-size:10px; }
+.student-withdrawal-link { padding:8px 0; color:var(--red); font-size:10px; font-weight:700; text-decoration:underline; text-decoration-color:rgba(197,62,69,.35); text-underline-offset:3px; }
+.student-withdrawal-link:hover { color:#a82f36; text-decoration-color:currentColor; }
+
+.student-withdrawal-page main { width:min(calc(100% - 40px), 720px); padding-top:34px; }
+.student-withdrawal-page > header .brand { display:flex; align-items:center; }
+.withdrawal-back-link { width:max-content; margin-bottom:18px; display:inline-flex; align-items:center; gap:6px; color:var(--muted); font-size:12px; font-weight:700; }
+.withdrawal-back-link svg { transform:rotate(180deg); }
+.withdrawal-card { padding:36px; border:1px solid var(--border); border-radius:20px; background:#fff; box-shadow:var(--shadow); }
+.withdrawal-icon { width:54px; height:54px; margin-bottom:20px; display:grid; place-items:center; border-radius:16px; color:var(--red); background:var(--red-soft); }
+.withdrawal-card h1 { margin:7px 0 12px; color:var(--navy); font-size:clamp(25px, 4vw, 32px); letter-spacing:-1px; }
+.withdrawal-description, .withdrawal-complete > p { margin:0; color:var(--muted); font-size:13px; line-height:1.75; }
+.withdrawal-notice-list { margin:24px 0; padding:0; display:grid; gap:10px; list-style:none; }
+.withdrawal-notice-list li { padding:15px; border:1px solid var(--border); border-radius:12px; display:flex; align-items:flex-start; gap:11px; background:#f8fafc; }
+.withdrawal-notice-list li > svg { flex:0 0 auto; margin-top:2px; color:var(--blue); }
+.withdrawal-notice-list li span { color:var(--muted); font-size:12px; line-height:1.6; }
+.withdrawal-notice-list li strong { margin-bottom:2px; display:block; color:var(--navy); font-size:13px; }
+.withdrawal-confirm { margin:0; padding:15px; border:1px solid #f0c7ca; border-radius:12px; display:flex; align-items:flex-start; gap:10px; color:#7d3035; background:#fff7f7; font-size:12px; font-weight:700; line-height:1.55; cursor:pointer; }
+.withdrawal-confirm input { width:18px; height:18px; min-height:18px; margin:0; flex:0 0 18px; }
+.withdrawal-actions { margin-top:22px; display:flex; justify-content:flex-end; gap:9px; }
+.withdrawal-submit { color:#fff; background:var(--red); }
+.withdrawal-submit:hover:not(:disabled) { background:#aa3037; }
+.withdrawal-submit:disabled { color:#fff; background:#c9a2a5; }
+.withdrawal-complete dl { margin:24px 0; padding:4px 18px; border-radius:13px; background:var(--bg); }
+.withdrawal-complete dl div { padding:13px 0; border-bottom:1px solid var(--border); display:grid; grid-template-columns:100px 1fr; gap:12px; }
+.withdrawal-complete dl div:last-child { border-bottom:0; }
+.withdrawal-complete dt { color:var(--muted); font-size:12px; }
+.withdrawal-complete dd { margin:0; color:var(--navy); font-size:13px; font-weight:800; }
+
+@media (max-width:600px) {
+  .student-record-management { padding:21px 17px; }
+  .student-record-management .section-header { align-items:flex-start; }
+  .student-record-count { margin-top:2px; }
+  .student-record-list article { align-items:flex-start; flex-direction:column; gap:12px; }
+  .student-record-info { align-items:flex-start; }
+  .student-record-delete, .student-record-list .request-status { margin-left:54px; }
+  .student-portal footer { padding:22px 18px; display:flex; align-items:center; gap:16px; text-align:left; }
+  .student-portal footer > div { min-width:0; }
+  .student-portal footer > div span { margin-top:0; line-height:1.5; }
+  .student-withdrawal-link { flex:0 0 auto; }
+  .student-withdrawal-page main { width:calc(100% - 30px); padding-top:22px; }
+  .withdrawal-card { padding:26px 19px; border-radius:17px; }
+  .withdrawal-actions { display:grid; grid-template-columns:1fr; }
+  .withdrawal-actions .button { width:100%; }
+}
