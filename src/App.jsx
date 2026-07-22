@@ -4,6 +4,7 @@ import AppLayout from './components/AppLayout';
 import { initialStudents } from './data/students';
 import { initialConsultations } from './data/consultations';
 import { initialFollowUps } from './data/followUps';
+import { initialAppointments } from './data/appointments';
 import { resolveFollowUpStatus, toDateKey } from './utils/date';
 import { useAuth } from './auth/AuthContext';
 import { saveCareerDocument, saveCareerDocumentGroup, subscribeCareerData } from './services/firebaseDataService';
@@ -20,6 +21,7 @@ const ProgramsPage = lazy(() => import('./pages/ProgramsPage'));
 const StudentMyPage = lazy(() => import('./pages/StudentMyPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
+const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage'));
 
 const AppContext = createContext(null);
 const read = (key, fallback) => {
@@ -36,6 +38,7 @@ function AppProvider({ children }) {
   const [consultations, setConsultations] = useState(() => syncingRemoteData ? [] : read('careerfit_consultations', initialConsultations));
   const [consultationNotes, setConsultationNotes] = useState(() => syncingRemoteData ? [] : read('careerfit_consultation_notes', []));
   const [followUps, setFollowUps] = useState(() => syncingRemoteData ? [] : read('careerfit_followups', initialFollowUps).map(followUp => ({ ...followUp, status: resolveFollowUpStatus(followUp) })));
+  const [appointments, setAppointments] = useState(() => syncingRemoteData ? [] : read('careerfit_appointments', initialAppointments));
   const [toast, setToast] = useState('');
   const [draftForm, setDraftForm] = useState(null);
   const [dataLoading, setDataLoading] = useState(syncingRemoteData);
@@ -44,6 +47,7 @@ function AppProvider({ children }) {
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_consultations', JSON.stringify(consultations)); }, [consultations, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_consultation_notes', JSON.stringify(consultationNotes)); }, [consultationNotes, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_followups', JSON.stringify(followUps)); }, [followUps, syncingRemoteData]);
+  useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_appointments', JSON.stringify(appointments)); }, [appointments, syncingRemoteData]);
   useEffect(() => { if (!toast) return undefined; const timer = setTimeout(() => setToast(''), 3200); return () => clearTimeout(timer); }, [toast]);
   useEffect(() => { if (!role) setDraftForm(null); }, [role]);
 
@@ -55,7 +59,7 @@ function AppProvider({ children }) {
     const loaded = new Set();
     const markLoaded = name => {
       loaded.add(name);
-      const expectedCount = role === 'student' ? 3 : role === 'admin' ? 5 : 4;
+      const expectedCount = role === 'student' ? 4 : role === 'admin' ? 6 : 5;
       if (loaded.size === expectedCount) setDataLoading(false);
     };
     return subscribeCareerData(
@@ -66,6 +70,7 @@ function AppProvider({ children }) {
         consultations: items => { setConsultations(items); markLoaded('consultations'); },
         consultationNotes: items => { setConsultationNotes(items); markLoaded('consultationNotes'); },
         followUps: items => { setFollowUps(items.map(followUp => ({ ...followUp, status: resolveFollowUpStatus(followUp) }))); markLoaded('followUps'); },
+        appointments: items => { setAppointments(items); markLoaded('appointments'); },
       },
       () => { setDataLoading(false); setToast('Firebase 데이터를 불러오지 못했습니다. 권한을 확인해 주세요.'); },
     );
@@ -78,6 +83,7 @@ function AppProvider({ children }) {
     if (name === 'consultationNotes') return { ...record, counselorUid: record.counselorUid || user.uid };
     if (name === 'consultations') return { ...record, counselorUid: record.counselorUid || user.uid, studentUid: record.studentUid || student?.uid || '', studentVisible: record.studentVisible ?? true };
     if (name === 'followUps') return { ...record, ownerUid: record.ownerUid || user.uid, assigneeUid: record.assigneeUid || (record.owner === '학생' ? student?.uid || '' : user.uid) };
+    if (name === 'appointments') return { ...record, counselorUid: record.counselorUid || student?.counselorUid || user.uid, studentUid: record.studentUid || student?.uid || '' };
     return record;
   };
 
@@ -105,7 +111,7 @@ function AppProvider({ children }) {
     }
   };
 
-  const value = useMemo(() => ({ users, setUsers, students, setStudents, consultations, setConsultations, consultationNotes, setConsultationNotes, followUps, setFollowUps, persistDocument, persistDocumentGroup, toast, notify: setToast, draftForm, setDraftForm }), [users, students, consultations, consultationNotes, followUps, toast, draftForm, user]);
+  const value = useMemo(() => ({ users, setUsers, students, setStudents, consultations, setConsultations, consultationNotes, setConsultationNotes, followUps, setFollowUps, appointments, setAppointments, persistDocument, persistDocumentGroup, toast, notify: setToast, draftForm, setDraftForm }), [users, students, consultations, consultationNotes, followUps, appointments, toast, draftForm, user]);
   if (dataLoading) return <main className="app-loading" role="status">상담 데이터를 불러오고 있어요...</main>;
   return <AppContext.Provider value={value}>{children}{toast && <div className="toast" role="status" aria-live="polite"><span>✓</span>{toast}</div>}</AppContext.Provider>;
 }
@@ -120,6 +126,7 @@ function CounselorRoutes() {
       <Route path="students/:studentId/consultation/new" element={<ConsultationFormPage />} />
       <Route path="consultations" element={<ConsultationsPage />} />
       <Route path="follow-ups" element={<FollowUpsPage />} />
+      <Route path="appointments" element={<AppointmentsPage />} />
       <Route path="programs" element={<ProgramsPage />} />
       <Route path="settings" element={<SettingsPage />} />
       <Route path="admin/users" element={role === 'admin' ? <AdminUsersPage /> : <Navigate to="/dashboard" replace />} />

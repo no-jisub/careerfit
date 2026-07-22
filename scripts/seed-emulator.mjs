@@ -163,6 +163,32 @@ const documents = {
       updatedAt: now,
     },
   },
+  appointments: {
+    a1: {
+      studentId: 's1',
+      studentUid: student.uid,
+      counselorUid: counselor.uid,
+      date: '2026-07-22',
+      time: '10:00',
+      type: '진로 상담',
+      location: '대학일자리플러스센터 상담실 2',
+      preparation: '관심 직무 비교표',
+      status: 'scheduled',
+      updatedAt: now,
+    },
+    a2: {
+      studentId: 's2',
+      studentUid: otherStudent.uid,
+      counselorUid: otherCounselor.uid,
+      date: '2026-07-22',
+      time: '11:30',
+      type: '취업 상담',
+      location: '대학일자리플러스센터 상담실 1',
+      preparation: '포트폴리오 초안',
+      status: 'scheduled',
+      updatedAt: now,
+    },
+  },
 };
 
 for (const [collectionName, records] of Object.entries(documents)) {

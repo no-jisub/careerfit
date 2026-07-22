@@ -951,3 +951,17 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .assignment-list select { min-width:190px; }
 @media (max-width: 900px) { .admin-grid { grid-template-columns:1fr; } }
 @media (max-width: 600px) { .admin-user-list article, .assignment-list article { grid-template-columns:1fr; align-items:start; } .assignment-list select { width:100%; } }
+.appointment-list { display:grid; }
+.appointment-list article { min-height:108px; padding:18px 22px; border-top:1px solid var(--border); display:grid; grid-template-columns:130px minmax(0,1fr) auto auto; align-items:center; gap:20px; }
+.appointment-list article.cancelled { opacity:.58; }
+.appointment-list time { display:grid; gap:4px; }
+.appointment-list time span { color:var(--blue); font-size:1.15rem; font-weight:800; }
+.appointment-list article > div:nth-child(2) { display:grid; gap:5px; }
+.appointment-list article a { color:var(--navy); font-weight:800; }
+.appointment-list article p, .appointment-list article small { margin:0; color:var(--muted); }
+.appointment-status { padding:6px 10px; border-radius:999px; background:var(--blue-soft); color:var(--blue); font-size:.78rem; font-weight:800; }
+.appointment-status.cancelled { background:var(--red-soft); color:var(--red); }
+.appointment-status.completed { background:var(--green-soft); color:var(--green); }
+.appointment-actions { display:flex; align-items:center; gap:10px; }
+.text-button.danger { color:var(--red); }
+@media (max-width: 760px) { .appointment-list article { grid-template-columns:1fr auto; gap:12px; } .appointment-list time, .appointment-list article > div:nth-child(2) { grid-column:1 / -1; } }
