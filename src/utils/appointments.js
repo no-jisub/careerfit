@@ -48,6 +48,15 @@ export function resolveCancelledAvailability(availability, decision, now = new D
   return { value: { ...availability, status: 'closed', reopenDecision: 'kept-closed', updatedAt: now.toISOString() } };
 }
 
+// 날짜 전체 재오픈은 취소 후 상담사 결정 대기 슬롯과 이미 지난 슬롯을 건드리지 않습니다.
+// 취소 슬롯은 개별 "다시 열기/마감 유지" 흐름에서만 처리합니다.
+export function canBulkReopenAvailability(availability, now = new Date()) {
+  if (!availability || availability.status !== 'closed') return false;
+  if (availability.closedReason === 'appointment-cancelled' && availability.reopenDecision === 'pending') return false;
+  const start = getAppointmentStart(availability);
+  return Boolean(start && start > now);
+}
+
 export function createRescheduleRequest(appointment, availability, role, message = '', now = new Date()) {
   if (!canRescheduleAppointment(appointment, now)) return { error: '상담 시작 24시간 전부터는 일정을 변경할 수 없습니다.' };
   if (!availability || availability.status !== 'open' || availability.counselorUid !== appointment.counselorUid) return { error: '선택한 시간은 예약할 수 없습니다.' };

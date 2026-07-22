@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   buildHourlyAvailabilitySlots,
   buildMonthCalendar,
+  canBulkReopenAvailability,
   canRescheduleAppointment,
   closeAvailabilityAfterCancellation,
   createRescheduleRequest,
@@ -38,6 +39,13 @@ test('cancelled booking remains closed until counselor explicitly reopens it', (
 test('past cancelled slot cannot be reopened', () => {
   const slot = { id: 'slot-1', date: '2026-07-20', time: '10:00', status: 'closed', closedReason: 'appointment-cancelled' };
   assert.match(resolveCancelledAvailability(slot, 'reopen', new Date('2026-07-23T00:00:00.000Z')).error, /지난/);
+});
+
+test('bulk reopen skips pending cancellation decisions and past slots', () => {
+  const now = new Date('2026-07-23T00:00:00.000Z');
+  assert.equal(canBulkReopenAvailability({ status: 'closed', date: '2026-07-24', time: '10:00' }, now), true);
+  assert.equal(canBulkReopenAvailability({ status: 'closed', date: '2026-07-24', time: '10:00', closedReason: 'appointment-cancelled', reopenDecision: 'pending' }, now), false);
+  assert.equal(canBulkReopenAvailability({ status: 'closed', date: '2026-07-22', time: '10:00' }, now), false);
 });
 
 test('reschedule is blocked within 24 hours and creates a pending request otherwise', () => {

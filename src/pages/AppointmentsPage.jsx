@@ -5,7 +5,7 @@ import Icon from '../components/Icon';
 import { EmptyState, PageIntro } from '../components/UI';
 import { getTimeRangeEnd, parseDateKey, toDateKey } from '../utils/date';
 import { validateAppointmentInput } from '../utils/validation';
-import { activeAppointmentStatuses, buildHourlyAvailabilitySlots, buildMonthCalendar, canRescheduleAppointment, closeAvailabilityAfterCancellation, createRescheduleRequest, getAppointmentCancellationLabel, hasCounselorAppointmentConflict, holdAvailabilityForReschedule, resolveCancelledAvailability, resolveRescheduleRequest, upsertAppointmentById } from '../utils/appointments';
+import { activeAppointmentStatuses, buildHourlyAvailabilitySlots, buildMonthCalendar, canBulkReopenAvailability, canRescheduleAppointment, closeAvailabilityAfterCancellation, createRescheduleRequest, getAppointmentCancellationLabel, hasCounselorAppointmentConflict, holdAvailabilityForReschedule, resolveCancelledAvailability, resolveRescheduleRequest, upsertAppointmentById } from '../utils/appointments';
 import { useAuth } from '../auth/AuthContext';
 import { buildEventNotification } from '../utils/notifications';
 
@@ -244,7 +244,9 @@ export default function AppointmentsPage() {
   };
 
   const updateAvailabilityDateStatus = async (date, status) => {
-    const targets = myAvailability.filter(item => item.date === date && (status === 'closed' ? item.status === 'open' : item.status === 'closed'));
+    const targets = myAvailability.filter(item => item.date === date && (status === 'closed'
+      ? item.status === 'open'
+      : canBulkReopenAvailability(item)));
     if (!targets.length) return;
     const now = new Date().toISOString();
     const updates = targets.map(item => ({ ...item, status, updatedAt: now }));
