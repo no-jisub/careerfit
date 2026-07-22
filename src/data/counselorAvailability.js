@@ -7,7 +7,7 @@ const dateAfter = days => {
 };
 
 export const initialCounselorAvailability = [
-  { id: 'availability-demo-1', counselorUid: 'demo-counselor', date: dateAfter(1), time: '10:00', endTime: '10:50', duration: 50, location: '대학일자리플러스센터 상담실 2', status: 'open' },
-  { id: 'availability-demo-2', counselorUid: 'demo-counselor', date: dateAfter(1), time: '14:00', endTime: '14:50', duration: 50, location: '대학일자리플러스센터 상담실 2', status: 'open' },
-  { id: 'availability-demo-3', counselorUid: 'demo-counselor', date: dateAfter(3), time: '11:00', endTime: '11:50', duration: 50, location: '온라인 상담실', status: 'open' },
+  { id: 'availability-demo-1', counselorUid: 'demo-counselor', date: dateAfter(1), time: '10:00', endTime: '11:00', duration: 60, location: '대학일자리플러스센터 상담실 2', status: 'open' },
+  { id: 'availability-demo-2', counselorUid: 'demo-counselor', date: dateAfter(1), time: '14:00', endTime: '15:00', duration: 60, location: '대학일자리플러스센터 상담실 2', status: 'open' },
+  { id: 'availability-demo-3', counselorUid: 'demo-counselor', date: dateAfter(3), time: '11:00', endTime: '12:00', duration: 60, location: '온라인 상담실', status: 'open' },
 ];

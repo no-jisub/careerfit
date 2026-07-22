@@ -48,7 +48,11 @@ export function restoreCounselorAvailabilityStore(stored, fallback, today = toDa
   const demoSlots = new Map(fallback.map(item => [item.id, item]));
   return items.map(item => {
     const refreshed = demoSlots.get(item.id);
-    return refreshed && item.date < today ? refreshed : item;
+    if (!refreshed) return item;
+    if (item.date < today) return refreshed;
+    return item.duration !== refreshed.duration
+      ? { ...refreshed, status: item.status }
+      : item;
   });
 }
 

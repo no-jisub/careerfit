@@ -43,7 +43,7 @@ test('bulk availability creates one-hour slots and skips existing or booked time
 });
 
 test('expired built-in demo slots roll forward without changing counselor-created slots', () => {
-  const fallback = [{ id: 'availability-demo-1', date: '2026-07-23', time: '10:00', status: 'open' }];
+  const fallback = [{ id: 'availability-demo-1', date: '2026-07-23', time: '10:00', endTime: '11:00', duration: 60, status: 'open' }];
   const stored = [
     { id: 'availability-demo-1', date: '2026-07-10', time: '10:00', status: 'closed' },
     { id: 'availability-custom-1', date: '2026-07-10', time: '14:00', status: 'closed' },
@@ -52,6 +52,15 @@ test('expired built-in demo slots roll forward without changing counselor-create
   assert.deepEqual(restoreCounselorAvailabilityStore(stored, fallback, '2026-07-22'), [
     fallback[0],
     stored[1],
+  ]);
+});
+
+test('legacy 50-minute demo slots migrate to one hour while preserving their status', () => {
+  const fallback = [{ id: 'availability-demo-1', date: '2026-07-23', time: '10:00', endTime: '11:00', duration: 60, status: 'open' }];
+  const stored = [{ id: 'availability-demo-1', date: '2026-07-23', time: '10:00', endTime: '10:50', duration: 50, status: 'closed' }];
+
+  assert.deepEqual(restoreCounselorAvailabilityStore(stored, fallback, '2026-07-22'), [
+    { ...fallback[0], status: 'closed' },
   ]);
 });
 
