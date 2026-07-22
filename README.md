@@ -221,14 +221,43 @@ npm run dev
 
 Vite가 출력한 로컬 주소로 접속합니다. 환경변수를 변경하면 개발 서버를 다시 시작하세요.
 
+### Firebase 실제 흐름 로컬 실행
+
+실제 Firebase 프로젝트나 개인정보를 사용하지 않고 Auth 로그인, 담당 학생 조회,
+Firestore 저장 흐름을 확인할 수 있습니다. 세 개의 터미널에서 순서대로 실행합니다.
+
+```bash
+# 터미널 1: Auth/Firestore Emulator
+npm run firebase:emulators
+
+# 터미널 2: Emulator가 준비된 뒤 가상 계정과 담당 학생 데이터 생성
+npm run firebase:seed
+
+# 터미널 3: Firebase 모드로 프런트엔드 실행
+npm run dev:firebase
+```
+
+로컬 테스트 계정은 다음과 같습니다. 이 계정과 비밀번호는 Emulator에만 존재합니다.
+
+| 역할 | 이메일 | 비밀번호 |
+| --- | --- | --- |
+| 상담 담당자 | `counselor@careerfit.local` | `CareerFit123!` |
+| 학생 | `student@careerfit.local` | `CareerFit123!` |
+
+상담 담당자 계정에는 김하늘 학생만 배정되어 있습니다. 별도 상담사에게 배정된
+이서준 학생도 시드되므로, 김하늘 학생만 조회되면 담당 학생 필터가 작동한 것입니다.
+Emulator UI는 `http://127.0.0.1:4000`에서 확인할 수 있습니다.
+
 ### 주요 명령어
 
 | 명령어 | 설명 |
 | --- | --- |
 | `npm run dev` | Vite 개발 서버 |
+| `npm run dev:firebase` | Emulator 설정으로 Vite 개발 서버 실행 |
 | `npm run build` | 프로덕션 빌드 및 Sites 호환 산출물 생성 |
 | `npm run preview` | `dist` 로컬 미리보기 |
 | `npm run firebase:emulators` | Auth/Firestore/Hosting Emulator 실행 |
+| `npm run firebase:seed` | Emulator 전용 가상 계정·담당 학생 데이터 생성 |
 | `npm run firebase:deploy:hosting` | 로컬 빌드 후 Firebase Hosting 수동 배포 |
 | `npm run firebase:deploy:rules` | Firestore 규칙과 인덱스만 배포 |
 
