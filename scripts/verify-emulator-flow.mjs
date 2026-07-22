@@ -220,6 +220,24 @@ try {
     counselor: '박지현',
     summary: 'Emulator 기능 검증용 상담 기록입니다.',
   });
+  documentGroup.set(doc(db, 'consultationSummaries', verificationId), {
+    consultationId: verificationId,
+    studentId: 's1',
+    studentUid: assignedStudents.docs[0].data().uid,
+    counselorUid: counselorCredential.user.uid,
+    counselor: '박지현',
+    date: '2026-07-22',
+    type: '기능 검증',
+    purpose: '학생 공개 문서 분리 검증',
+    summary: '학생에게 공개되는 검증 요약입니다.',
+    strengths: '',
+    concern: '',
+    programs: [],
+    studentActions: '',
+    nextCheckItems: '',
+    visibleFields: ['summary'],
+    published: true,
+  });
   documentGroup.set(doc(db, 'consultationNotes', verificationId), {
     consultationId: verificationId,
     studentId: 's1',
@@ -249,6 +267,7 @@ try {
   });
   await documentGroup.commit();
   assert((await getDoc(doc(db, 'consultations', verificationId))).exists(), '상담 문서 저장에 실패했습니다.');
+  assert((await getDoc(doc(db, 'consultationSummaries', verificationId))).exists(), '학생 공개 상담 요약 저장에 실패했습니다.');
   assert((await getDoc(doc(db, 'consultationNotes', verificationId))).exists(), '내부 메모 문서 저장에 실패했습니다.');
   assert((await getDoc(doc(db, 'appointments', verificationAppointmentId))).exists(), '상담 일정 저장에 실패했습니다.');
 
@@ -285,6 +304,27 @@ try {
     where('studentUid', '==', studentCredential.user.uid),
   ));
   assert(ownAppointments.size === 2, `학생 본인 상담 일정 조회 결과가 올바르지 않습니다: ${ownAppointments.size}`);
+  const publicSummaries = await getDocs(query(
+    collection(db, 'consultationSummaries'),
+    where('studentUid', '==', studentCredential.user.uid),
+    where('published', '==', true),
+  ));
+  assert(publicSummaries.size === 2, `학생 공개 상담 요약 조회 결과가 올바르지 않습니다: ${publicSummaries.size}`);
+  let blockedPrivateConsultation = false;
+  try {
+    await getDoc(doc(db, 'consultations', verificationId));
+  } catch (error) {
+    blockedPrivateConsultation = error.code === 'permission-denied';
+  }
+  assert(blockedPrivateConsultation, '학생의 비공개 상담 원본 조회가 차단되지 않았습니다.');
+  const cancelledAt = new Date().toISOString();
+  await updateDoc(doc(db, 'appointments', verificationAppointmentId), {
+    status: 'cancelled',
+    cancelledAt,
+    cancelledBy: studentCredential.user.uid,
+    updatedAt: cancelledAt,
+  });
+  assert((await getDoc(doc(db, 'appointments', verificationAppointmentId))).data().status === 'cancelled', '학생의 상담 예약 취소가 저장되지 않았습니다.');
   let blockedInternalNote = false;
   try {
     await getDoc(doc(db, 'consultationNotes', 'n1'));
@@ -314,6 +354,8 @@ try {
   console.log('- atomic consultation/note/follow-up document save');
   console.log('- student follow-up completion update');
   console.log('- counselor appointment save and student appointment query');
+  console.log('- student-selected public summary document and private original isolation');
+  console.log('- student appointment cancellation');
   console.log('- invalid document shape denied by Firestore rules');
   console.log('- counselor-only consultation note denied for student');
 } finally {
