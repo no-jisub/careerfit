@@ -1,4 +1,4 @@
-import { addDays, toDateKey } from './date';
+import { addDays, toDateKey } from './date.js';
 
 export function buildOperationalNotifications(students, followUps, appointments, today = toDateKey()) {
   const studentById = new Map(students.map(student => [student.id, student]));
