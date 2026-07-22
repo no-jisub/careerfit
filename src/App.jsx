@@ -23,6 +23,8 @@ const StudentMyPage = lazy(() => import('./pages/StudentMyPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const InsightsPage = lazy(() => import('./pages/InsightsPage'));
 
 const AppContext = createContext(null);
 const read = (key, fallback) => {
@@ -129,6 +131,8 @@ function CounselorRoutes() {
       <Route path="consultations" element={<ConsultationsPage />} />
       <Route path="follow-ups" element={<FollowUpsPage />} />
       <Route path="appointments" element={<AppointmentsPage />} />
+      <Route path="notifications" element={<NotificationsPage />} />
+      <Route path="insights" element={<InsightsPage />} />
       <Route path="programs" element={<ProgramsPage />} />
       <Route path="settings" element={<SettingsPage />} />
       <Route path="admin/users" element={role === 'admin' ? <AdminUsersPage /> : <Navigate to="/dashboard" replace />} />
