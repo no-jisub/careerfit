@@ -6,7 +6,7 @@ export const allowedAttachmentTypes = [
   'image/jpeg',
 ];
 
-export const maxAttachmentSize = 10 * 1024 * 1024;
+export const maxAttachmentSize = 5 * 1024 * 1024;
 export const maxAttachmentCount = 5;
 
 export function validateAttachments(files, existingCount = 0) {
@@ -15,7 +15,7 @@ export function validateAttachments(files, existingCount = 0) {
   const invalidType = items.find(file => !allowedAttachmentTypes.includes(file.type));
   if (invalidType) return { error: 'PDF, DOC, DOCX, PNG, JPG 파일만 첨부할 수 있습니다.' };
   const oversized = items.find(file => file.size > maxAttachmentSize);
-  if (oversized) return { error: '파일 한 개의 크기는 10MB를 넘을 수 없습니다.' };
+  if (oversized) return { error: '파일 한 개의 크기는 5MB를 넘을 수 없습니다.' };
   return { value: items };
 }
 

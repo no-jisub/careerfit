@@ -5,7 +5,7 @@ import { canDeleteAttachment, safeAttachmentName, validateAttachments } from '..
 test('attachment validation enforces type, size, and count limits', () => {
   assert.ok(validateAttachments([{ name: 'resume.pdf', type: 'application/pdf', size: 1024 }]).value);
   assert.match(validateAttachments([{ name: 'tool.exe', type: 'application/octet-stream', size: 10 }]).error, /PDF/);
-  assert.match(validateAttachments([{ name: 'large.pdf', type: 'application/pdf', size: 11 * 1024 * 1024 }]).error, /10MB/);
+  assert.match(validateAttachments([{ name: 'large.pdf', type: 'application/pdf', size: 6 * 1024 * 1024 }]).error, /5MB/);
   assert.match(validateAttachments([{ name: 'a.pdf', type: 'application/pdf', size: 1 }], 5).error, /최대 5개/);
 });
 

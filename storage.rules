@@ -4,7 +4,7 @@ service firebase.storage {
     function signedIn() { return request.auth != null; }
     function appointment(id) { return firestore.get(/databases/(default)/documents/appointments/$(id)).data; }
     function validUpload() {
-      return request.resource.size <= 10 * 1024 * 1024
+      return request.resource.size <= 5 * 1024 * 1024
         && request.resource.contentType.matches('(application/pdf|application/msword|application/vnd.openxmlformats-officedocument.wordprocessingml.document|image/png|image/jpeg)');
     }
     match /appointmentAttachments/{appointmentId}/{attachmentId}/{fileName} {
