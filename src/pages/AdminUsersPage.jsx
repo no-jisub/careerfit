@@ -2,12 +2,14 @@ import { useMemo, useState } from 'react';
 import { useApp } from '../App';
 import { createManagedUser, sendManagedPasswordReset } from '../services/adminUserService';
 import { PageIntro } from '../components/UI';
+import { useAuth } from '../auth/AuthContext';
 
 const emptyAccount = { role: 'counselor', displayName: '', email: '', password: '' };
 const emptyStudent = { studentNo: '', department: '', grade: '1학년', phone: '', goal: '', concern: '', interests: '', counselorUid: '' };
 
 export default function AdminUsersPage() {
-  const { users, students, setStudents, persistDocument, notify } = useApp();
+  const { users, setUsers, students, setStudents, persistDocument, notify } = useApp();
+  const { firebaseAuthEnabled } = useAuth();
   const counselors = useMemo(() => users.filter(item => item.role === 'counselor' && item.active !== false), [users]);
   const [account, setAccount] = useState(emptyAccount);
   const [student, setStudent] = useState(emptyStudent);
@@ -26,7 +28,7 @@ export default function AdminUsersPage() {
     const normalizedStudentNo = student.studentNo.trim().replace(/[^0-9A-Za-z_-]/g, '-');
     const studentId = account.role === 'student' ? `student-${normalizedStudentNo}` : null;
     try {
-      await createManagedUser({
+      const managedPayload = {
         account: {
           ...account,
           displayName: account.displayName.trim(),
@@ -45,7 +47,18 @@ export default function AdminUsersPage() {
           counselorUid: counselor.id,
           counselor: counselor.displayName.replace(/\s*상담사$/, ''),
         } : null,
-      });
+      };
+      if (firebaseAuthEnabled) {
+        await createManagedUser(managedPayload);
+      } else {
+        const userId = account.role === 'student' ? `demo-${studentId}` : `demo-${account.role}-${Date.now()}`;
+        const nextUser = { id: userId, displayName: managedPayload.account.displayName, email: managedPayload.account.email, role: account.role, active: true, createdAt: new Date().toISOString() };
+        setUsers(items => [...items, nextUser]);
+        if (managedPayload.student) {
+          const nextStudent = { ...managedPayload.student, uid: userId, status: 'scheduled', lastConsultation: '-', appointmentDate: '', appointment: '', initials: managedPayload.student.name.slice(-2), createdAt: new Date().toISOString() };
+          setStudents(items => [...items, nextStudent]);
+        }
+      }
       setAccount(emptyAccount);
       setStudent(emptyStudent);
       notify(`${account.displayName.trim()} 계정을 등록했습니다.`);
@@ -94,7 +107,8 @@ export default function AdminUsersPage() {
           <label>역할<select value={account.role} onChange={event => updateAccount('role', event.target.value)}><option value="counselor">상담사</option><option value="student">학생</option><option value="admin">관리자</option></select></label>
           <label>이름<input value={account.displayName} onChange={event => updateAccount('displayName', event.target.value)} required /></label>
           <label>이메일<input type="email" value={account.email} onChange={event => updateAccount('email', event.target.value)} required /></label>
-          <label>임시 비밀번호<input type="password" minLength="6" autoComplete="new-password" value={account.password} onChange={event => updateAccount('password', event.target.value)} required /></label>
+          {firebaseAuthEnabled && <label>임시 비밀번호<input type="password" minLength="6" autoComplete="new-password" value={account.password} onChange={event => updateAccount('password', event.target.value)} required /></label>}
+          {!firebaseAuthEnabled && <p className="demo-admin-hint">개발 모드에서는 계정이 현재 브라우저에만 생성되며 비밀번호가 필요하지 않습니다.</p>}
           {account.role === 'student' && <div className="student-account-fields">
             <div className="form-row"><label>학번<input value={student.studentNo} onChange={event => updateStudent('studentNo', event.target.value)} required /></label><label>학년<select value={student.grade} onChange={event => updateStudent('grade', event.target.value)}>{['1학년','2학년','3학년','4학년','졸업생'].map(grade => <option key={grade}>{grade}</option>)}</select></label></div>
             <label>학과<input value={student.department} onChange={event => updateStudent('department', event.target.value)} required /></label>
@@ -110,7 +124,7 @@ export default function AdminUsersPage() {
       </section>
       <section className="card admin-user-list">
         <div className="section-header"><div><span className="eyebrow">등록 계정</span><h2>사용자 {users.length}명</h2></div></div>
-        {users.map(item => <article key={item.id}><div><strong>{item.displayName}</strong><span>{item.email}</span></div><b>{item.role === 'admin' ? '관리자' : item.role === 'student' ? '학생' : '상담사'}</b><button className="text-button" onClick={() => resetPassword(item)}>비밀번호 재설정</button></article>)}
+        {users.map(item => <article key={item.id}><div><strong>{item.displayName}</strong><span>{item.email}</span></div><b>{item.role === 'admin' ? '관리자' : item.role === 'student' ? '학생' : '상담사'}</b>{firebaseAuthEnabled && <button className="text-button" onClick={() => resetPassword(item)}>비밀번호 재설정</button>}</article>)}
       </section>
     </div>
     <section className="card assignment-card">

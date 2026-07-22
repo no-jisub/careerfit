@@ -5,6 +5,7 @@ import { initialStudents } from './data/students';
 import { initialConsultations } from './data/consultations';
 import { initialFollowUps } from './data/followUps';
 import { initialAppointments } from './data/appointments';
+import { initialUsers } from './data/users';
 import { resolveFollowUpStatus, toDateKey } from './utils/date';
 import { useAuth } from './auth/AuthContext';
 import { saveCareerDocument, saveCareerDocumentGroup, subscribeCareerData } from './services/firebaseDataService';
@@ -33,7 +34,7 @@ export function useApp() { return useContext(AppContext); }
 function AppProvider({ children }) {
   const { user, role } = useAuth();
   const syncingRemoteData = firestoreSyncEnabled && Boolean(user);
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState(() => syncingRemoteData ? [] : read('careerfit_users', initialUsers));
   const [students, setStudents] = useState(() => syncingRemoteData ? [] : read('careerfit_students', initialStudents).map(student => student.appointment && !student.appointmentDate ? { ...student, appointmentDate: toDateKey() } : student));
   const [consultations, setConsultations] = useState(() => syncingRemoteData ? [] : read('careerfit_consultations', initialConsultations));
   const [consultationNotes, setConsultationNotes] = useState(() => syncingRemoteData ? [] : read('careerfit_consultation_notes', []));
@@ -48,6 +49,7 @@ function AppProvider({ children }) {
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_consultation_notes', JSON.stringify(consultationNotes)); }, [consultationNotes, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_followups', JSON.stringify(followUps)); }, [followUps, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_appointments', JSON.stringify(appointments)); }, [appointments, syncingRemoteData]);
+  useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_users', JSON.stringify(users)); }, [users, syncingRemoteData]);
   useEffect(() => { if (!toast) return undefined; const timer = setTimeout(() => setToast(''), 3200); return () => clearTimeout(timer); }, [toast]);
   useEffect(() => { if (!role) setDraftForm(null); }, [role]);
 
