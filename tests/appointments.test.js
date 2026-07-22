@@ -6,6 +6,7 @@ import {
   getAppointmentCancellationLabel,
   hasCounselorAppointmentConflict,
   hasCounselorAvailabilityConflict,
+  restoreCounselorAvailabilityStore,
   upsertAppointmentById,
 } from '../src/utils/appointments.js';
 
@@ -39,6 +40,19 @@ test('bulk availability creates one-hour slots and skips existing or booked time
     '2026-07-23 11:00-12:00',
   ]);
   assert.ok(result.slots.every(slot => slot.duration === 60 && slot.status === 'open'));
+});
+
+test('expired built-in demo slots roll forward without changing counselor-created slots', () => {
+  const fallback = [{ id: 'availability-demo-1', date: '2026-07-23', time: '10:00', status: 'open' }];
+  const stored = [
+    { id: 'availability-demo-1', date: '2026-07-10', time: '10:00', status: 'closed' },
+    { id: 'availability-custom-1', date: '2026-07-10', time: '14:00', status: 'closed' },
+  ];
+
+  assert.deepEqual(restoreCounselorAvailabilityStore(stored, fallback, '2026-07-22'), [
+    fallback[0],
+    stored[1],
+  ]);
 });
 
 test('appointment cancellation label identifies student and counselor cancellations', () => {

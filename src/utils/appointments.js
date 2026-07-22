@@ -43,6 +43,15 @@ export function buildMonthCalendar(monthKey, today = toDateKey()) {
   });
 }
 
+export function restoreCounselorAvailabilityStore(stored, fallback, today = toDateKey()) {
+  const items = Array.isArray(stored) ? stored : fallback;
+  const demoSlots = new Map(fallback.map(item => [item.id, item]));
+  return items.map(item => {
+    const refreshed = demoSlots.get(item.id);
+    return refreshed && item.date < today ? refreshed : item;
+  });
+}
+
 export function buildHourlyAvailabilitySlots({
   dates = [],
   startTime,

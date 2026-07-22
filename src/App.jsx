@@ -18,6 +18,7 @@ import { saveCareerDocument, saveCareerDocumentGroup, subscribeCareerData } from
 import { firestoreSyncEnabled } from './lib/firebase';
 import { isOperationsStaff } from './utils/roles';
 import { createProgramRecommendationStore, createProgramStore, restoreProgramRecommendationStore, restoreProgramStore } from './utils/programs';
+import { restoreCounselorAvailabilityStore } from './utils/appointments';
 
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const SignupPage = lazy(() => import('./pages/SignupPage'));
@@ -63,7 +64,7 @@ function AppProvider({ children }) {
   const [consultationNotes, setConsultationNotes] = useState(() => syncingRemoteData ? [] : read('careerfit_consultation_notes', []));
   const [followUps, setFollowUps] = useState(() => syncingRemoteData ? [] : read('careerfit_followups', initialFollowUps).map(followUp => ({ ...followUp, status: resolveFollowUpStatus(followUp) })));
   const [appointments, setAppointments] = useState(() => syncingRemoteData ? [] : read('careerfit_appointments', initialAppointments));
-  const [counselorAvailability, setCounselorAvailability] = useState(() => syncingRemoteData ? [] : read('careerfit_counselor_availability', initialCounselorAvailability));
+  const [counselorAvailability, setCounselorAvailability] = useState(() => syncingRemoteData ? [] : restoreCounselorAvailabilityStore(read('careerfit_counselor_availability', initialCounselorAvailability), initialCounselorAvailability));
   const [recordDeletionRequests, setRecordDeletionRequests] = useState(() => syncingRemoteData ? [] : read('careerfit_record_deletion_requests', initialRecordDeletionRequests));
   const [programs, setPrograms] = useState(() => restoreProgramStore(read('careerfit_program_store', null), initialPrograms));
   const [programRecommendations, setProgramRecommendations] = useState(() => restoreProgramRecommendationStore(read('careerfit_program_recommendation_store', null), initialProgramRecommendations));
