@@ -25,7 +25,7 @@ export default function AppLayout({ logout }) {
   const [panel, setPanel] = useState('');
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
-  const { students, consultations, followUps, appointments } = useApp();
+  const { students, consultations, followUps, appointments, notifications: eventNotifications } = useApp();
   const { profile, user, role } = useAuth();
   const counselorName = profile?.displayName || user?.displayName || '상담 담당자';
   const shortCounselorName = counselorName.replace(/\s*상담사$/, '');
@@ -35,7 +35,7 @@ export default function AppLayout({ logout }) {
   const today = toDateKey();
   const pendingCount = followUps.filter(item => item.status !== 'complete').length;
   const notifications = useMemo(() => buildOperationalNotifications(students, followUps, appointments, today), [students, followUps, appointments, today]);
-  const noticeCount = notifications.length;
+  const noticeCount = notifications.length + eventNotifications.filter(item => !item.readAt).length;
   const searchResults = useMemo(() => {
     const query = deferredSearch.trim().toLowerCase();
     if (!query) return [];

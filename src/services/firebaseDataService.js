@@ -1,19 +1,21 @@
-import { collection, doc, onSnapshot, query, setDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, onSnapshot, or, query, setDoc, where, writeBatch } from 'firebase/firestore';
 import { db, firestoreSyncEnabled } from '../lib/firebase';
 import { isOperationsStaff } from '../utils/roles';
 
 const collectionNamesFor = role => {
-  if (role === 'student') return ['students', 'consultationSummaries', 'followUps', 'appointments', 'counselorAvailability'];
-  return ['users', 'studentRegistrations', 'students', 'consultations', 'consultationSummaries', 'consultationNotes', 'followUps', 'appointments', 'counselorAvailability'];
+  if (role === 'student') return ['students', 'consultationSummaries', 'followUps', 'appointments', 'counselorAvailability', 'notifications'];
+  return ['users', 'studentRegistrations', 'students', 'consultations', 'consultationSummaries', 'consultationNotes', 'consultationDrafts', 'followUps', 'appointments', 'counselorAvailability', 'notifications'];
 };
 
 function constraintsFor(name, session) {
+  if (name === 'consultationDrafts') return [where('counselorUid', '==', session.user.uid)];
+  if (name === 'notifications') return [where('recipientUid', '==', session.user.uid)];
+  if (name === 'counselorAvailability' && session.role === 'student') return [or(where('status', '==', 'open'), where('bookedByUid', '==', session.user.uid))];
   if (isOperationsStaff(session.role)) return [];
   if (name === 'students') return [where('uid', '==', session.user.uid)];
   if (name === 'consultations') return [where('studentUid', '==', session.user.uid), where('studentVisible', '==', true)];
   if (name === 'consultationSummaries') return [where('studentUid', '==', session.user.uid), where('published', '==', true)];
   if (name === 'appointments') return [where('studentUid', '==', session.user.uid)];
-  if (name === 'counselorAvailability') return [where('status', '==', 'open')];
   return [where('assigneeUid', '==', session.user.uid)];
 }
 
@@ -47,4 +49,9 @@ export async function saveCareerDocumentGroup(entries) {
     });
     await batch.commit();
   }
+}
+
+export async function deleteCareerDocument(name, id) {
+  if (!firestoreSyncEnabled) return;
+  await deleteDoc(doc(db, name, id));
 }

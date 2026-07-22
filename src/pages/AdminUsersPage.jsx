@@ -3,13 +3,14 @@ import { useApp } from '../App';
 import { createManagedUser } from '../services/adminUserService';
 import { PageIntro } from '../components/UI';
 import { useAuth } from '../auth/AuthContext';
+import { buildEventNotification } from '../utils/notifications';
 import { validateAccountInput } from '../utils/validation';
 
 const emptyAccount = { role: 'counselor', displayName: '', email: '', password: '' };
 const emptyStudent = { studentNo: '', department: '', grade: '1학년', phone: '', goal: '', concern: '', interests: '', counselorUid: '' };
 
 export default function AdminUsersPage() {
-  const { users, setUsers, studentRegistrations, setStudentRegistrations, students, setStudents, consultations, followUps, setFollowUps, appointments, setAppointments, persistDocument, persistDocumentGroup, notify } = useApp();
+  const { users, setUsers, studentRegistrations, setStudentRegistrations, students, setStudents, consultations, followUps, setFollowUps, appointments, setAppointments, setNotifications, persistDocument, persistDocumentGroup, notify } = useApp();
   const { firebaseAuthEnabled, user, profile } = useAuth();
   const counselors = useMemo(() => users.filter(item => item.role === 'counselor' && item.active !== false), [users]);
   const [account, setAccount] = useState(emptyAccount);
@@ -104,17 +105,20 @@ export default function AdminUsersPage() {
       .map(item => ({ ...item, ownerUid: counselorUid, assigneeUid: counselorUid, transferredAt: now, updatedAt: now }));
     const registration = studentRegistrations.find(item => item.uid === studentRecord.uid);
     const updatedRegistration = registration ? { ...registration, counselorUid, updatedAt: now } : null;
+    const assignmentNotification = buildEventNotification({ eventId: `${studentRecord.id}-assigned-${now}`, recipientUid: counselorUid, actorUid: currentCounselorUid, type: 'assignment', title: '새 담당 학생이 배정되었습니다', description: `${studentRecord.name} · ${studentRecord.department}`, to: `/students/${studentRecord.id}`, createdAt: now });
     try {
       await persistDocumentGroup([
         { name: 'students', record: updated },
         ...transferredAppointments.map(record => ({ name: 'appointments', record })),
         ...transferredFollowUps.map(record => ({ name: 'followUps', record })),
         ...(updatedRegistration ? [{ name: 'studentRegistrations', record: updatedRegistration }] : []),
+        { name: 'notifications', record: assignmentNotification },
       ]);
       setStudents(items => items.map(item => item.id === updated.id ? updated : item));
       setAppointments(items => items.map(item => transferredAppointments.find(record => record.id === item.id) || item));
       setFollowUps(items => items.map(item => transferredFollowUps.find(record => record.id === item.id) || item));
       if (updatedRegistration) setStudentRegistrations(items => items.map(item => item.id === updatedRegistration.id ? updatedRegistration : item));
+      setNotifications(items => items.some(item => item.id === assignmentNotification.id) ? items : [...items, assignmentNotification]);
       const historyCount = consultations.filter(item => item.studentId === studentRecord.id).length;
       notify(`${studentRecord.name} 학생과 상담 이력 ${historyCount}건을 ${counselor.displayName}에게 재배정했습니다.`);
     } catch { /* 공통 오류 메시지를 사용합니다. */ }

@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import Icon from '../components/Icon';
 import { buildMonthCalendar, canRescheduleAppointment, getAppointmentCancellationLabel, isAvailabilityBookable, resolveRescheduleRequest } from '../utils/appointments';
 import { addMinutesToTime, getTimeRangeEnd, parseDateKey, toDateKey } from '../utils/date';
+import { buildEventNotification } from '../utils/notifications';
 
 const formatDate = value => new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(`${value}T00:00:00`));
 const formatMonthTitle = monthKey => new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long' }).format(parseDateKey(monthKey));
@@ -19,7 +20,7 @@ const shiftMonth = (monthKey, amount) => {
 export default function StudentAppointmentSlotsPage() {
   const [searchParams] = useSearchParams();
   const rescheduleId = searchParams.get('change') || '';
-  const { students, counselorAvailability, setCounselorAvailability, appointments, setAppointments, persistDocumentGroup, notify } = useApp();
+  const { students, counselorAvailability, setCounselorAvailability, appointments, setAppointments, setNotifications, persistDocumentGroup, notify } = useApp();
   const { user, logout } = useAuth();
   const student = useMemo(() => {
     const matched = user ? students.find(item => item.uid === user.uid) : students[0];
@@ -58,10 +59,12 @@ export default function StudentAppointmentSlotsPage() {
     const result = resolveRescheduleRequest(appointment, original, proposed, { approve, originalAction, actorUid: student.uid || user?.uid || '' });
     if (result.error) { notify(result.error); return; }
     const value = result.value;
-    await persistDocumentGroup([{ name: 'appointments', record: value.appointment }, ...(value.originalAvailability ? [{ name: 'counselorAvailability', record: value.originalAvailability }] : []), ...(value.proposedAvailability ? [{ name: 'counselorAvailability', record: value.proposedAvailability }] : [])]);
+    const notification = buildEventNotification({ eventId: `${appointment.rescheduleRequest.id}-student-response-${approve ? 'approved' : originalAction}`, recipientUid: appointment.counselorUid, actorUid: student.uid || user?.uid || '', type: 'appointment', title: approve ? '학생이 변경된 일정에 참가합니다' : '학생이 일정 변경 제안을 거절했습니다', description: approve ? `${value.appointment.date} ${value.appointment.time}` : `기존 예약 ${originalAction === 'keep' ? '유지' : '취소'}`, to: '/appointments' });
+    await persistDocumentGroup([{ name: 'appointments', record: value.appointment }, ...(value.originalAvailability ? [{ name: 'counselorAvailability', record: value.originalAvailability }] : []), ...(value.proposedAvailability ? [{ name: 'counselorAvailability', record: value.proposedAvailability }] : []), { name: 'notifications', record: notification }]);
     setAppointments(items => items.map(item => item.id === appointment.id ? value.appointment : item));
     const slots = new Map([value.originalAvailability, value.proposedAvailability].filter(Boolean).map(item => [item.id, item]));
     setCounselorAvailability(items => items.map(item => slots.get(item.id) || item));
+    setNotifications(items => items.some(item => item.id === notification.id) ? items : [...items, notification]);
     notify(approve ? '변경된 상담 일정에 참가한다고 응답했습니다.' : `변경 제안을 거절하고 기존 예약을 ${originalAction === 'keep' ? '유지했습니다' : '취소했습니다'}.`);
   };
 

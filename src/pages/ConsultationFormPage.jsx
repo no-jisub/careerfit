@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useApp } from '../App';
 import Icon from '../components/Icon';
 import { EmptyState, StatusBadge } from '../components/UI';
@@ -8,6 +8,7 @@ import { addDays, toDateKey } from '../utils/date';
 import { useAuth } from '../auth/AuthContext';
 import { cleanText, validateConsultationInput } from '../utils/validation';
 import { buildConsultationSummary, consultationPublicFieldOptions, defaultConsultationVisibility } from '../utils/consultations';
+import { buildEventNotification } from '../utils/notifications';
 
 const createEmptyForm = () => { const today = toDateKey(); return { date: today, type: '진로 탐색', purpose: '관심 직무 구체화 및 경험 계획 수립', currentConcern: '', rawMemo: '', guidance: '', strengths: '', programs: [], studentActions: '', counselorActions: '', nextCheckItems: '', nextDate: addDays(today, 14), studentVisible: true, visibility: { ...defaultConsultationVisibility } }; };
 const appendMissingDocuments = (current, additions) => [
@@ -17,10 +18,15 @@ const appendMissingDocuments = (current, additions) => [
 
 export default function ConsultationFormPage() {
   const { studentId } = useParams();
+  const [searchParams] = useSearchParams();
+  const appointmentId = searchParams.get('appointment') || '';
   const navigate = useNavigate();
   const { profile, user } = useAuth();
-  const { students, setStudents, setConsultations, setConsultationSummaries, setConsultationNotes, setFollowUps, appointments, setAppointments, persistDocumentGroup, notify, draftForm, setDraftForm } = useApp();
+  const { students, setStudents, consultations, setConsultations, setConsultationSummaries, setConsultationNotes, consultationDrafts, setConsultationDrafts, setFollowUps, appointments, setAppointments, setNotifications, persistDocument, persistDocumentGroup, removeDocument, notify, draftForm, setDraftForm } = useApp();
   const student = students.find(s => s.id === studentId);
+  const linkedAppointment = appointmentId ? appointments.find(item => item.id === appointmentId && item.studentId === studentId) : null;
+  const counselorUid = user?.uid || profile?.id || 'demo-counselor';
+  const draftId = useMemo(() => `draft-${appointmentId || `${counselorUid}-${studentId}`}`.replace(/[^A-Za-z0-9_-]/g, '-'), [appointmentId, counselorUid, studentId]);
   const [form, setForm] = useState(() => draftForm?.studentId === student?.id ? draftForm.form : { ...createEmptyForm(), currentConcern: student?.concern || '' });
   const [aiDraft, setAiDraft] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -28,6 +34,9 @@ export default function ConsultationFormPage() {
   const [error, setError] = useState('');
   const [studentTask, setStudentTask] = useState('');
   const [counselorTask, setCounselorTask] = useState('');
+  const [draftSavedAt, setDraftSavedAt] = useState('');
+  const [draftRestored, setDraftRestored] = useState(false);
+  const lastDraftPayload = useRef('');
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
   useEffect(() => {
     if (!student) return undefined;
@@ -35,6 +44,37 @@ export default function ConsultationFormPage() {
     // long-lived, script-readable browser storage.
     localStorage.removeItem(`draft_${student.id}`);
   }, [student?.id]);
+  useEffect(() => {
+    if (draftRestored || !student) return;
+    const saved = consultationDrafts.find(item => item.id === draftId);
+    if (saved?.form) {
+      setForm(saved.form);
+      setStudentTask(saved.studentTask || '');
+      setCounselorTask(saved.counselorTask || '');
+      setDraftSavedAt(saved.updatedAt || '');
+      lastDraftPayload.current = JSON.stringify({ form: saved.form, studentTask: saved.studentTask || '', counselorTask: saved.counselorTask || '' });
+      notify('Firestore에 임시 저장된 상담 기록을 복구했습니다.');
+    } else if (linkedAppointment) {
+      setForm(current => ({ ...current, date: linkedAppointment.date, type: linkedAppointment.type || current.type, purpose: linkedAppointment.subject || current.purpose, currentConcern: linkedAppointment.requestMessage || current.currentConcern }));
+    }
+    setDraftRestored(true);
+  }, [consultationDrafts, draftId, draftRestored, linkedAppointment, notify, student]);
+  useEffect(() => {
+    if (!draftRestored || !student || (!form.rawMemo.trim() && !studentTask.trim() && !counselorTask.trim())) return undefined;
+    const payload = JSON.stringify({ form, studentTask, counselorTask });
+    if (payload === lastDraftPayload.current) return undefined;
+    const timer = setTimeout(async () => {
+      const updatedAt = new Date().toISOString();
+      const record = { id: draftId, appointmentId, studentId: student.id, studentUid: student.uid || '', counselorUid, form, studentTask, counselorTask, updatedAt };
+      try {
+        await persistDocument('consultationDrafts', record);
+        setConsultationDrafts(items => items.some(item => item.id === draftId) ? items.map(item => item.id === draftId ? record : item) : [...items, record]);
+        setDraftSavedAt(updatedAt);
+        lastDraftPayload.current = payload;
+      } catch { /* 공통 저장 오류 메시지를 사용합니다. */ }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [appointmentId, counselorTask, counselorUid, draftId, draftRestored, form, persistDocument, setConsultationDrafts, student, studentTask]);
 
   if (!student) return <section className="card"><EmptyState title="상담을 작성할 학생을 찾을 수 없습니다" description="현재 계정에 배정된 학생인지 확인해 주세요." action={<Link className="button secondary" to="/students?select=consultation">담당 학생 선택</Link>} /></section>;
 
@@ -62,16 +102,17 @@ export default function ConsultationFormPage() {
       counselorActions: cleanText(draft.counselorActions, 2000),
       nextCheckItems: cleanText(draft.nextCheckItems, 2000),
     };
+    if (linkedAppointment && new Date(`${linkedAppointment.date}T${linkedAppointment.time}:00`) > new Date()) { setError('최종 상담 기록은 상담 시작 이후 저장할 수 있습니다. 지금은 임시 저장을 이용해 주세요.'); return; }
+    if (linkedAppointment && consultations.some(item => item.appointmentId === linkedAppointment.id)) { setError('이 예약에는 이미 최종 상담 기록이 저장되어 있습니다.'); return; }
     const now = new Date().toISOString();
-    const counselorUid = user?.uid || profile?.id || 'demo-counselor';
     const publication = { ...defaultConsultationVisibility, ...(form.visibility || {}) };
-    const consultation = { id: `c${Date.now()}`, studentId: student.id, studentUid: student.uid || '', counselorUid, date: form.date, type: form.type, purpose: final.purpose, counselor: (profile?.displayName || user?.displayName || '상담 담당자').replace(/\s*상담사$/, ''), summary: final.summary, strengths: final.strengths, concern: final.concern, guidance: final.guidance, programs: final.programs, studentActions: final.studentActions, counselorActions: final.counselorActions, nextCheckItems: final.nextCheckItems, publication, studentVisible: Object.values(publication).some(Boolean), createdAt: now, updatedAt: now };
+    const consultation = { id: linkedAppointment ? `consultation-${linkedAppointment.id}` : `c${Date.now()}`, appointmentId: linkedAppointment?.id || '', studentId: student.id, studentUid: student.uid || '', counselorUid, date: form.date, type: form.type, purpose: final.purpose, counselor: (profile?.displayName || user?.displayName || '상담 담당자').replace(/\s*상담사$/, ''), summary: final.summary, strengths: final.strengths, concern: final.concern, guidance: final.guidance, programs: final.programs, studentActions: final.studentActions, counselorActions: final.counselorActions, nextCheckItems: final.nextCheckItems, publication, studentVisible: Object.values(publication).some(Boolean), createdAt: now, updatedAt: now };
     const publishedSummary = buildConsultationSummary(consultation, publication);
     const internalNote = { id: consultation.id, consultationId: consultation.id, studentId: student.id, note: safeForm.rawMemo, createdAt: now, updatedAt: now };
     const newTasks = [];
     if (studentTask.trim()) newTasks.push({ id: `f${Date.now()}a`, studentId: student.id, content: studentTask.trim(), owner: '학생', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date, createdAt: now, updatedAt: now });
     if (counselorTask.trim()) newTasks.push({ id: `f${Date.now()}b`, studentId: student.id, content: counselorTask.trim(), owner: '교직원', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date, createdAt: now, updatedAt: now });
-    const matchingAppointment = appointments.find(item => item.studentId === student.id && item.date === form.date && ['confirmed', 'scheduled'].includes(item.status));
+    const matchingAppointment = linkedAppointment || appointments.find(item => item.studentId === student.id && item.date === form.date && ['confirmed', 'scheduled'].includes(item.status));
     const completedAppointment = matchingAppointment ? { ...matchingAppointment, status: 'completed', completedAt: now, updatedAt: now } : null;
     const updatedStudent = {
       ...student,
@@ -81,6 +122,10 @@ export default function ConsultationFormPage() {
       appointment: matchingAppointment ? '' : student.appointment,
       updatedAt: now,
     };
+    const studentNotifications = [
+      ...(publishedSummary.published && student.uid ? [buildEventNotification({ eventId: `${consultation.id}-published`, recipientUid: student.uid, actorUid: counselorUid, type: 'summary', title: '새 상담 요약이 공개되었습니다', description: `${form.date} 상담에서 공개된 내용을 확인하세요.`, to: '/student', createdAt: now })] : []),
+      ...newTasks.filter(task => task.owner === '학생' && student.uid).map(task => buildEventNotification({ eventId: `${task.id}-assigned`, recipientUid: student.uid, actorUid: counselorUid, type: 'followup', title: '새 후속 조치가 등록되었습니다', description: `${task.content} · ${task.dueDate}까지`, to: '/student', createdAt: now })),
+    ];
     setSaving(true);
     setError('');
     try {
@@ -91,6 +136,7 @@ export default function ConsultationFormPage() {
         ...newTasks.map(record => ({ name: 'followUps', record })),
         { name: 'students', record: updatedStudent },
         ...(completedAppointment ? [{ name: 'appointments', record: completedAppointment }] : []),
+        ...studentNotifications.map(record => ({ name: 'notifications', record })),
       ]);
       setConsultations(current => appendMissingDocuments(current, [consultation]));
       setConsultationSummaries(current => appendMissingDocuments(current, [publishedSummary]));
@@ -98,6 +144,9 @@ export default function ConsultationFormPage() {
       setFollowUps(current => appendMissingDocuments(current, newTasks));
       setStudents(current => current.map(item => item.id === student.id ? updatedStudent : item));
       if (completedAppointment) setAppointments(current => current.map(item => item.id === completedAppointment.id ? completedAppointment : item));
+      setNotifications(items => [...items, ...studentNotifications.filter(record => !items.some(item => item.id === record.id))]);
+      await removeDocument('consultationDrafts', draftId);
+      setConsultationDrafts(items => items.filter(item => item.id !== draftId));
       setDraftForm(null);
       notify('상담 기록을 저장했습니다.');
       navigate(`/students/${student.id}`);
@@ -110,7 +159,7 @@ export default function ConsultationFormPage() {
 
   return <>
     <nav className="breadcrumb" aria-label="현재 위치"><Link to={`/students/${student.id}`}>{student.name}</Link><Icon name="chevron" size={14} /><span>상담 기록 작성</span></nav>
-    <div className="form-page-header"><div><span className="eyebrow">상담 진행 중 · {form.date}</span><h1>상담 기록 작성</h1><p>상담 중에는 핵심만 메모하고, AI 초안으로 정리해 보세요.</p></div><div><button className="button secondary" disabled={saving} onClick={() => { setDraftForm({ studentId: student.id, form }); notify('상담 기록을 현재 세션에 임시 저장했습니다.'); }}>임시 저장</button><button className="button primary" disabled={saving} onClick={save}>{saving ? '저장 중...' : '상담 기록 저장'}</button></div></div>
+    <div className="form-page-header"><div><span className="eyebrow">상담 진행 중 · {form.date}</span><h1>상담 기록 작성</h1><p>{linkedAppointment ? `${linkedAppointment.time}–${linkedAppointment.endTime} 예약과 연결됨` : '상담 중에는 핵심만 메모하고, AI 초안으로 정리해 보세요.'}</p>{draftSavedAt && <small>마지막 임시 저장 {new Date(draftSavedAt).toLocaleString('ko-KR')}</small>}</div><div><button className="button secondary" disabled={saving} onClick={async () => { await removeDocument('consultationDrafts', draftId); setConsultationDrafts(items => items.filter(item => item.id !== draftId)); setDraftSavedAt(''); notify('임시 저장 내용을 삭제했습니다.'); }}>임시 기록 삭제</button><button className="button primary" disabled={saving} onClick={save}>{saving ? '저장 중...' : '상담 기록 저장'}</button></div></div>
     <div className="consultation-layout">
       <section className="card consultation-form-card">
         <div className="form-section-title"><span>1</span><div><h2>상담 기본 정보</h2><p>상담의 목적과 유형을 선택해 주세요.</p></div></div>

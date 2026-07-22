@@ -6,6 +6,7 @@ import Icon from '../components/Icon';
 import { createRescheduleRequest, holdAvailabilityForReschedule, isAvailabilityBookable, upsertAppointmentById } from '../utils/appointments';
 import { getTimeRangeEnd, toDateKey } from '../utils/date';
 import { validateStudentAppointmentRequest } from '../utils/validation';
+import { buildEventNotification } from '../utils/notifications';
 
 const initialForm = { type: '진로 상담', subject: '', requestMessage: '', preferredOutcome: '' };
 const consultationTypes = ['진로 상담', '취업 상담', '자기소개서 상담', '면접 상담', '기타 상담'];
@@ -13,7 +14,7 @@ const consultationTypes = ['진로 상담', '취업 상담', '자기소개서 �
 export default function StudentAppointmentRequestPage() {
   const { availabilityId, appointmentId } = useParams();
   const navigate = useNavigate();
-  const { students, counselorAvailability, setCounselorAvailability, appointments, setAppointments, persistDocumentGroup, notify } = useApp();
+  const { students, counselorAvailability, setCounselorAvailability, appointments, setAppointments, notifications, setNotifications, persistDocumentGroup, notify } = useApp();
   const { user, logout } = useAuth();
   const student = useMemo(() => {
     const matched = user ? students.find(item => item.uid === user.uid) : students[0];
@@ -47,11 +48,13 @@ export default function StudentAppointmentRequestPage() {
       requested.value.rescheduleRequest.subject = validated.value.subject;
       requested.value.rescheduleRequest.requestMessage = validated.value.requestMessage;
       const heldSlot = holdAvailabilityForReschedule(slot, changingAppointment);
+      const notification = buildEventNotification({ eventId: `${requested.value.rescheduleRequest.id}-requested`, recipientUid: changingAppointment.counselorUid, actorUid: student.uid || user?.uid || '', type: 'appointment', title: '학생이 일정 변경을 요청했습니다', description: `${student.name} 학생 · ${slot.date} ${slot.time}`, to: '/appointments' });
       setSaving(true);
       try {
-        await persistDocumentGroup([{ name: 'appointments', record: requested.value }, { name: 'counselorAvailability', record: heldSlot }]);
+        await persistDocumentGroup([{ name: 'appointments', record: requested.value }, { name: 'counselorAvailability', record: heldSlot }, { name: 'notifications', record: notification }]);
         setAppointments(items => items.map(item => item.id === changingAppointment.id ? requested.value : item));
         setCounselorAvailability(items => items.map(item => item.id === slot.id ? heldSlot : item));
+        setNotifications(items => items.some(item => item.id === notification.id) ? items : [...items, notification]);
         notify('일정 변경을 요청했습니다. 기존 예약은 상담사가 결정할 때까지 유지됩니다.');
         navigate('/student/appointments', { replace: true });
       } catch { setError('일정 변경 요청을 저장하지 못했습니다.'); }
@@ -78,12 +81,14 @@ export default function StudentAppointmentRequestPage() {
       updatedAt: createdAt,
     };
     const bookedSlot = { ...slot, status: 'booked', appointmentId, bookedByUid: appointment.studentUid, updatedAt: createdAt };
+    const notification = buildEventNotification({ eventId: `${appointmentId}-created`, recipientUid: slot.counselorUid, actorUid: appointment.studentUid, type: 'appointment', title: '새 상담 신청이 도착했습니다', description: `${student.name} 학생 · ${slot.date} ${slot.time}`, to: '/appointments', createdAt });
     setSaving(true);
     setError('');
     try {
-      await persistDocumentGroup([{ name: 'appointments', record: appointment }, { name: 'counselorAvailability', record: bookedSlot }]);
+      await persistDocumentGroup([{ name: 'appointments', record: appointment }, { name: 'counselorAvailability', record: bookedSlot }, { name: 'notifications', record: notification }]);
       setAppointments(items => upsertAppointmentById(items, appointment));
       setCounselorAvailability(items => items.map(item => item.id === slot.id ? bookedSlot : item));
+      setNotifications(items => items.some(item => item.id === notification.id) ? items : [...items, notification]);
       notify('상담 신청을 완료했습니다. 상담사가 확인하면 일정이 확정됩니다.');
       navigate('/student', { replace: true });
     } catch {

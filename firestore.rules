@@ -108,6 +108,24 @@ service cloud.firestore {
         && validText(data.note, 10000);
     }
 
+    function validConsultationDraft(data) {
+      return validText(data.studentId, 128)
+        && validText(data.counselorUid, 128)
+        && validOptionalText(data, 'studentUid', 128)
+        && validOptionalText(data, 'appointmentId', 128)
+        && data.form is map;
+    }
+
+    function validNotification(data) {
+      return validText(data.recipientUid, 128)
+        && validText(data.actorUid, 128)
+        && validText(data.type, 40)
+        && validText(data.title, 200)
+        && validText(data.description, 1000)
+        && validText(data.to, 300)
+        && validOptionalText(data, 'readAt', 40);
+    }
+
     function validFollowUp(data) {
       return validText(data.studentId, 128)
         && validText(data.ownerUid, 128)
@@ -321,6 +339,26 @@ service cloud.firestore {
       allow delete: if isStaff();
     }
 
+    match /consultationDrafts/{draftId} {
+      allow read: if isCounselor() && resource.data.counselorUid == request.auth.uid;
+      allow create: if isCounselor() && validConsultationDraft(request.resource.data)
+        && request.resource.data.counselorUid == request.auth.uid;
+      allow update: if isCounselor() && validConsultationDraft(request.resource.data)
+        && resource.data.counselorUid == request.auth.uid
+        && request.resource.data.counselorUid == resource.data.counselorUid;
+      allow delete: if isCounselor() && resource.data.counselorUid == request.auth.uid;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if signedIn() && resource.data.recipientUid == request.auth.uid;
+      allow create: if signedIn() && validNotification(request.resource.data)
+        && request.resource.data.actorUid == request.auth.uid;
+      allow update: if signedIn() && resource.data.recipientUid == request.auth.uid
+        && validNotification(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt']);
+      allow delete: if false;
+    }
+
     match /followUps/{followUpId} {
       allow read: if isStaff()
         || (isStudent() && resource.data.assigneeUid == request.auth.uid);
@@ -347,7 +385,7 @@ service cloud.firestore {
 
     match /counselorAvailability/{availabilityId} {
       allow read: if isStaff()
-        || (isStudent() && resource.data.status == 'open');
+        || (isStudent() && (resource.data.status == 'open' || resource.data.bookedByUid == request.auth.uid));
       allow create: if validCounselorAvailability(request.resource.data)
         && request.resource.data.status == 'open'
         && (isAdmin()
@@ -359,21 +397,24 @@ service cloud.firestore {
             && resource.data.counselorUid == request.auth.uid
             && request.resource.data.counselorUid == resource.data.counselorUid)
           || (isStudent()
-            && resource.data.status == 'open'
-            && request.resource.data.status == 'booked'
             && request.resource.data.counselorUid == resource.data.counselorUid
             && request.resource.data.date == resource.data.date
             && request.resource.data.time == resource.data.time
             && request.resource.data.get('endTime', '') == resource.data.get('endTime', '')
             && request.resource.data.duration == resource.data.duration
             && request.resource.data.location == resource.data.location
-            && request.resource.data.bookedByUid == request.auth.uid
-            && validText(request.resource.data.appointmentId, 128)
-            && request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['status', 'appointmentId', 'bookedByUid', 'updatedAt'])
-            && existsAfter(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId))
-            && getAfter(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId)).data.studentUid == request.auth.uid
-            && getAfter(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId)).data.availabilityId == availabilityId));
+            && ((resource.data.status == 'open'
+              && request.resource.data.status == 'booked'
+              && request.resource.data.bookedByUid == request.auth.uid
+              && validText(request.resource.data.appointmentId, 128)
+              && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['status', 'appointmentId', 'bookedByUid', 'holdReason', 'updatedAt'])
+              && existsAfter(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId))
+              && getAfter(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId)).data.studentUid == request.auth.uid)
+            || (resource.data.bookedByUid == request.auth.uid
+              && request.resource.data.status in ['open', 'booked', 'closed']
+              && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['status', 'appointmentId', 'bookedByUid', 'holdReason', 'closedReason', 'reopenDecision', 'updatedAt'])))));
       allow delete: if isAdmin()
         || (isCounselor() && resource.data.counselorUid == request.auth.uid);
     }
@@ -416,11 +457,14 @@ service cloud.firestore {
           && request.resource.data.studentId == resource.data.studentId
           && request.resource.data.counselorUid == resource.data.counselorUid
           && resource.data.status in ['pending', 'confirmed', 'scheduled']
-          && request.resource.data.status == 'cancelled'
-          && request.resource.data.cancelledBy == request.auth.uid
-          && request.resource.data.cancelledByRole == 'student'
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['status', 'cancelledAt', 'cancelledBy', 'cancelledByRole', 'updatedAt'])));
+          && ((request.resource.data.status == 'cancelled'
+            && request.resource.data.cancelledBy == request.auth.uid
+            && request.resource.data.cancelledByRole == 'student'
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'cancelledAt', 'cancelledBy', 'cancelledByRole', 'updatedAt']))
+          || (request.resource.data.rescheduleRequest is map
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['rescheduleRequest', 'rescheduleHistory', 'availabilityId', 'date', 'time', 'endTime', 'duration', 'location', 'subject', 'requestMessage', 'status', 'cancelledAt', 'cancelledBy', 'updatedAt'])))));
       allow delete: if isStaff();
     }
 
