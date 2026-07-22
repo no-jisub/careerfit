@@ -5,9 +5,9 @@ import { auth, db, demoModeEnabled, firebaseAuthEnabled } from '../lib/firebase'
 
 const AuthContext = createContext(null);
 const demoProfiles = {
-  admin: { displayName: '개발 관리자', role: 'admin', active: true },
-  counselor: { displayName: '박지현 상담사', role: 'counselor', active: true },
-  student: { displayName: '김하늘', role: 'student', active: true },
+  admin: { id: 'demo-admin', displayName: '개발 관리자', role: 'admin', active: true },
+  counselor: { id: 'demo-counselor', displayName: '박지현 상담사', role: 'counselor', active: true },
+  student: { id: 'demo-student-s1', displayName: '김하늘', role: 'student', active: true },
 };
 
 async function resolveProfile(user) {
@@ -28,6 +28,7 @@ async function resolveProfile(user) {
   }
   const storedProfile = snapshot.exists() ? snapshot.data() : {};
   return {
+    id: user.uid,
     ...storedProfile,
     email: storedProfile.email || user.email,
     displayName: storedProfile.displayName || user.displayName || user.email,
@@ -121,6 +122,7 @@ export function AuthProvider({ children }) {
         interests: registration.interests,
         goal: registration.goal,
         concern: registration.concern,
+        emailVerified: false,
         status: 'pending',
         counselorUid: '',
         createdAt: now,
@@ -153,6 +155,12 @@ export function AuthProvider({ children }) {
   const refreshAccount = async () => {
     if (!auth?.currentUser) return { role: null, status: null };
     await reload(auth.currentUser);
+    if (auth.currentUser.emailVerified) {
+      await setDoc(doc(db, 'studentRegistrations', auth.currentUser.uid), {
+        emailVerified: true,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true }).catch(() => {});
+    }
     return applyFirebaseSession(auth.currentUser);
   };
 

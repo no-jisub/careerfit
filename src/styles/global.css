@@ -983,8 +983,21 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .admin-user-list article b { color:var(--blue); font-size:.82rem; }
 .assignment-card { margin-bottom:28px; }
 .assignment-list select { min-width:190px; }
+.pending-assignment-card { margin-bottom:24px; }
+.pending-assignment-card .section-header { align-items:flex-end; }
+.pending-assignment-card .section-header p { margin:6px 0 0; color:var(--muted); font-size:13px; }
+.pending-registration-list { display:grid; gap:10px; }
+.pending-registration-list article { display:grid; grid-template-columns:auto minmax(0, 1fr) auto; align-items:center; gap:14px; padding:15px; border:1px solid var(--border); border-radius:12px; transition:.16s ease; }
+.pending-registration-list article.selected { border-color:var(--blue); background:#f5f8ff; box-shadow:0 0 0 2px rgba(47, 111, 235, .08); }
+.pending-registration-select input { width:18px; height:18px; }
+.pending-registration-list article > div { display:grid; gap:3px; }
+.pending-registration-list article span, .pending-registration-list article small { color:var(--muted); font-size:12px; }
+.pending-registration-list article strong { color:var(--navy); }
+.verification-badge { padding:6px 9px; border-radius:999px; color:#177348 !important; background:#eaf8f1; font-size:11px !important; font-weight:800; white-space:nowrap; }
+.verification-badge.waiting { color:#966614 !important; background:#fff5df; }
+.empty-assignment { margin:4px 0 0; padding:22px; border-radius:12px; color:var(--muted); background:var(--bg); text-align:center; }
 @media (max-width: 900px) { .admin-grid { grid-template-columns:1fr; } }
-@media (max-width: 600px) { .admin-user-list article, .assignment-list article { grid-template-columns:1fr; align-items:start; } .assignment-list select { width:100%; } }
+@media (max-width: 600px) { .admin-user-list article, .assignment-list article { grid-template-columns:1fr; align-items:start; } .assignment-list select { width:100%; } .pending-assignment-card .section-header { align-items:stretch; } .pending-registration-list article { grid-template-columns:auto 1fr; } .verification-badge { grid-column:2; justify-self:start; } }
 .appointment-list { display:grid; }
 .appointment-list article { min-height:108px; padding:18px 22px; border-top:1px solid var(--border); display:grid; grid-template-columns:130px minmax(0,1fr) auto auto; align-items:center; gap:20px; }
 .appointment-list article.cancelled { opacity:.58; }

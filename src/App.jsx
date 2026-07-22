@@ -6,6 +6,7 @@ import { initialConsultations } from './data/consultations';
 import { initialFollowUps } from './data/followUps';
 import { initialAppointments } from './data/appointments';
 import { initialUsers } from './data/users';
+import { initialStudentRegistrations } from './data/studentRegistrations';
 import { initialPrograms } from './data/programs';
 import { initialProgramRecommendations } from './data/programRecommendations';
 import { resolveFollowUpStatus, toDateKey } from './utils/date';
@@ -43,6 +44,7 @@ function AppProvider({ children }) {
   const { user, role } = useAuth();
   const syncingRemoteData = firestoreSyncEnabled && Boolean(user) && Boolean(role);
   const [users, setUsers] = useState(() => syncingRemoteData ? [] : read('careerfit_users', initialUsers));
+  const [studentRegistrations, setStudentRegistrations] = useState(() => syncingRemoteData ? [] : read('careerfit_student_registrations', initialStudentRegistrations));
   const [students, setStudents] = useState(() => syncingRemoteData ? [] : read('careerfit_students', initialStudents).map(student => student.appointment && !student.appointmentDate ? { ...student, appointmentDate: toDateKey() } : student));
   const [consultations, setConsultations] = useState(() => syncingRemoteData ? [] : read('careerfit_consultations', initialConsultations));
   const [consultationNotes, setConsultationNotes] = useState(() => syncingRemoteData ? [] : read('careerfit_consultation_notes', []));
@@ -60,6 +62,7 @@ function AppProvider({ children }) {
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_followups', JSON.stringify(followUps)); }, [followUps, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_appointments', JSON.stringify(appointments)); }, [appointments, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_users', JSON.stringify(users)); }, [users, syncingRemoteData]);
+  useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_student_registrations', JSON.stringify(studentRegistrations)); }, [studentRegistrations, syncingRemoteData]);
   useEffect(() => { localStorage.setItem('careerfit_program_store', JSON.stringify(createProgramStore(programs))); }, [programs]);
   useEffect(() => { localStorage.setItem('careerfit_program_recommendation_store', JSON.stringify(createProgramRecommendationStore(programRecommendations))); }, [programRecommendations]);
   useEffect(() => { if (!toast) return undefined; const timer = setTimeout(() => setToast(''), 3200); return () => clearTimeout(timer); }, [toast]);
@@ -73,13 +76,14 @@ function AppProvider({ children }) {
     const loaded = new Set();
     const markLoaded = name => {
       loaded.add(name);
-      const expectedCount = isOperationsStaff(role) ? 6 : 4;
+      const expectedCount = isOperationsStaff(role) ? 7 : 4;
       if (loaded.size === expectedCount) setDataLoading(false);
     };
     return subscribeCareerData(
       { user, role },
       {
         users: items => { setUsers(items); markLoaded('users'); },
+        studentRegistrations: items => { setStudentRegistrations(items); markLoaded('studentRegistrations'); },
         students: items => { setStudents(items); markLoaded('students'); },
         consultations: items => { setConsultations(items); markLoaded('consultations'); },
         consultationNotes: items => { setConsultationNotes(items); markLoaded('consultationNotes'); },
@@ -130,7 +134,7 @@ function AppProvider({ children }) {
     setProgramRecommendations(initialProgramRecommendations);
   };
 
-  const value = useMemo(() => ({ users, setUsers, students, setStudents, consultations, setConsultations, consultationNotes, setConsultationNotes, followUps, setFollowUps, appointments, setAppointments, programs, setPrograms, programRecommendations, setProgramRecommendations, resetProgramDemo, persistDocument, persistDocumentGroup, toast, notify: setToast, draftForm, setDraftForm }), [users, students, consultations, consultationNotes, followUps, appointments, programs, programRecommendations, toast, draftForm, user]);
+  const value = useMemo(() => ({ users, setUsers, studentRegistrations, setStudentRegistrations, students, setStudents, consultations, setConsultations, consultationNotes, setConsultationNotes, followUps, setFollowUps, appointments, setAppointments, programs, setPrograms, programRecommendations, setProgramRecommendations, resetProgramDemo, persistDocument, persistDocumentGroup, toast, notify: setToast, draftForm, setDraftForm }), [users, studentRegistrations, students, consultations, consultationNotes, followUps, appointments, programs, programRecommendations, toast, draftForm, user]);
   if (dataLoading) return <main className="app-loading" role="status">상담 데이터를 불러오고 있어요...</main>;
   return <AppContext.Provider value={value}>{children}{toast && <div className="toast" role="status" aria-live="polite"><span>✓</span>{toast}</div>}</AppContext.Provider>;
 }

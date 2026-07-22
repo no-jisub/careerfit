@@ -4,7 +4,7 @@ import { isOperationsStaff } from '../utils/roles';
 
 const collectionNamesFor = role => {
   if (role === 'student') return ['students', 'consultations', 'followUps', 'appointments'];
-  return ['users', 'students', 'consultations', 'consultationNotes', 'followUps', 'appointments'];
+  return ['users', 'studentRegistrations', 'students', 'consultations', 'consultationNotes', 'followUps', 'appointments'];
 };
 
 function constraintsFor(name, session) {
