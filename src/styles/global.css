@@ -1247,6 +1247,19 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .student-record-info > div > span { color:var(--muted); font-size:11px; line-height:1.5; }
 .student-record-date { flex:0 0 auto; padding:8px 10px; border-radius:9px; color:var(--blue)!important; background:var(--blue-soft); font-size:11px!important; font-weight:800; }
 .student-record-delete { min-height:36px; padding:0 8px; white-space:nowrap; }
+.student-consultation-timeline { position:relative; margin-left:6px; padding-left:26px; }
+.student-consultation-timeline:before { content:''; position:absolute; top:22px; bottom:22px; left:6px; width:2px; border-radius:999px; background:#dce5f3; }
+.student-consultation-timeline > article { position:relative; border-bottom:1px solid var(--border); }
+.student-consultation-timeline > article:last-child { border-bottom:0; }
+.student-timeline-dot { position:absolute; top:29px; left:-25px; z-index:1; width:12px; height:12px; border:3px solid #fff; border-radius:50%; background:#91a1b8; box-shadow:0 0 0 2px #dce5f3; transition:background .2s, box-shadow .2s; }
+.student-consultation-timeline > article.open .student-timeline-dot { background:var(--blue); box-shadow:0 0 0 2px #b9ccfa; }
+.student-record-toggle { width:100%; min-height:72px; padding:13px 2px; border:0; display:flex; align-items:center; justify-content:space-between; gap:16px; color:inherit; background:transparent; text-align:left; }
+.student-record-toggle > svg { flex:0 0 auto; color:var(--muted); transition:transform .2s; }
+.student-consultation-timeline > article.open .student-record-toggle > svg { color:var(--blue); transform:rotate(90deg); }
+.student-timeline-body { padding:0 2px 20px; }
+.student-timeline-body .published-summary-fields { max-height:none; padding:14px; border:1px solid #e1e9f5; border-radius:13px; background:#f8faff!important; }
+.student-timeline-footer { margin-top:12px; display:flex; align-items:center; justify-content:space-between; gap:14px; }
+.student-timeline-footer small { color:var(--muted); font-size:10px; line-height:1.5; }
 .student-portal footer > div { display:grid; gap:4px; }
 .student-portal footer strong { color:#64748b; font-size:11px; }
 .student-portal footer > div span { color:#8e98a9; font-size:10px; }
@@ -1285,6 +1298,12 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
   .student-record-list article { align-items:flex-start; flex-direction:column; gap:12px; }
   .student-record-info { align-items:flex-start; }
   .student-record-delete, .student-record-list .request-status { margin-left:54px; }
+  .student-consultation-timeline { margin-left:2px; padding-left:21px; }
+  .student-timeline-dot { left:-20px; }
+  .student-record-toggle .student-record-info { gap:9px!important; }
+  .student-record-toggle .student-record-date { padding:7px 8px; }
+  .student-timeline-footer { align-items:flex-start; flex-direction:column; }
+  .student-timeline-footer .student-record-delete, .student-timeline-footer .request-status { margin-left:0; }
   .student-portal footer { padding:22px 18px; display:flex; align-items:center; gap:16px; text-align:left; }
   .student-portal footer > div { min-width:0; }
   .student-portal footer > div span { margin-top:0; line-height:1.5; }
