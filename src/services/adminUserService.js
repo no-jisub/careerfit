@@ -30,6 +30,7 @@ export async function createManagedUser({ account, student }) {
       displayName: account.displayName,
       role: account.role,
       active: true,
+      approvalStatus: 'approved',
       createdAt: now,
       updatedAt: now,
     });

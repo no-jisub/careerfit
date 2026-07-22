@@ -158,6 +158,28 @@ const documents = {
       updatedAt: now,
     },
   },
+  consultationSummaries: {
+    c1: {
+      consultationId: 'c1',
+      studentId: 's1',
+      studentUid: student.uid,
+      counselorUid: counselor.uid,
+      counselor: '박지현',
+      date: '2026-07-08',
+      type: '진로 탐색',
+      purpose: '관심 직무 구체화',
+      summary: '개발 수업 경험과 서비스 기획 관심을 바탕으로 두 직무를 비교하기로 했습니다.',
+      strengths: '새로운 직무를 비교하고 탐색하려는 태도',
+      concern: '',
+      programs: [],
+      studentActions: '관심 직무 두 개의 역할과 필요 역량 정리',
+      nextCheckItems: '직무 비교 결과와 프로그램 신청 여부',
+      visibleFields: ['summary', 'strengths', 'studentActions', 'nextCheckItems'],
+      published: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+  },
   consultationNotes: {
     n1: {
       consultationId: 'c1',

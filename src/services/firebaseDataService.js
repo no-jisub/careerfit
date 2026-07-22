@@ -3,15 +3,17 @@ import { db, firestoreSyncEnabled } from '../lib/firebase';
 import { isOperationsStaff } from '../utils/roles';
 
 const collectionNamesFor = role => {
-  if (role === 'student') return ['students', 'consultations', 'followUps', 'appointments'];
-  return ['users', 'studentRegistrations', 'students', 'consultations', 'consultationNotes', 'followUps', 'appointments'];
+  if (role === 'student') return ['students', 'consultationSummaries', 'followUps', 'appointments', 'recordDeletionRequests'];
+  return ['users', 'studentRegistrations', 'students', 'consultations', 'consultationSummaries', 'consultationNotes', 'followUps', 'appointments', 'recordDeletionRequests'];
 };
 
 function constraintsFor(name, session) {
   if (isOperationsStaff(session.role)) return [];
   if (name === 'students') return [where('uid', '==', session.user.uid)];
   if (name === 'consultations') return [where('studentUid', '==', session.user.uid), where('studentVisible', '==', true)];
+  if (name === 'consultationSummaries') return [where('studentUid', '==', session.user.uid), where('published', '==', true)];
   if (name === 'appointments') return [where('studentUid', '==', session.user.uid)];
+  if (name === 'recordDeletionRequests') return [where('studentUid', '==', session.user.uid)];
   return [where('assigneeUid', '==', session.user.uid)];
 }
 

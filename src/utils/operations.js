@@ -13,7 +13,7 @@ export function buildOperationalNotifications(students, followUps, appointments,
     }
   });
   appointments.forEach(item => {
-    if (item.status !== 'scheduled' || item.date !== today) return;
+    if (!['confirmed', 'scheduled'].includes(item.status) || item.date !== today) return;
     const student = studentById.get(item.studentId);
     notices.push({ id: `appointment-${item.id}`, type: 'appointment', title: `오늘 ${item.time} 상담 예정`, description: `${student?.name || '학생'} · ${item.type}`, date: item.date, to: `/students/${item.studentId}`, priority: 2 });
   });

@@ -14,6 +14,16 @@ const statusCopy = {
     title: '상담사 배정을 기다리고 있어요',
     description: '이메일 인증이 완료되었습니다. 상담사가 가입 정보를 확인하고 담당 학생으로 배정하면 바로 이용할 수 있어요.',
   },
+  counselorApprovalPending: {
+    icon: 'clock',
+    title: '상담사 승인을 기다리고 있어요',
+    description: '이메일 인증이 완료되었습니다. 기존 상담사가 계정을 승인하면 업무 화면을 사용할 수 있어요.',
+  },
+  withdrawalPending: {
+    icon: 'clock',
+    title: '탈퇴 처리가 접수되었어요',
+    description: '계정 이용이 중지되었습니다. 삭제 예정일 전에는 상담사에게 복구를 요청할 수 있어요.',
+  },
   rejected: {
     icon: 'alert',
     title: '가입 승인을 확인해 주세요',
@@ -39,7 +49,7 @@ export default function AccountStatusPage() {
     setMessage('');
     try {
       const result = await refreshAccount();
-      if (result.status !== 'approved') setMessage(result.status === 'assignmentPending' ? '아직 상담사 배정 전입니다.' : '현재 상태를 다시 확인했습니다.');
+      if (result.status !== 'approved') setMessage(result.status === 'assignmentPending' ? '아직 상담사 배정 전입니다.' : result.status === 'counselorApprovalPending' ? '아직 기존 상담사의 승인 전입니다.' : '현재 상태를 다시 확인했습니다.');
     } catch {
       setMessage('상태를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
     } finally { setWorking(false); }

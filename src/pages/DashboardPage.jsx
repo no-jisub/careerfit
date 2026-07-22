@@ -12,7 +12,7 @@ export default function DashboardPage() {
   const counselorName = (profile?.displayName || user?.displayName || '상담 담당자').replace(/\s*상담사$/, '');
   const today = new Date();
   const todayKey = toDateKey(today);
-  const scheduled = appointments.filter(item => item.date === todayKey && item.status === 'scheduled').sort((a, b) => a.time.localeCompare(b.time));
+  const scheduled = appointments.filter(item => item.date === todayKey && ['confirmed', 'scheduled'].includes(item.status)).sort((a, b) => a.time.localeCompare(b.time));
   const writing = students.filter(s => s.status === 'writing');
   const pending = followUps.filter(f => f.status !== 'complete');
   const overdue = pending.filter(f => f.status === 'overdue');
