@@ -27,7 +27,7 @@
 
 - Firebase Hosting 배포와 GitHub Actions 자동 배포는 정상적으로 연결되어 있습니다.
 - 실제 사용자를 받기 전까지 GitHub Actions는 `VITE_FIREBASE_AUTH_ENABLED=false`, `VITE_FIRESTORE_SYNC_ENABLED=false`, `VITE_DEMO_MODE_ENABLED=true`로 공개 데모 빌드를 생성합니다.
-- 운영 사이트에서도 로그인 없이 관리자·상담사·학생 역할을 선택할 수 있습니다.
+- 운영 사이트에서는 로그인 없이 상담 담당자·학생 역할을 선택할 수 있습니다. 상담 담당자 화면에 사용자 등록과 학생 배정 등 운영 관리 기능이 포함됩니다.
 - 공개 데모에서 생성한 데이터는 해당 브라우저의 `localStorage`에만 저장되며 Cloud Firestore 운영 데이터와 연결되지 않습니다.
 - Firebase 웹 설정은 빌드에 포함되는 공개 클라이언트 설정입니다. 반면 서비스 계정 키, 비밀번호, 서버 토큰은 절대 `VITE_` 변수나 Git에 저장하면 안 됩니다.
 - GitHub Pages 배포는 제거되었습니다. Vite의 `base`는 Firebase 루트 배포를 위해 반드시 `/`를 유지해야 합니다.
@@ -44,6 +44,9 @@
 - 규칙 기반 상담일지 초안 생성 및 직접 수정
 - 학생/교직원 담당 후속 조치 추가와 상태 관리
 - 학생 관심 분야에 맞춘 비교과 프로그램 추천
+- 상담사·학생 계정 등록과 학생별 담당 상담사 배정
+- 전체 상담 일정·기록·후속 조치·운영 통계 확인
+- 계정별 비밀번호 재설정 메일 발송
 
 ### 학생(`student`)
 
@@ -51,11 +54,10 @@
 - 본인에게 배정된 후속 조치 확인 및 완료 처리
 - 추천 비교과 프로그램 확인
 
-### 관리자(`admin`)
+### 호환용 관리자(`admin`)
 
-- 관리자·상담사·학생 계정 등록과 학생별 담당 상담사 배정
-- 전체 상담 일정·기록·후속 조치·운영 통계 확인
-- 계정별 비밀번호 재설정 메일 발송
+- 기존 관리자 계정은 계속 사용할 수 있으며 상담 담당자와 동일한 운영 권한을 가집니다.
+- 공개 데모에서는 별도 관리자 시작 버튼을 제공하지 않습니다.
 
 ### 공통 운영 기능
 
@@ -139,7 +141,7 @@ design-system/careerfit/MASTER.md       # UI 디자인 시스템 기준
 | `/programs` | `/#/programs` | 프로그램 추천 |
 | `/settings` | `/#/settings` | 설정 |
 | `/student` | `/#/student` | 학생 마이페이지 |
-| `/admin/users` | `/#/admin/users` | 관리자 전용 계정 등록·담당 배정 |
+| `/admin/users` | `/#/admin/users` | 상담 담당자 계정 등록·담당 배정 |
 
 역할이 없거나 허용되지 않은 경로로 접근하면 `/login`으로 이동합니다. 상담 담당자와 관리자는 상담 담당자 라우트를 사용하고, 학생은 `/student`만 사용할 수 있습니다.
 
@@ -176,8 +178,7 @@ design-system/careerfit/MASTER.md       # UI 디자인 시스템 기준
 
 `firebaseDataService.js`의 쿼리 범위:
 
-- 관리자: 모든 대상 문서
-- 상담 담당자: 자신의 UID가 `counselorUid` 또는 `ownerUid`인 문서
+- 상담 담당자와 호환용 관리자: 운영에 필요한 모든 대상 문서
 - 학생: 자신의 `uid`, `studentUid`, `assigneeUid`와 일치하는 문서
 - 학생 상담 기록: `studentVisible == true`인 문서만
 
@@ -190,7 +191,7 @@ Firestore 복합 쿼리를 확장하면 `firestore.indexes.json`에 인덱스가
 1. Firebase ID 토큰의 custom claim `role`
 2. `users/{uid}` 문서의 `role`
 
-허용 역할은 `counselor`, `student`, `admin`입니다. 실제 Auth를 켤 때 이메일/비밀번호 로그인을 Firebase Console에서 활성화하고, 각 계정에 역할 정보를 반드시 연결해야 합니다.
+허용 역할은 `counselor`, `student`, `admin`입니다. `counselor`는 상담과 운영 관리 기능을 함께 사용하고, `admin`은 기존 계정 호환을 위해 동일 권한으로 유지합니다. 실제 Auth를 켤 때 이메일/비밀번호 로그인을 Firebase Console에서 활성화하고 각 계정에 역할 정보를 반드시 연결해야 합니다.
 
 데모 로그인의 역할은 `localStorage`에 저장됩니다. 실제 Firebase 로그인에 성공하면 데모 역할 값은 제거됩니다.
 

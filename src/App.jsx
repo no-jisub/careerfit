@@ -10,6 +10,7 @@ import { resolveFollowUpStatus, toDateKey } from './utils/date';
 import { useAuth } from './auth/AuthContext';
 import { saveCareerDocument, saveCareerDocumentGroup, subscribeCareerData } from './services/firebaseDataService';
 import { firestoreSyncEnabled } from './lib/firebase';
+import { isOperationsStaff } from './utils/roles';
 
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -63,7 +64,7 @@ function AppProvider({ children }) {
     const loaded = new Set();
     const markLoaded = name => {
       loaded.add(name);
-      const expectedCount = role === 'student' ? 4 : role === 'admin' ? 6 : 5;
+      const expectedCount = isOperationsStaff(role) ? 6 : 4;
       if (loaded.size === expectedCount) setDataLoading(false);
     };
     return subscribeCareerData(
@@ -135,7 +136,7 @@ function CounselorRoutes() {
       <Route path="insights" element={<InsightsPage />} />
       <Route path="programs" element={<ProgramsPage />} />
       <Route path="settings" element={<SettingsPage />} />
-      <Route path="admin/users" element={role === 'admin' ? <AdminUsersPage /> : <Navigate to="/dashboard" replace />} />
+      <Route path="admin/users" element={isOperationsStaff(role) ? <AdminUsersPage /> : <Navigate to="/dashboard" replace />} />
       <Route index element={<Navigate to="dashboard" replace />} />
       <Route path="*" element={<Navigate to="dashboard" replace />} />
     </Route>
@@ -149,6 +150,6 @@ export default function App() {
   return <AppProvider key={dataSessionKey}><Suspense fallback={<main className="app-loading" role="status">화면을 준비하고 있어요...</main>}><Routes>
     <Route path="/login" element={<LoginPage />} />
     <Route path="/student" element={role === 'student' ? <StudentMyPage /> : <Navigate to="/login" replace />} />
-    <Route path="/*" element={role === 'counselor' || role === 'admin' ? <CounselorRoutes /> : <Navigate to="/login" replace />} />
+    <Route path="/*" element={isOperationsStaff(role) ? <CounselorRoutes /> : <Navigate to="/login" replace />} />
   </Routes></Suspense></AppProvider>;
 }

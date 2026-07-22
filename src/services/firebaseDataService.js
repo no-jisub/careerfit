@@ -1,17 +1,14 @@
 import { collection, doc, onSnapshot, query, setDoc, where, writeBatch } from 'firebase/firestore';
 import { db, firestoreSyncEnabled } from '../lib/firebase';
+import { isOperationsStaff } from '../utils/roles';
 
 const collectionNamesFor = role => {
   if (role === 'student') return ['students', 'consultations', 'followUps', 'appointments'];
-  if (role === 'admin') return ['users', 'students', 'consultations', 'consultationNotes', 'followUps', 'appointments'];
-  return ['students', 'consultations', 'consultationNotes', 'followUps', 'appointments'];
+  return ['users', 'students', 'consultations', 'consultationNotes', 'followUps', 'appointments'];
 };
 
 function constraintsFor(name, session) {
-  if (session.role === 'admin') return [];
-  if (session.role === 'counselor') {
-    return [where(name === 'followUps' ? 'ownerUid' : 'counselorUid', '==', session.user.uid)];
-  }
+  if (isOperationsStaff(session.role)) return [];
   if (name === 'students') return [where('uid', '==', session.user.uid)];
   if (name === 'consultations') return [where('studentUid', '==', session.user.uid), where('studentVisible', '==', true)];
   if (name === 'appointments') return [where('studentUid', '==', session.user.uid)];

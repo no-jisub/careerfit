@@ -102,6 +102,12 @@ service cloud.firestore {
       return hasRole('student');
     }
 
+    // In the current small-team operating model, counselors also perform
+    // account management, student assignment, and global operational review.
+    function isStaff() {
+      return isAdmin() || isCounselor();
+    }
+
     function isAssignedStudent(studentId) {
       return signedIn()
         && exists(/databases/$(database)/documents/students/$(studentId))
@@ -134,39 +140,39 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isAdmin() || (signedIn() && request.auth.uid == userId);
-      allow create: if validUserProfile(request.resource.data) && (isAdmin()
+      allow read: if isStaff() || (signedIn() && request.auth.uid == userId);
+      allow create: if validUserProfile(request.resource.data) && (isStaff()
         || (signedIn()
           && request.auth.uid == userId
           && (request.resource.data.role == 'student'
             || (request.auth.token.role in ['admin', 'counselor']
               && request.resource.data.role == request.auth.token.role))));
-      allow update: if isAdmin() && validUserProfile(request.resource.data);
-      allow delete: if isAdmin();
+      allow update: if isStaff() && validUserProfile(request.resource.data);
+      allow delete: if isStaff();
     }
 
     match /students/{studentId} {
-      allow read: if isAdmin()
-        || (isCounselor() && resource.data.counselorUid == request.auth.uid)
+      allow read: if isStaff()
         || (isStudent() && resource.data.uid == request.auth.uid);
-      // Student identity binding is privileged. Counselors may edit only records
-      // that an administrator has already assigned to them.
-      allow create: if isAdmin() && validStudent(request.resource.data);
-      allow update: if validStudent(request.resource.data) && (isAdmin()
-        || (isCounselor()
-          && resource.data.counselorUid == request.auth.uid
+      // Student identity binding remains privileged. Staff can manage assignments;
+      // students can update only their explicitly self-managed profile fields.
+      allow create: if isStaff() && validStudent(request.resource.data);
+      allow update: if validStudent(request.resource.data) && (isStaff()
+        || (isStudent()
+          && resource.data.uid == request.auth.uid
+          && request.resource.data.uid == resource.data.uid
           && request.resource.data.counselorUid == resource.data.counselorUid
-          && request.resource.data.uid == resource.data.uid));
-      allow delete: if isAdmin();
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['phone', 'interests', 'goal', 'concern', 'updatedAt'])));
+      allow delete: if isStaff();
     }
 
     match /consultations/{consultationId} {
-      allow read: if isAdmin()
-        || (isCounselor() && resource.data.counselorUid == request.auth.uid)
+      allow read: if isStaff()
         || (isStudent()
           && resource.data.studentUid == request.auth.uid
           && resource.data.studentVisible == true);
-      allow create: if validConsultation(request.resource.data) && (isAdmin()
+      allow create: if validConsultation(request.resource.data) && (isStaff()
         || (isCounselor()
           && request.resource.data.counselorUid == request.auth.uid
           && isAssignedStudent(request.resource.data.studentId)
@@ -174,35 +180,33 @@ service cloud.firestore {
             request.resource.data.studentId,
             request.resource.data.studentUid
           )));
-      allow update: if validConsultation(request.resource.data) && (isAdmin()
+      allow update: if validConsultation(request.resource.data) && (isStaff()
         || (isCounselor()
           && resource.data.counselorUid == request.auth.uid
           && request.resource.data.counselorUid == resource.data.counselorUid
           && request.resource.data.studentUid == resource.data.studentUid
           && request.resource.data.studentId == resource.data.studentId));
-      allow delete: if isAdmin();
+      allow delete: if isStaff();
     }
 
     match /consultationNotes/{noteId} {
-      allow read: if isAdmin()
-        || (isCounselor() && resource.data.counselorUid == request.auth.uid);
-      allow create: if validConsultationNote(request.resource.data) && (isAdmin()
+      allow read: if isStaff();
+      allow create: if validConsultationNote(request.resource.data) && (isStaff()
         || (isCounselor()
           && request.resource.data.counselorUid == request.auth.uid
           && isAssignedStudent(request.resource.data.studentId)));
-      allow update: if validConsultationNote(request.resource.data) && (isAdmin()
+      allow update: if validConsultationNote(request.resource.data) && (isStaff()
         || (isCounselor()
           && resource.data.counselorUid == request.auth.uid
           && request.resource.data.counselorUid == resource.data.counselorUid
           && request.resource.data.studentId == resource.data.studentId));
-      allow delete: if isAdmin();
+      allow delete: if isStaff();
     }
 
     match /followUps/{followUpId} {
-      allow read: if isAdmin()
-        || (isCounselor() && resource.data.ownerUid == request.auth.uid)
+      allow read: if isStaff()
         || (isStudent() && resource.data.assigneeUid == request.auth.uid);
-      allow create: if validFollowUp(request.resource.data) && (isAdmin()
+      allow create: if validFollowUp(request.resource.data) && (isStaff()
         || (isCounselor()
           && request.resource.data.ownerUid == request.auth.uid
           && isAssignedStudent(request.resource.data.studentId)
@@ -211,7 +215,7 @@ service cloud.firestore {
               request.resource.data.studentId,
               request.resource.data.assigneeUid
             ))));
-      allow update: if validFollowUp(request.resource.data) && (isAdmin()
+      allow update: if validFollowUp(request.resource.data) && (isStaff()
         || (isCounselor()
           && resource.data.ownerUid == request.auth.uid
           && request.resource.data.ownerUid == resource.data.ownerUid
@@ -220,14 +224,13 @@ service cloud.firestore {
         || (isStudent()
           && resource.data.assigneeUid == request.auth.uid
           && isValidStudentCompletion()));
-      allow delete: if isAdmin();
+      allow delete: if isStaff();
     }
 
     match /appointments/{appointmentId} {
-      allow read: if isAdmin()
-        || (isCounselor() && resource.data.counselorUid == request.auth.uid)
+      allow read: if isStaff()
         || (isStudent() && resource.data.studentUid == request.auth.uid);
-      allow create: if validAppointment(request.resource.data) && (isAdmin()
+      allow create: if validAppointment(request.resource.data) && (isStaff()
         || (isCounselor()
           && request.resource.data.counselorUid == request.auth.uid
           && isAssignedStudent(request.resource.data.studentId)
@@ -235,22 +238,22 @@ service cloud.firestore {
             request.resource.data.studentId,
             request.resource.data.studentUid
           )));
-      allow update: if validAppointment(request.resource.data) && (isAdmin()
+      allow update: if validAppointment(request.resource.data) && (isStaff()
         || (isCounselor()
           && resource.data.counselorUid == request.auth.uid
           && request.resource.data.counselorUid == resource.data.counselorUid
           && request.resource.data.studentUid == resource.data.studentUid
           && request.resource.data.studentId == resource.data.studentId));
-      allow delete: if isAdmin();
+      allow delete: if isStaff();
     }
 
     match /programs/{programId} {
       allow read: if signedIn();
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isStaff();
     }
 
     match /auditLogs/{logId} {
-      allow read: if isAdmin();
+      allow read: if isStaff();
       allow write: if false;
     }
 
