@@ -6,7 +6,7 @@ import { EmptyState, StatusBadge } from '../components/UI';
 import { generateConsultationDraft } from '../services/consultationAiService';
 import { addDays, toDateKey } from '../utils/date';
 import { useAuth } from '../auth/AuthContext';
-import { validateConsultationInput } from '../utils/validation';
+import { cleanText, validateConsultationInput } from '../utils/validation';
 
 const createEmptyForm = () => { const today = toDateKey(); return { date: today, type: '진로 탐색', purpose: '관심 직무 구체화 및 경험 계획 수립', currentConcern: '', rawMemo: '', guidance: '', programs: [], studentActions: '', counselorActions: '', nextCheckItems: '', nextDate: addDays(today, 14), studentVisible: true }; };
 const appendMissingDocuments = (current, additions) => [
@@ -49,7 +49,17 @@ export default function ConsultationFormPage() {
     const validated = validateConsultationInput(form);
     if (validated.error) { setError(validated.error); document.querySelector('#rawMemo')?.focus(); return; }
     const safeForm = validated.value;
-    const final = aiDraft || generateConsultationDraft(safeForm);
+    const draft = aiDraft || generateConsultationDraft(safeForm);
+    const final = {
+      ...draft,
+      purpose: cleanText(draft.purpose, 500),
+      summary: cleanText(draft.summary, 5000),
+      concern: cleanText(draft.concern, 5000),
+      guidance: cleanText(draft.guidance, 5000),
+      studentActions: cleanText(draft.studentActions, 2000),
+      counselorActions: cleanText(draft.counselorActions, 2000),
+      nextCheckItems: cleanText(draft.nextCheckItems, 2000),
+    };
     const now = new Date().toISOString();
     const consultation = { id: `c${Date.now()}`, studentId: student.id, date: form.date, type: form.type, purpose: final.purpose, counselor: (profile?.displayName || user?.displayName || '상담 담당자').replace(/\s*상담사$/, ''), summary: final.summary, concern: final.concern, guidance: final.guidance, programs: final.programs, studentActions: final.studentActions, counselorActions: final.counselorActions, nextCheckItems: final.nextCheckItems, studentVisible: form.studentVisible, createdAt: now, updatedAt: now };
     const internalNote = { id: consultation.id, consultationId: consultation.id, studentId: student.id, note: safeForm.rawMemo, createdAt: now, updatedAt: now };
