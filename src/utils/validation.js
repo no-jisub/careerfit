@@ -25,6 +25,44 @@ export function validateAccountInput(account, student, existingUsers = []) {
   return { value: { ...account, displayName, email } };
 }
 
+export function validateStudentRegistrationInput(form) {
+  const displayName = cleanText(form.displayName, 80);
+  const email = cleanText(form.email, 254).toLowerCase();
+  const studentNo = cleanText(form.studentNo, 40);
+  const department = cleanText(form.department, 100);
+  const phone = cleanText(form.phone, 40);
+  const goal = cleanText(form.goal, 1000);
+  const concern = cleanText(form.concern, 5000);
+  const interests = cleanText(form.interests, 500)
+    .split(',')
+    .map(value => cleanText(value, 50))
+    .filter(Boolean)
+    .slice(0, 20);
+
+  if (!displayName) return { error: '이름을 입력해 주세요.' };
+  if (!emailPattern.test(email)) return { error: '유효한 이메일 형식으로 입력해 주세요.' };
+  if (!studentNo || !department || !form.grade) return { error: '학번, 학과, 학년을 모두 입력해 주세요.' };
+  if (String(form.password || '').length < 8) return { error: '비밀번호는 8자 이상으로 입력해 주세요.' };
+  if (!/[A-Za-z]/.test(form.password) || !/[0-9]/.test(form.password)) return { error: '비밀번호에 영문과 숫자를 모두 포함해 주세요.' };
+  if (form.password !== form.passwordConfirm) return { error: '비밀번호 확인이 일치하지 않습니다.' };
+  if (!form.privacyConsent) return { error: '개인정보 수집·이용에 동의해 주세요.' };
+
+  return {
+    value: {
+      displayName,
+      email,
+      password: form.password,
+      studentNo,
+      department,
+      grade: cleanText(form.grade, 20),
+      phone,
+      goal,
+      concern,
+      interests,
+    },
+  };
+}
+
 export function validateAppointmentInput(form, nowDate, nowTime) {
   if (!form.studentId) return { error: '상담할 학생을 선택해 주세요.' };
   if (!isDateKey(form.date) || !timePattern.test(form.time)) return { error: '상담 날짜와 시간을 확인해 주세요.' };

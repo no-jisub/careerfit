@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanText, isDateKey, validateAppointmentInput, validateConsultationInput } from '../src/utils/validation.js';
+import { cleanText, isDateKey, validateAppointmentInput, validateConsultationInput, validateStudentRegistrationInput } from '../src/utils/validation.js';
 
 test('cleanText removes control characters and applies a maximum length', () => {
   assert.equal(cleanText('  상\u0000담 내용  ', 4), '상담 내');
@@ -19,4 +19,18 @@ test('appointment validation blocks past appointments and empty locations', () =
 test('consultation validation requires a meaningful private memo', () => {
   const result = validateConsultationInput({ date: '2026-07-22', purpose: '진로 탐색', rawMemo: '짧음', nextDate: '2026-08-01' });
   assert.match(result.error, /10자/);
+});
+
+test('student registration requires verified identity fields and a strong matching password', () => {
+  const base = {
+    displayName: ' 김하늘 ', email: 'STUDENT@EXAMPLE.COM', password: 'careerfit1', passwordConfirm: 'careerfit1',
+    studentNo: ' 20261234 ', department: ' 컴퓨터공학과 ', grade: '2학년', phone: '', interests: 'UX, 데이터 분석, UX', goal: '', concern: '', privacyConsent: true,
+  };
+  const valid = validateStudentRegistrationInput(base);
+  assert.equal(valid.value.email, 'student@example.com');
+  assert.equal(valid.value.studentNo, '20261234');
+  assert.deepEqual(valid.value.interests, ['UX', '데이터 분석', 'UX']);
+  assert.match(validateStudentRegistrationInput({ ...base, password: 'abcdefgh', passwordConfirm: 'abcdefgh' }).error, /영문과 숫자/);
+  assert.match(validateStudentRegistrationInput({ ...base, passwordConfirm: 'different' }).error, /일치/);
+  assert.match(validateStudentRegistrationInput({ ...base, privacyConsent: false }).error, /동의/);
 });

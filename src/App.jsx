@@ -16,6 +16,8 @@ import { isOperationsStaff } from './utils/roles';
 import { createProgramRecommendationStore, createProgramStore, restoreProgramRecommendationStore, restoreProgramStore } from './utils/programs';
 
 const LoginPage = lazy(() => import('./pages/LoginPage'));
+const SignupPage = lazy(() => import('./pages/SignupPage'));
+const AccountStatusPage = lazy(() => import('./pages/AccountStatusPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const StudentsPage = lazy(() => import('./pages/StudentsPage'));
 const StudentDetailPage = lazy(() => import('./pages/StudentDetailPage'));
@@ -39,7 +41,7 @@ export function useApp() { return useContext(AppContext); }
 
 function AppProvider({ children }) {
   const { user, role } = useAuth();
-  const syncingRemoteData = firestoreSyncEnabled && Boolean(user);
+  const syncingRemoteData = firestoreSyncEnabled && Boolean(user) && Boolean(role);
   const [users, setUsers] = useState(() => syncingRemoteData ? [] : read('careerfit_users', initialUsers));
   const [students, setStudents] = useState(() => syncingRemoteData ? [] : read('careerfit_students', initialStudents).map(student => student.appointment && !student.appointmentDate ? { ...student, appointmentDate: toDateKey() } : student));
   const [consultations, setConsultations] = useState(() => syncingRemoteData ? [] : read('careerfit_consultations', initialConsultations));
@@ -160,7 +162,9 @@ export default function App() {
   if (loading) return <main className="app-loading" role="status">로그인 정보를 확인하고 있어요...</main>;
   const dataSessionKey = firestoreSyncEnabled && user ? `firebase:${user.uid}` : 'demo';
   return <AppProvider key={dataSessionKey}><Suspense fallback={<main className="app-loading" role="status">화면을 준비하고 있어요...</main>}><Routes>
-    <Route path="/login" element={<LoginPage />} />
+    <Route path="/login" element={role ? <Navigate to={role === 'student' ? '/student' : '/dashboard'} replace /> : user ? <Navigate to="/account-status" replace /> : <LoginPage />} />
+    <Route path="/signup" element={<SignupPage />} />
+    <Route path="/account-status" element={<AccountStatusPage />} />
     <Route path="/student" element={role === 'student' ? <StudentMyPage /> : <Navigate to="/login" replace />} />
     <Route path="/*" element={isOperationsStaff(role) ? <CounselorRoutes /> : <Navigate to="/login" replace />} />
   </Routes></Suspense></AppProvider>;
