@@ -206,7 +206,7 @@ function CounselorRoutes() {
       <Route path="settings" element={<SettingsPage />} />
       <Route path="admin/users" element={isOperationsStaff(role) ? <AdminUsersPage /> : <Navigate to="/dashboard" replace />} />
       <Route index element={<Navigate to="dashboard" replace />} />
-      <Route path="*" element={<Navigate to="dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Route>
   </Routes>;
 }
