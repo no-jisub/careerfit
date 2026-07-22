@@ -9,10 +9,16 @@ export default function FollowUpsPage() {
   const { students, followUps, setFollowUps, persistDocument, notify } = useApp();
   const [filter, setFilter] = useState('all');
   const [owner, setOwner] = useState('all');
+  const [query, setQuery] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(() => ({ studentId: students[0]?.id || '', content: '', owner: '학생', dueDate: addDays(toDateKey(), 7) }));
-  const items = useMemo(() => followUps.filter(f => students.some(student => student.id === f.studentId) && (filter === 'all' || f.status === filter) && (owner === 'all' || f.owner === owner)).sort((a, b) => (a.status === 'overdue' ? -1 : 1) - (b.status === 'overdue' ? -1 : 1)), [students, followUps, filter, owner]);
+  const items = useMemo(() => followUps.filter(f => {
+    const student = students.find(item => item.id === f.studentId);
+    const keyword = query.trim().toLowerCase();
+    return student && (filter === 'all' || f.status === filter) && (owner === 'all' || f.owner === owner)
+      && (!keyword || [student.name, student.studentNo, f.content].some(value => value?.toLowerCase().includes(keyword)));
+  }).sort((a, b) => (a.status === 'overdue' ? -1 : 1) - (b.status === 'overdue' ? -1 : 1) || a.dueDate.localeCompare(b.dueDate)), [students, followUps, filter, owner, query]);
   useEffect(() => {
     if (!showAdd) return undefined;
     const closeModal = event => { if (event.key === 'Escape' && !saving) setShowAdd(false); };
@@ -63,7 +69,7 @@ export default function FollowUpsPage() {
 
   return <>
     <PageIntro eyebrow="후속 조치 관리" title="다음 행동을 놓치지 않도록" description="모든 학생의 후속 조치를 기한과 담당자별로 모아 확인하세요." action={<button className="button primary" onClick={() => setShowAdd(true)}><Icon name="plus" size={18} />후속 조치 추가</button>} />
-    <section className="task-filter-bar"><div className="segmented" aria-label="상태 필터">{[['all','전체'],['scheduled','예정'],['inProgress','진행 중'],['complete','완료'],['overdue','기한 초과']].map(([key,label]) => <button className={filter === key ? 'active' : ''} key={key} onClick={() => setFilter(key)}>{label}<span>{key === 'all' ? followUps.length : followUps.filter(f => f.status === key).length}</span></button>)}</div><select aria-label="행동 담당자" value={owner} onChange={e => setOwner(e.target.value)}><option value="all">전체 담당자</option><option value="학생">학생 담당</option><option value="교직원">교직원 담당</option></select></section>
+    <section className="task-filter-bar"><label className="search-field"><span className="sr-only">후속 조치 검색</span><Icon name="search" size={18} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="학생, 학번, 후속 조치 검색" /></label><div className="segmented" aria-label="상태 필터">{[['all','전체'],['scheduled','예정'],['inProgress','진행 중'],['complete','완료'],['overdue','기한 초과']].map(([key,label]) => <button className={filter === key ? 'active' : ''} key={key} onClick={() => setFilter(key)}>{label}<span>{key === 'all' ? followUps.length : followUps.filter(f => f.status === key).length}</span></button>)}</div><select aria-label="행동 담당자" value={owner} onChange={e => setOwner(e.target.value)}><option value="all">전체 담당자</option><option value="학생">학생 담</option><option value="교직원">교직원 담</option></select></section>
     <section className="card task-table-card">
       <div className="list-toolbar"><div><h2>후속 조치 목록 <span>{items.length}</span></h2><p>기한 초과 항목이 먼저 표시됩니다.</p></div></div>
       {items.length ? <>
