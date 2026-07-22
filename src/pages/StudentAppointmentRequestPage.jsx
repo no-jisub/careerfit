@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../App';
 import { useAuth } from '../auth/AuthContext';
@@ -15,7 +15,10 @@ export default function StudentAppointmentRequestPage() {
   const navigate = useNavigate();
   const { students, counselorAvailability, setCounselorAvailability, appointments, setAppointments, persistDocumentGroup, notify } = useApp();
   const { user, logout } = useAuth();
-  const student = user ? students.find(item => item.uid === user.uid) : students[0];
+  const student = useMemo(() => {
+    const matched = user ? students.find(item => item.uid === user.uid) : students[0];
+    return !user && matched ? { ...matched, counselorUid: 'demo-counselor' } : matched;
+  }, [students, user]);
   const slot = counselorAvailability.find(item => item.id === availabilityId);
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);

@@ -19,7 +19,10 @@ const shiftMonth = (monthKey, amount) => {
 export default function StudentAppointmentSlotsPage() {
   const { students, counselorAvailability, appointments } = useApp();
   const { user, logout } = useAuth();
-  const student = user ? students.find(item => item.uid === user.uid) : students[0];
+  const student = useMemo(() => {
+    const matched = user ? students.find(item => item.uid === user.uid) : students[0];
+    return !user && matched ? { ...matched, counselorUid: 'demo-counselor' } : matched;
+  }, [students, user]);
   const now = new Date();
   const today = toDateKey(now);
   const time = now.toTimeString().slice(0, 5);
