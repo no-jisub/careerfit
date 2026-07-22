@@ -7,6 +7,8 @@ import { createRescheduleRequest, holdAvailabilityForReschedule, isAvailabilityB
 import { getTimeRangeEnd, toDateKey } from '../utils/date';
 import { validateStudentAppointmentRequest } from '../utils/validation';
 import { buildEventNotification } from '../utils/notifications';
+import { validateAttachments } from '../utils/attachments';
+import { uploadAppointmentAttachment } from '../services/attachmentService';
 
 const initialForm = { type: '진로 상담', subject: '', requestMessage: '', preferredOutcome: '' };
 const consultationTypes = ['진로 상담', '취업 상담', '자기소개서 상담', '면접 상담', '기타 상담'];
@@ -14,7 +16,7 @@ const consultationTypes = ['진로 상담', '취업 상담', '자기소개서 �
 export default function StudentAppointmentRequestPage() {
   const { availabilityId, appointmentId } = useParams();
   const navigate = useNavigate();
-  const { students, counselorAvailability, setCounselorAvailability, appointments, setAppointments, notifications, setNotifications, persistDocumentGroup, notify } = useApp();
+  const { students, counselorAvailability, setCounselorAvailability, appointments, setAppointments, notifications, setNotifications, persistDocument, persistDocumentGroup, notify } = useApp();
   const { user, logout } = useAuth();
   const student = useMemo(() => {
     const matched = user ? students.find(item => item.uid === user.uid) : students[0];
@@ -25,6 +27,7 @@ export default function StudentAppointmentRequestPage() {
   const [form, setForm] = useState(() => changingAppointment ? { type: changingAppointment.type, subject: changingAppointment.subject || '', requestMessage: changingAppointment.requestMessage || '', preferredOutcome: changingAppointment.preferredOutcome || '' } : initialForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [files, setFiles] = useState([]);
   const now = new Date();
   const bookable = isAvailabilityBookable(slot, student, appointments, toDateKey(now), now.toTimeString().slice(0, 5));
   const update = (key, value) => setForm(current => ({ ...current, [key]: value }));
@@ -41,6 +44,8 @@ export default function StudentAppointmentRequestPage() {
     }
     const validated = validateStudentAppointmentRequest(form);
     if (validated.error) { setError(validated.error); return; }
+    const validatedFiles = validateAttachments(files, changingAppointment?.attachments?.length || 0);
+    if (validatedFiles.error) { setError(validatedFiles.error); return; }
     const createdAt = new Date().toISOString();
     if (changingAppointment) {
       const requested = createRescheduleRequest({ ...changingAppointment, subject: validated.value.subject, requestMessage: validated.value.requestMessage }, slot, 'student');
@@ -86,7 +91,11 @@ export default function StudentAppointmentRequestPage() {
     setError('');
     try {
       await persistDocumentGroup([{ name: 'appointments', record: appointment }, { name: 'counselorAvailability', record: bookedSlot }, { name: 'notifications', record: notification }]);
-      setAppointments(items => upsertAppointmentById(items, appointment));
+      const attachments = [];
+      for (const file of validatedFiles.value) attachments.push(await uploadAppointmentAttachment({ file, appointmentId, studentUid: appointment.studentUid, counselorUid: appointment.counselorUid, uploaderUid: appointment.studentUid }));
+      const savedAppointment = attachments.length ? { ...appointment, attachments } : appointment;
+      if (attachments.length) await persistDocument('appointments', savedAppointment);
+      setAppointments(items => upsertAppointmentById(items, savedAppointment));
       setCounselorAvailability(items => items.map(item => item.id === slot.id ? bookedSlot : item));
       setNotifications(items => items.some(item => item.id === notification.id) ? items : [...items, notification]);
       notify('상담 신청을 완료했습니다. 상담사가 확인하면 일정이 확정됩니다.');
@@ -112,6 +121,7 @@ export default function StudentAppointmentRequestPage() {
             <label>상담받고 싶은 주제<input autoFocus maxLength="200" value={form.subject} onChange={event => update('subject', event.target.value)} placeholder="예: 서비스 기획 직무 준비 방향" required /></label>
             <label>상담사에게 전달할 내용<textarea rows="6" maxLength="2000" value={form.requestMessage} onChange={event => update('requestMessage', event.target.value)} placeholder="현재 상황, 고민하고 있는 점, 이미 준비한 내용을 구체적으로 적어 주세요." required /><small>{form.requestMessage.length}/2000자 · 10자 이상 입력</small></label>
             <label>상담 후 얻고 싶은 결과 <small>선택</small><textarea rows="3" maxLength="1000" value={form.preferredOutcome} onChange={event => update('preferredOutcome', event.target.value)} placeholder="예: 앞으로 한 달 동안 준비할 순서를 정하고 싶어요." /></label>
+            {!changingAppointment && <label>상담 준비자료 <small>선택 · 최대 5개, 파일당 10MB</small><input type="file" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={event => { const selected = Array.from(event.target.files || []); const checked = validateAttachments(selected); if (checked.error) { setError(checked.error); event.target.value = ''; return; } setFiles(selected); setError(''); }} /><small>PDF, Word, PNG, JPG 형식만 사용할 수 있습니다.{files.length ? ` · ${files.length}개 선택됨` : ''}</small></label>}
             {error && <p className="field-error" role="alert">{error}</p>}
             <div className="student-request-actions"><Link className="button secondary" to="/student/appointments">취소</Link><button className="button primary" disabled={saving || !bookable}>{saving ? '저장 중...' : changingAppointment ? '일정 변경 요청하기' : '상담 신청하기'}</button></div>
           </form>

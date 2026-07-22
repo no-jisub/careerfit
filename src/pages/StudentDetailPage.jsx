@@ -6,12 +6,13 @@ import { EmptyState, StatusBadge } from '../components/UI';
 import { addDays, toDateKey } from '../utils/date';
 import { useAuth } from '../auth/AuthContext';
 import { buildConsultationSummary, consultationPublicFieldOptions, defaultConsultationVisibility } from '../utils/consultations';
+import { openAttachment } from '../services/attachmentService';
 
 const studentTagOptions = ['면접 준비', '포트폴리오', '진로 미정', '공공기관 희망'];
 
 export default function StudentDetailPage() {
   const { studentId } = useParams();
-  const { students, setStudents, consultations, setConsultations, consultationSummaries, setConsultationSummaries, consultationNotes, followUps, setFollowUps, persistDocument, persistDocumentGroup, notify } = useApp();
+  const { students, setStudents, consultations, setConsultations, consultationSummaries, setConsultationSummaries, consultationNotes, followUps, setFollowUps, appointments, persistDocument, persistDocumentGroup, notify } = useApp();
   const { user, profile } = useAuth();
   const student = students.find(s => s.id === studentId);
   const history = student ? consultations.filter(c => c.studentId === student.id).sort((a, b) => b.date.localeCompare(a.date)) : [];
@@ -142,6 +143,7 @@ export default function StudentDetailPage() {
         </section>
       </div>
       <aside className="detail-aside">
+        {appointments.some(item => item.studentId === student.id && item.attachments?.length) && <section className="card info-card"><span className="eyebrow">상담 준비자료</span><h2>학생 첨부파일</h2><div className="attachment-list">{appointments.filter(item => item.studentId === student.id).flatMap(item => item.attachments || []).map(file => <button type="button" className="text-button" key={file.id} onClick={() => openAttachment(file)}>{file.fileName}</button>)}</div></section>}
         <section className="card info-card"><span className="eyebrow">학생 기본 정보</span><h2>프로필</h2><dl><div><dt>연락처</dt><dd>{student.phone}</dd></div><div><dt>진로 목표</dt><dd>{student.goal}</dd></div><div><dt>담당 상담자</dt><dd>{student.counselor}</dd></div><div><dt>최근 상담일</dt><dd>{student.lastConsultation}</dd></div></dl></section>
         <section className="card"><div className="section-header compact"><div><span className="eyebrow">해야 할 일</span><h2>미완료 후속 조치 <em>{tasks.length}</em></h2></div><button className="icon-button" aria-label="후속 조치 추가" onClick={() => setShowAdd(true)}><Icon name="plus" /></button></div>
           <div className="aside-tasks">{tasks.map(t => <article className={t.status === 'overdue' ? 'overdue' : ''} key={t.id}><div><StatusBadge status={t.status} context="followUp" /><span>{t.owner} 담당</span></div><strong>{t.content}</strong><small><Icon name="calendar" size={14} />{t.dueDate}까지</small></article>)}{!tasks.length && <EmptyState title="등록된 후속 조치가 없습니다" />}</div>

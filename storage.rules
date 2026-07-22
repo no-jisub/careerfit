@@ -1,0 +1,18 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function appointment(id) { return firestore.get(/databases/(default)/documents/appointments/$(id)).data; }
+    function validUpload() {
+      return request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType.matches('(application/pdf|application/msword|application/vnd.openxmlformats-officedocument.wordprocessingml.document|image/png|image/jpeg)');
+    }
+    match /appointmentAttachments/{appointmentId}/{attachmentId}/{fileName} {
+      allow read: if signedIn() && (appointment(appointmentId).studentUid == request.auth.uid || appointment(appointmentId).counselorUid == request.auth.uid);
+      allow create: if signedIn() && validUpload() && (appointment(appointmentId).studentUid == request.auth.uid || appointment(appointmentId).counselorUid == request.auth.uid);
+      allow delete: if signedIn() && (appointment(appointmentId).counselorUid == request.auth.uid || (appointment(appointmentId).studentUid == request.auth.uid && appointment(appointmentId).status != 'completed'));
+      allow update: if false;
+    }
+    match /{allPaths=**} { allow read, write: if false; }
+  }
+}
