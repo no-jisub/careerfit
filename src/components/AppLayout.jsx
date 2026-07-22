@@ -4,6 +4,7 @@ import { useApp } from '../App';
 import { toDateKey } from '../utils/date';
 import Icon from './Icon';
 import { IconButton } from './UI';
+import { useAuth } from '../auth/AuthContext';
 
 const navItems = [
   { to: '/dashboard', label: '대시보드', icon: 'dashboard' },
@@ -21,6 +22,9 @@ export default function AppLayout({ logout }) {
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
   const { students, consultations, followUps } = useApp();
+  const { profile, user } = useAuth();
+  const counselorName = profile?.displayName || user?.displayName || '상담 담당자';
+  const shortCounselorName = counselorName.replace(/\s*상담사$/, '');
   const location = useLocation();
   const navigate = useNavigate();
   const segment = location.pathname.split('/')[1] || 'dashboard';
@@ -64,7 +68,7 @@ export default function AppLayout({ logout }) {
       <div className="sidebar-bottom">
         <NavLink to="/settings"><Icon name="settings" /><span>설정</span></NavLink>
         <button onClick={logout}><Icon name="logout" /><span>로그아웃</span></button>
-        <div className="counselor-card"><div><strong>박지현 상담사</strong><small>대학일자리플러스센터</small></div></div>
+        <div className="counselor-card"><div><strong>{counselorName}</strong><small>대학일자리플러스센터</small></div></div>
       </div>
     </aside>
     <div className="app-main">
@@ -73,7 +77,7 @@ export default function AppLayout({ logout }) {
         <div className="header-actions">
           <div className="global-search-wrap"><label className="global-search"><Icon name="search" size={18} /><span className="sr-only">학생 또는 상담 검색</span><input value={search} placeholder="학생 또는 상담 검색" onFocus={() => setPanel('search')} onChange={e => { setSearch(e.target.value); setPanel('search'); }} onKeyDown={e => { if (e.key === 'Enter' && searchResults[0]) navigate(searchResults[0].to); }} /></label>{panel === 'search' && search.trim() && <div className="header-popover search-popover"><strong>통합 검색 결과 {searchResults.length}건</strong>{searchResults.length ? searchResults.map(result => <NavLink key={result.id} to={result.to}><span>{result.type}</span><div><b>{result.title}</b><small>{result.description}</small></div></NavLink>) : <p>일치하는 학생 또는 상담 기록이 없습니다.</p>}<button onClick={() => navigate(`/students?q=${encodeURIComponent(search.trim())}`)}>학생 목록에서 자세히 찾기</button></div>}</div>
           <div className="header-popover-wrap"><IconButton label={`알림 ${noticeCount}개`} icon="bell" aria-expanded={panel === 'notice'} aria-controls="notice-popover" onClick={() => setPanel(panel === 'notice' ? '' : 'notice')} />{noticeCount > 0 && <span className="notice-dot" aria-hidden="true">{noticeCount > 9 ? '9+' : noticeCount}</span>}{panel === 'notice' && <div className="header-popover notice-popover" id="notice-popover"><strong>확인할 알림 {noticeCount}개</strong>{overdueItems.slice(0, 3).map(item => { const student = students.find(candidate => candidate.id === item.studentId); return <p key={item.id}><b>기한 초과 · {student?.name}</b>{item.content}</p>; })}{todayAppointments.slice(0, 3).map(student => <p key={student.id}><b>오늘 {student.appointment}</b>{student.name} 학생 상담 예정</p>)}{noticeCount === 0 && <p>새로 확인할 일정이나 기한 초과 업무가 없습니다.</p>}<NavLink to="/follow-ups" onClick={() => setPanel('')}>후속 조치 확인하기</NavLink></div>}</div>
-          <div className="header-popover-wrap"><button className="profile-button" aria-expanded={panel === 'profile'} onClick={() => setPanel(panel === 'profile' ? '' : 'profile')}><span>박지현</span><Icon name="chevron" size={16} /></button>{panel === 'profile' && <div className="header-popover profile-popover"><strong>박지현 상담사</strong><small>대학일자리플러스센터</small><NavLink to="/settings" onClick={() => setPanel('')}>내 설정</NavLink><button onClick={logout}>로그아웃</button></div>}</div>
+          <div className="header-popover-wrap"><button className="profile-button" aria-expanded={panel === 'profile'} onClick={() => setPanel(panel === 'profile' ? '' : 'profile')}><span>{shortCounselorName}</span><Icon name="chevron" size={16} /></button>{panel === 'profile' && <div className="header-popover profile-popover"><strong>{counselorName}</strong><small>대학일자리플러스센터</small><NavLink to="/settings" onClick={() => setPanel('')}>내 설정</NavLink><button onClick={logout}>로그아웃</button></div>}</div>
         </div>
       </header>
       <main className="content" id="main-content" tabIndex="-1"><Outlet /></main>

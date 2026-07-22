@@ -233,6 +233,9 @@ npm run firebase:emulators
 # 터미널 2: Emulator가 준비된 뒤 가상 계정과 담당 학생 데이터 생성
 npm run firebase:seed
 
+# 선택: 로그인과 담당 학생 권한 흐름 검증
+npm run firebase:verify
+
 # 터미널 3: Firebase 모드로 프런트엔드 실행
 npm run dev:firebase
 ```
@@ -258,6 +261,7 @@ Emulator UI는 `http://127.0.0.1:4000`에서 확인할 수 있습니다.
 | `npm run preview` | `dist` 로컬 미리보기 |
 | `npm run firebase:emulators` | Auth/Firestore/Hosting Emulator 실행 |
 | `npm run firebase:seed` | Emulator 전용 가상 계정·담당 학생 데이터 생성 |
+| `npm run firebase:verify` | 실제 로그인·담당 학생 필터·타 학생 접근 차단 검증 |
 | `npm run firebase:deploy:hosting` | 로컬 빌드 후 Firebase Hosting 수동 배포 |
 | `npm run firebase:deploy:rules` | Firestore 규칙과 인덱스만 배포 |
 
