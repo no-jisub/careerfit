@@ -175,6 +175,7 @@ design-system/careerfit/MASTER.md       # UI 디자인 시스템 기준
 | 컬렉션 | 목적 | 중요한 연결 필드 |
 | --- | --- | --- |
 | `users` | 사용자 역할 프로필 | 문서 ID=`Auth UID`, `role` |
+| `studentRegistrations` | 학생 셀프 회원가입과 배정 대기 정보 | 문서 ID=`Auth UID`, `status`, `emailVerified`, `counselorUid` |
 | `students` | 학생 기본 정보 | `uid`, `counselorUid` |
 | `consultations` | 공개 가능한 상담 기록 | `studentId`, `studentUid`, `counselorUid`, `studentVisible` |
 | `consultationNotes` | 상담 담당자 전용 메모 | `studentId`, `counselorUid` |
@@ -201,7 +202,17 @@ Firestore 복합 쿼리를 확장하면 `firestore.indexes.json`에 인덱스가
 
 데모 로그인의 역할은 `localStorage`에 저장됩니다. 실제 Firebase 로그인에 성공하면 데모 역할 값은 제거됩니다.
 
-실제 서비스 전환 시 로그인 화면은 Firebase Authentication 이메일/비밀번호 로그인과 비밀번호 재설정 메일 발송을 제공합니다. 공개 회원가입은 제공하지 않으며 계정은 관리자가 등록합니다. 현재 공개 데모 배포에서는 이 기능을 일시적으로 비활성화했습니다.
+실제 서비스 전환 시 로그인 화면은 Firebase Authentication 이메일/비밀번호 로그인, 비밀번호 재설정, 학생 셀프 회원가입을 제공합니다. 학생은 가입 후 이메일 인증과 상담사 배정을 모두 마쳐야 학생 화면에 접근할 수 있습니다. 공개 화면에서 상담사 역할로 가입할 수 없으며 상담사 계정은 기존 상담 담당자가 등록합니다. 현재 공개 데모 배포에서는 Firebase 인증 기능을 일시적으로 비활성화했습니다.
+
+학생 가입·배정 흐름:
+
+1. 학생이 이름, 이메일, 학번, 학과, 학년과 상담 희망 정보를 입력합니다.
+2. `users/{uid}`는 `active=false`, `approvalStatus=pending`으로 생성됩니다.
+3. `studentRegistrations/{uid}`에 배정 대기 정보가 저장되고 인증 메일이 발송됩니다.
+4. 이메일 인증 전에는 상담 데이터에 접근할 수 없습니다.
+5. 상담 담당자는 사용자 관리 화면에서 인증 완료 학생을 선택해 **내 담당으로 배정**합니다.
+6. 배정 작업은 사용자 승인, 가입 신청 승인, 담당 학생 문서 생성을 한 번의 Firestore batch로 저장합니다.
+7. 학생이 승인 상태를 새로고침하면 자신의 학생 화면으로 이동합니다.
 
 ## 상담 초안 생성 기능
 

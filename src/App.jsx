@@ -164,7 +164,7 @@ function CounselorRoutes() {
 export default function App() {
   const { user, role, loading } = useAuth();
   if (loading) return <main className="app-loading" role="status">로그인 정보를 확인하고 있어요...</main>;
-  const dataSessionKey = firestoreSyncEnabled && user ? `firebase:${user.uid}` : 'demo';
+  const dataSessionKey = firestoreSyncEnabled && user && role ? `firebase:${user.uid}:${role}` : user ? `pending:${user.uid}` : 'demo';
   return <AppProvider key={dataSessionKey}><Suspense fallback={<main className="app-loading" role="status">화면을 준비하고 있어요...</main>}><Routes>
     <Route path="/login" element={role ? <Navigate to={role === 'student' ? '/student' : '/dashboard'} replace /> : user ? <Navigate to="/account-status" replace /> : <LoginPage />} />
     <Route path="/signup" element={<SignupPage />} />
