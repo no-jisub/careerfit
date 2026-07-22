@@ -42,6 +42,13 @@ export function resolveProgramStatus(program, today = new Date().toISOString().s
   return PROGRAM_STATUSES.includes(program.status) ? program.status : 'scheduled';
 }
 
+export function isProgramEligibleForStudent(program, student) {
+  if (!program || !student) return false;
+  const gradeEligible = !program.grades?.length || program.grades.includes(student.grade);
+  const departmentEligible = !program.targetDepartments?.length || program.targetDepartments.includes(student.department);
+  return gradeEligible && departmentEligible;
+}
+
 export function normalizeProgram(program, index = 0) {
   const now = new Date().toISOString();
   const normalized = {

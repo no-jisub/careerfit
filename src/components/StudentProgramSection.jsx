@@ -3,7 +3,7 @@ import { useApp } from '../App';
 import { EmptyState } from './UI';
 import Icon from './Icon';
 import { recommendPrograms } from '../utils/programRecommendations';
-import { PROGRAM_MODES, PROGRAM_STATUS_LABELS, resolveProgramStatus } from '../utils/programs';
+import { isProgramEligibleForStudent, PROGRAM_MODES, PROGRAM_STATUS_LABELS, resolveProgramStatus } from '../utils/programs';
 
 const responseLabels = {
   recommended: '확인 전',
@@ -20,9 +20,10 @@ export default function StudentProgramSection({ student, notify }) {
   const [mode, setMode] = useState('전체');
   const [status, setStatus] = useState('all');
   const today = new Date().toISOString().slice(0, 10);
-  const availablePrograms = useMemo(() => programs.filter(program => ['scheduled', 'recruiting'].includes(resolveProgramStatus(program, today))), [programs, today]);
-  const directRecommendations = programRecommendations.filter(item => item.studentId === student.id && item.status !== 'dismissed');
-  const directProgramIds = new Set(directRecommendations.map(item => item.programId));
+  const availablePrograms = useMemo(() => programs.filter(program => ['scheduled', 'recruiting'].includes(resolveProgramStatus(program, today)) && isProgramEligibleForStudent(program, student)), [programs, student, today]);
+  const allDirectRecommendations = programRecommendations.filter(item => item.studentId === student.id);
+  const directRecommendations = allDirectRecommendations.filter(item => item.status !== 'dismissed');
+  const directProgramIds = new Set(allDirectRecommendations.map(item => item.programId));
   const directPrograms = directRecommendations.map(recommendation => availablePrograms.find(program => program.id === recommendation.programId)).filter(Boolean);
   const profilePrograms = recommendPrograms(availablePrograms.filter(program => !directProgramIds.has(program.id)), student, 3);
   const recommendedPrograms = [...directPrograms, ...profilePrograms].slice(0, 3);

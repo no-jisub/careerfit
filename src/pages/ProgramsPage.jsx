@@ -10,6 +10,7 @@ import {
   PROGRAM_MODES,
   PROGRAM_STATUS_LABELS,
   PROGRAM_TYPES,
+  isProgramEligibleForStudent,
   resolveProgramStatus,
   validateProgram,
 } from '../utils/programs';
@@ -162,7 +163,7 @@ function ProgramRecommendationPage({ studentId, returnToForm }) {
   const today = new Date().toISOString().slice(0, 10);
   const recommended = useMemo(() => {
     if (!student) return [];
-    const available = programs.filter(program => ['scheduled', 'recruiting'].includes(resolveProgramStatus(program, today)) && (program.grades.includes(student.grade) || program.target.includes('전 학과')));
+    const available = programs.filter(program => ['scheduled', 'recruiting'].includes(resolveProgramStatus(program, today)) && isProgramEligibleForStudent(program, student));
     return recommendPrograms(available, student, available.length).filter(program => (!query || program.name.includes(query) || program.tags.some(tag => tag.includes(query))) && (mode === '전체' || program.mode === mode));
   }, [student, programs, query, mode, today]);
   if (!student) return <section className="card"><EmptyState title="프로그램을 추천할 학생을 찾을 수 없습니다" description="먼저 담당 학생을 선택해 주세요." action={<Link className="button secondary" to="/students">담당 학생 목록으로</Link>} /></section>;
