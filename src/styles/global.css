@@ -1468,6 +1468,16 @@ h1, h2, h3,
   color: #ffe7e9;
   background: rgba(117, 24, 34, .18);
 }
+.student-appointment-detail-modal { width:min(580px, calc(100% - 32px)); }
+.student-appointment-detail-modal > h2 { margin-bottom:16px; }
+.appointment-detail-summary { padding:17px; border:1px solid #dce7f8; border-radius:14px; display:grid; gap:9px; background:#f6f9ff; }
+.appointment-detail-summary .appointment-status { width:max-content; }
+.appointment-detail-summary strong { color:var(--navy); font-size:16px; }
+.appointment-detail-summary p { margin:0; display:flex; align-items:center; gap:6px; color:var(--muted); font-size:12px; }
+.student-appointment-detail-list { margin:18px 0 0; display:grid; }
+.student-appointment-detail-list > div { padding:13px 2px; border-bottom:1px solid var(--border); display:grid; grid-template-columns:145px minmax(0, 1fr); gap:14px; }
+.student-appointment-detail-list dt { color:var(--muted); font-size:11px; font-weight:700; }
+.student-appointment-detail-list dd { margin:0; color:var(--navy); font-size:12px; line-height:1.65; white-space:pre-wrap; }
 
 @media (max-width: 600px) {
   .modal-backdrop { padding: 12px; }
@@ -1501,4 +1511,5 @@ h1, h2, h3,
     grid-template-columns: 1fr 1fr;
   }
   .student-appointment-actions button { width: 100%; }
+  .student-appointment-detail-list > div { grid-template-columns:1fr; gap:5px; }
 }
