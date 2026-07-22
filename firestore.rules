@@ -151,15 +151,6 @@ service cloud.firestore {
         && validOptionalText(data, 'bookedByUid', 128);
     }
 
-    function validRecordDeletionRequest(data) {
-      return validText(data.consultationId, 128)
-        && validText(data.studentId, 128)
-        && validText(data.studentUid, 128)
-        && data.status in ['pending', 'approved', 'rejected']
-        && validOptionalText(data, 'reason', 1000)
-        && validOptionalText(data, 'resolutionReason', 1000);
-    }
-
     function isAdmin() {
       return hasRole('admin');
     }
@@ -431,22 +422,6 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['status', 'cancelledAt', 'cancelledBy', 'cancelledByRole', 'updatedAt'])));
       allow delete: if isStaff();
-    }
-
-    match /recordDeletionRequests/{requestId} {
-      allow read: if isStaff()
-        || (signedIn() && resource.data.studentUid == request.auth.uid);
-      allow create: if isStudent()
-        && validRecordDeletionRequest(request.resource.data)
-        && request.resource.data.studentUid == request.auth.uid
-        && request.resource.data.status == 'pending'
-        && exists(/databases/$(database)/documents/consultations/$(request.resource.data.consultationId))
-        && get(/databases/$(database)/documents/consultations/$(request.resource.data.consultationId)).data.studentUid == request.auth.uid;
-      allow update: if isStaff()
-        && validRecordDeletionRequest(request.resource.data)
-        && resource.data.status == 'pending'
-        && request.resource.data.status in ['approved', 'rejected'];
-      allow delete: if false;
     }
 
     match /programs/{programId} {

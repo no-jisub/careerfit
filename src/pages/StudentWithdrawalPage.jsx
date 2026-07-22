@@ -64,7 +64,6 @@ export default function StudentWithdrawalPage() {
           <ul className="withdrawal-notice-list">
             <li><Icon name="check" size={17} /><span><strong>서비스 이용 중지</strong>상담 일정, 상담 기록과 추천 프로그램을 더 이상 확인할 수 없습니다.</span></li>
             <li><Icon name="check" size={17} /><span><strong>30일 복구 기간</strong>삭제 예정일 전에는 담당 상담사에게 계정 복구를 요청할 수 있습니다.</span></li>
-            <li><Icon name="check" size={17} /><span><strong>상담 기록 처리</strong>별도의 상담 기록 삭제 요청은 담당 상담사의 검토 절차를 따릅니다.</span></li>
           </ul>
           <label className="withdrawal-confirm"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} /><span>위 안내 내용을 모두 확인했으며 회원 탈퇴를 요청합니다.</span></label>
           {error && <p className="field-error" role="alert">{error}</p>}
