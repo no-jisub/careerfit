@@ -1163,8 +1163,10 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .program-grade-field { margin: 0; padding: 13px 14px; border: 1px solid #dce2ec; border-radius: 11px; }
 .program-grade-field legend { padding: 0 6px; color: #435069; font-size: 11px; font-weight: 800; }
 .program-grade-field > div { display: flex; gap: 16px; flex-wrap: wrap; }
-.program-grade-field label, .program-featured-check { display: flex; align-items: center; gap: 7px; font-size: 12px; }
-.program-grade-field input, .program-featured-check input { width: 17px; height: 17px; margin: 0; }
+.program-grade-field label { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+.program-form-grid .program-featured-check { min-height:44px; margin:0; padding:12px 14px; display:flex; align-items:center; gap:9px; border:1px solid var(--border); border-radius:11px; background:#f8faff; color:var(--navy); font-size:12px; line-height:1.5; cursor:pointer; }
+.program-grade-field input, .program-form-grid .program-featured-check input { width:17px; height:17px; min-height:17px; margin:0; flex:0 0 17px; }
+.program-form-grid .program-featured-check span { display:block; }
 .field-error { display: block; margin-top: 5px; color: var(--red); font-size: 11px; }
 .recommendation-modal { width: min(560px, calc(100% - 32px)); }
 .recommendation-program-summary { margin-bottom: 18px; padding: 14px; border-radius: 12px; display: grid; gap: 4px; background: var(--blue-soft); }

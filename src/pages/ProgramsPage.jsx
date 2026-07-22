@@ -81,7 +81,7 @@ function ProgramFormModal({ program, onClose, onSave }) {
           <label>정원<input type="number" min="0" value={form.capacity} onChange={event => update('capacity', event.target.value)} /></label>
           <label>관리 상태<select value={form.status} onChange={event => update('status', event.target.value)}>{editableStatuses.map(status => <option value={status} key={status}>{PROGRAM_STATUS_LABELS[status]}</option>)}</select></label>
           <label className="span-2">신청 링크<input type="url" value={form.applicationUrl} onChange={event => update('applicationUrl', event.target.value)} placeholder="https://" />{errors.applicationUrl && <small className="field-error">{errors.applicationUrl}</small>}</label>
-          <label className="program-featured-check span-2"><input type="checkbox" checked={form.featured} onChange={event => update('featured', event.target.checked)} />학생 화면에서 주요 프로그램으로 강조</label>
+          <label className="program-featured-check span-2"><input type="checkbox" checked={form.featured} onChange={event => update('featured', event.target.checked)} /><span>학생 화면에서 주요 프로그램으로 강조</span></label>
         </div>
         <div className="modal-actions"><button type="button" className="button secondary" onClick={onClose}>취소</button><button className="button primary">{program ? '수정 내용 저장' : '프로그램 등록'}</button></div>
       </form>
