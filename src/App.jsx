@@ -31,6 +31,8 @@ const FollowUpsPage = lazy(() => import('./pages/FollowUpsPage'));
 const ProgramsPage = lazy(() => import('./pages/ProgramsPage'));
 const StudentMyPage = lazy(() => import('./pages/StudentMyPage'));
 const StudentWithdrawalPage = lazy(() => import('./pages/StudentWithdrawalPage'));
+const StudentAppointmentSlotsPage = lazy(() => import('./pages/StudentAppointmentSlotsPage'));
+const StudentAppointmentRequestPage = lazy(() => import('./pages/StudentAppointmentRequestPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage'));
@@ -203,6 +205,8 @@ export default function App() {
     <Route path="/account-status" element={<AccountStatusPage />} />
     <Route path="/student" element={role === 'student' ? <StudentMyPage /> : <Navigate to="/login" replace />} />
     <Route path="/student/withdrawal" element={role === 'student' ? <StudentWithdrawalPage /> : <Navigate to="/login" replace />} />
+    <Route path="/student/appointments" element={role === 'student' ? <StudentAppointmentSlotsPage /> : <Navigate to="/login" replace />} />
+    <Route path="/student/appointments/request/:availabilityId" element={role === 'student' ? <StudentAppointmentRequestPage /> : <Navigate to="/login" replace />} />
     <Route path="/*" element={isOperationsStaff(role) ? <CounselorRoutes /> : <Navigate to="/login" replace />} />
   </Routes></Suspense></AppProvider>;
 }

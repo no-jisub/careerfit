@@ -127,6 +127,12 @@ service cloud.firestore {
         && validText(data.type, 80)
         && validText(data.location, 200)
         && validOptionalText(data, 'preparation', 1000)
+        && validOptionalText(data, 'availabilityId', 128)
+        && validOptionalText(data, 'subject', 200)
+        && validOptionalText(data, 'requestMessage', 2000)
+        && validOptionalText(data, 'preferredOutcome', 1000)
+        && (!('requestedBy' in data) || data.requestedBy in ['student', 'counselor'])
+        && (!('duration' in data) || (data.duration is int && data.duration >= 15 && data.duration <= 240))
         && data.status in ['pending', 'confirmed', 'scheduled', 'completed', 'cancelled'];
     }
 
@@ -358,7 +364,22 @@ service cloud.firestore {
         && (isAdmin()
           || (isCounselor()
             && resource.data.counselorUid == request.auth.uid
-            && request.resource.data.counselorUid == resource.data.counselorUid));
+            && request.resource.data.counselorUid == resource.data.counselorUid)
+          || (isStudent()
+            && resource.data.status == 'open'
+            && request.resource.data.status == 'booked'
+            && request.resource.data.counselorUid == resource.data.counselorUid
+            && request.resource.data.date == resource.data.date
+            && request.resource.data.time == resource.data.time
+            && request.resource.data.duration == resource.data.duration
+            && request.resource.data.location == resource.data.location
+            && request.resource.data.bookedByUid == request.auth.uid
+            && validText(request.resource.data.appointmentId, 128)
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'appointmentId', 'bookedByUid', 'updatedAt'])
+            && existsAfter(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId))
+            && getAfter(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId)).data.studentUid == request.auth.uid
+            && getAfter(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId)).data.availabilityId == availabilityId));
       allow delete: if isAdmin()
         || (isCounselor() && resource.data.counselorUid == request.auth.uid);
     }
@@ -367,13 +388,24 @@ service cloud.firestore {
       allow read: if isStaff()
         || (isStudent() && resource.data.studentUid == request.auth.uid);
       allow create: if validAppointment(request.resource.data) && (isStaff()
-        || (isCounselor()
-          && request.resource.data.counselorUid == request.auth.uid
-          && isAssignedStudent(request.resource.data.studentId)
-          && hasMatchingStudentUid(
-            request.resource.data.studentId,
-            request.resource.data.studentUid
-          )));
+        || (isStudent()
+          && request.resource.data.studentUid == request.auth.uid
+          && request.resource.data.status == 'pending'
+          && request.resource.data.requestedBy == 'student'
+          && validText(request.resource.data.subject, 200)
+          && validText(request.resource.data.requestMessage, 2000)
+          && validText(request.resource.data.availabilityId, 128)
+          && hasMatchingStudentUid(request.resource.data.studentId, request.resource.data.studentUid)
+          && get(/databases/$(database)/documents/students/$(request.resource.data.studentId)).data.counselorUid == request.resource.data.counselorUid
+          && exists(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId))
+          && get(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId)).data.status == 'open'
+          && get(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId)).data.counselorUid == request.resource.data.counselorUid
+          && get(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId)).data.date == request.resource.data.date
+          && get(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId)).data.time == request.resource.data.time
+          && existsAfter(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId))
+          && getAfter(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId)).data.status == 'booked'
+          && getAfter(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId)).data.appointmentId == appointmentId
+          && getAfter(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId)).data.bookedByUid == request.auth.uid));
       allow update: if validAppointment(request.resource.data) && (isStaff()
         || (isCounselor()
           && resource.data.counselorUid == request.auth.uid

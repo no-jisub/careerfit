@@ -1319,3 +1319,63 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
   .availability-slot-list article > div { grid-column:1 / -1; }
   .availability-slot-list article > button { justify-self:end; }
 }
+
+/* Student appointment request flow */
+.student-welcome-actions { margin-top:18px; display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+.student-welcome-actions .student-profile-edit { margin-top:0; }
+.student-consultation-apply { min-height:40px; padding:0 14px; border:1px solid #fff; border-radius:11px; display:inline-flex; align-items:center; gap:7px; color:var(--blue-dark); background:#fff; font-size:11px; font-weight:800; }
+.student-consultation-apply:hover { background:#eef4ff; }
+.student-booking-page main { width:min(calc(100% - 40px), 900px); padding-top:34px; }
+.student-booking-page > header .brand { display:flex; align-items:center; }
+.student-booking-intro { margin-bottom:24px; }
+.student-booking-intro h1 { margin:7px 0 10px; color:var(--navy); font-size:clamp(27px, 4vw, 36px); letter-spacing:-1.2px; }
+.student-booking-intro p { max-width:720px; margin:0; color:var(--muted); font-size:13px; line-height:1.7; }
+.student-slot-groups { display:grid; gap:16px; }
+.student-slot-group { padding:22px; border:1px solid var(--border); border-radius:17px; background:#fff; box-shadow:var(--shadow); }
+.student-slot-group > div:first-child { margin-bottom:15px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.student-slot-group > div:first-child strong { color:var(--navy); font-size:16px; }
+.student-slot-group > div:first-child span { color:var(--muted); font-size:11px; }
+.student-slot-group > div:last-child { display:grid; gap:9px; }
+.student-slot-group article { min-height:70px; padding:12px 14px; border:1px solid var(--border); border-radius:12px; display:grid; grid-template-columns:80px minmax(0,1fr) auto; align-items:center; gap:16px; background:#fbfcfe; }
+.student-slot-time { color:var(--blue); font-size:20px; font-weight:900; }
+.student-slot-group article > div { display:grid; gap:5px; }
+.student-slot-group article > div strong { color:var(--navy); font-size:13px; }
+.student-slot-group article > div span { display:flex; align-items:center; gap:5px; color:var(--muted); font-size:11px; }
+.student-booking-empty { padding:28px; }
+.student-request-layout { display:grid; grid-template-columns:240px minmax(0,1fr); align-items:start; gap:18px; }
+.student-selected-slot { padding:24px; border-radius:17px; display:grid; color:#fff; background:linear-gradient(145deg, #2459bc, #193d82); box-shadow:0 14px 30px rgba(25,61,130,.2); }
+.student-selected-slot .eyebrow { color:#cbdcff; }
+.student-selected-slot > strong { margin-top:20px; color:#dce7ff; font-size:13px; }
+.student-selected-slot > b { margin:4px 0 10px; font-size:34px; }
+.student-selected-slot > p { margin:0; color:#d6e2fb; font-size:12px; line-height:1.65; }
+.student-selected-slot > small { margin-top:18px; padding-top:14px; border-top:1px solid rgba(255,255,255,.18); color:#bcd0f7; font-size:11px; }
+.student-request-card { padding:30px; }
+.student-request-card h1 { margin:7px 0 9px; color:var(--navy); font-size:27px; letter-spacing:-.8px; }
+.student-request-card > p { margin:0 0 24px; color:var(--muted); font-size:12px; line-height:1.65; }
+.student-request-card form { display:grid; gap:16px; }
+.student-request-card form label { margin:0; color:var(--navy); font-size:12px; font-weight:800; }
+.student-request-card form label > input, .student-request-card form label > select, .student-request-card form label > textarea { margin-top:7px; }
+.student-request-card form label > small { margin-top:6px; display:block; color:var(--muted); font-size:10px; font-weight:500; text-align:right; }
+.student-slot-warning { margin:0 0 18px!important; padding:12px 14px; border-radius:10px; color:#8c3036!important; background:var(--red-soft); }
+.student-request-actions { margin-top:5px; display:flex; justify-content:flex-end; gap:9px; }
+.appointment-request-details { margin-top:8px; }
+.appointment-request-details summary { width:max-content; color:var(--blue); font-size:11px; font-weight:800; cursor:pointer; }
+.appointment-request-details dl { max-width:620px; margin:10px 0 0; padding:13px 15px; border:1px solid #dce6f7; border-radius:11px; display:grid; gap:10px; background:#f6f9ff; }
+.appointment-request-details dl div { display:grid; gap:3px; }
+.appointment-request-details dt { color:var(--blue); font-size:10px; font-weight:800; }
+.appointment-request-details dd { margin:0; color:#4b5870; font-size:11px; line-height:1.6; white-space:pre-wrap; }
+
+@media (max-width:700px) {
+  .student-booking-page main { width:calc(100% - 30px); padding-top:22px; }
+  .student-slot-group { padding:18px 15px; }
+  .student-slot-group article { grid-template-columns:70px 1fr; gap:10px; }
+  .student-slot-group article .button { grid-column:1 / -1; width:100%; }
+  .student-request-layout { grid-template-columns:1fr; }
+  .student-selected-slot { padding:21px; grid-template-columns:1fr auto; align-items:end; gap:4px 14px; }
+  .student-selected-slot .eyebrow, .student-selected-slot > p, .student-selected-slot > small { grid-column:1 / -1; }
+  .student-selected-slot > strong { margin-top:12px; }
+  .student-selected-slot > b { margin:0; font-size:29px; }
+  .student-request-card { padding:24px 18px; }
+  .student-request-actions { display:grid; grid-template-columns:1fr; }
+  .student-request-actions .button { width:100%; }
+}

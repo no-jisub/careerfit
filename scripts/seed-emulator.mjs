@@ -239,6 +239,28 @@ const documents = {
       updatedAt: now,
     },
   },
+  counselorAvailability: {
+    'availability-verify-open': {
+      counselorUid: counselor.uid,
+      date: '2026-07-30',
+      time: '13:00',
+      duration: 50,
+      location: '대학일자리플러스센터 상담실 3',
+      status: 'open',
+      createdAt: now,
+      updatedAt: now,
+    },
+    'availability-other-counselor': {
+      counselorUid: otherCounselor.uid,
+      date: '2026-07-30',
+      time: '14:00',
+      duration: 50,
+      location: '온라인 상담실',
+      status: 'open',
+      createdAt: now,
+      updatedAt: now,
+    },
+  },
 };
 
 for (const [collectionName, records] of Object.entries(documents)) {

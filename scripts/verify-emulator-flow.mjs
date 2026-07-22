@@ -319,6 +319,79 @@ try {
     where('studentUid', '==', studentCredential.user.uid),
   ));
   assert(ownAppointments.size === 2, `학생 본인 상담 일정 조회 결과가 올바르지 않습니다: ${ownAppointments.size}`);
+  const openAvailability = await getDocs(query(
+    collection(db, 'counselorAvailability'),
+    where('status', '==', 'open'),
+  ));
+  const assignedCounselorSlot = openAvailability.docs.find(item => item.id === 'availability-verify-open');
+  assert(assignedCounselorSlot, '학생이 신청 가능한 상담 시간을 조회하지 못했습니다.');
+  const otherCounselorSlot = openAvailability.docs.find(item => item.id === 'availability-other-counselor');
+  let blockedOtherCounselorBooking = false;
+  try {
+    const blockedRequestId = 'verification-blocked-other-counselor-request';
+    const blockedBatch = writeBatch(db);
+    blockedBatch.set(doc(db, 'appointments', blockedRequestId), {
+      availabilityId: otherCounselorSlot.id,
+      studentId: 's1',
+      studentUid: studentCredential.user.uid,
+      counselorUid: otherCounselorSlot.data().counselorUid,
+      date: otherCounselorSlot.data().date,
+      time: otherCounselorSlot.data().time,
+      duration: otherCounselorSlot.data().duration,
+      type: '진로 상담',
+      location: otherCounselorSlot.data().location,
+      subject: '다른 상담사 시간 신청 시도',
+      requestMessage: '담당 상담사가 아닌 다른 상담사의 시간을 신청하려는 검증입니다.',
+      preferredOutcome: '',
+      preparation: '',
+      requestedBy: 'student',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    blockedBatch.set(otherCounselorSlot.ref, {
+      ...otherCounselorSlot.data(),
+      status: 'booked',
+      appointmentId: blockedRequestId,
+      bookedByUid: studentCredential.user.uid,
+      updatedAt: new Date().toISOString(),
+    });
+    await blockedBatch.commit();
+  } catch (error) {
+    blockedOtherCounselorBooking = error.code === 'permission-denied';
+  }
+  assert(blockedOtherCounselorBooking, '학생이 담당 상담사가 아닌 상담 시간을 신청할 수 있습니다.');
+  const appointmentRequestId = 'verification-student-appointment-request';
+  const requestAt = new Date().toISOString();
+  const requestBatch = writeBatch(db);
+  requestBatch.set(doc(db, 'appointments', appointmentRequestId), {
+    availabilityId: assignedCounselorSlot.id,
+    studentId: 's1',
+    studentUid: studentCredential.user.uid,
+    counselorUid: assignedCounselorSlot.data().counselorUid,
+    date: assignedCounselorSlot.data().date,
+    time: assignedCounselorSlot.data().time,
+    duration: assignedCounselorSlot.data().duration,
+    type: '진로 상담',
+    location: assignedCounselorSlot.data().location,
+    subject: '서비스 기획 직무 준비',
+    requestMessage: '서비스 기획 직무에 필요한 경험과 준비 순서를 상담받고 싶습니다.',
+    preferredOutcome: '한 달 준비 계획 정리',
+    preparation: '',
+    requestedBy: 'student',
+    status: 'pending',
+    createdAt: requestAt,
+    updatedAt: requestAt,
+  });
+  requestBatch.set(assignedCounselorSlot.ref, {
+    ...assignedCounselorSlot.data(),
+    status: 'booked',
+    appointmentId: appointmentRequestId,
+    bookedByUid: studentCredential.user.uid,
+    updatedAt: requestAt,
+  });
+  await requestBatch.commit();
+  assert((await getDoc(doc(db, 'appointments', appointmentRequestId))).data().subject === '서비스 기획 직무 준비', '학생 상담 신청과 사전 내용이 저장되지 않았습니다.');
   const publicSummaries = await getDocs(query(
     collection(db, 'consultationSummaries'),
     where('studentUid', '==', studentCredential.user.uid),
@@ -372,6 +445,7 @@ try {
   console.log('- counselor appointment save and student appointment query');
   console.log('- student-selected public summary document and private original isolation');
   console.log('- student appointment cancellation');
+  console.log('- counselor availability query and atomic student appointment request');
   console.log('- invalid document shape denied by Firestore rules');
   console.log('- counselor-only consultation note denied for student');
 } finally {

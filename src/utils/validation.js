@@ -93,6 +93,17 @@ export function validateAvailabilityInput(form, nowDate, nowTime) {
   return { value: { date: form.date, time: form.time, location, duration } };
 }
 
+export function validateStudentAppointmentRequest(form) {
+  const type = cleanText(form.type, 80);
+  const subject = cleanText(form.subject, 200);
+  const requestMessage = cleanText(form.requestMessage, 2000);
+  const preferredOutcome = cleanText(form.preferredOutcome, 1000);
+  if (!type) return { error: '상담 유형을 선택해 주세요.' };
+  if (subject.length < 2) return { error: '상담받고 싶은 주제를 2자 이상 입력해 주세요.' };
+  if (requestMessage.length < 10) return { error: '상담사에게 전달할 내용을 10자 이상 입력해 주세요.' };
+  return { value: { type, subject, requestMessage, preferredOutcome } };
+}
+
 export function validateFollowUpInput(form) {
   const content = cleanText(form.content, 300);
   if (!form.studentId || !content) return { error: '학생과 후속 조치 내용을 입력해 주세요.' };

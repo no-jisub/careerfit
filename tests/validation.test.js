@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanText, isDateKey, validateAppointmentInput, validateAvailabilityInput, validateConsultationInput, validateStudentRegistrationInput } from '../src/utils/validation.js';
+import { cleanText, isDateKey, validateAppointmentInput, validateAvailabilityInput, validateConsultationInput, validateStudentAppointmentRequest, validateStudentRegistrationInput } from '../src/utils/validation.js';
 
 test('cleanText removes control characters and applies a maximum length', () => {
   assert.equal(cleanText('  상\u0000담 내용  ', 4), '상담 내');
@@ -20,6 +20,12 @@ test('counselor availability requires a future slot and reasonable duration', ()
   assert.match(validateAvailabilityInput({ date: '2026-07-21', time: '10:00', location: '상담실', duration: 50 }, '2026-07-22', '09:00').error, /과거/);
   assert.match(validateAvailabilityInput({ date: '2026-07-23', time: '10:00', location: '상담실', duration: 10 }, '2026-07-22', '09:00').error, /15분/);
   assert.equal(validateAvailabilityInput({ date: '2026-07-23', time: '10:00', location: '상담실', duration: 50 }, '2026-07-22', '09:00').value.duration, 50);
+});
+
+test('student appointment request requires a clear subject and message', () => {
+  assert.match(validateStudentAppointmentRequest({ type: '진로 상담', subject: '진로', requestMessage: '짧음', preferredOutcome: '' }).error, /10자/);
+  const valid = validateStudentAppointmentRequest({ type: '진로 상담', subject: '서비스 기획 진로', requestMessage: '서비스 기획 직무 준비 방법을 상담받고 싶습니다.', preferredOutcome: '준비 순서 정리' });
+  assert.equal(valid.value.subject, '서비스 기획 진로');
 });
 
 test('consultation validation requires a meaningful private memo', () => {

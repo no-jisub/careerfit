@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildConsultationSummary, defaultConsultationVisibility } from '../src/utils/consultations.js';
-import { hasCounselorAppointmentConflict } from '../src/utils/appointments.js';
+import { hasCounselorAppointmentConflict, isAvailabilityBookable } from '../src/utils/appointments.js';
 import { validateCounselorRegistrationInput } from '../src/utils/validation.js';
 
 const consultation = {
@@ -37,6 +37,15 @@ test('appointment conflict blocks only the same counselor active time slot', () 
   assert.equal(hasCounselorAppointmentConflict(appointments, students, { date: '2026-08-01', time: '10:00', counselorUid: 'c1' }), true);
   assert.equal(hasCounselorAppointmentConflict(appointments, students, { date: '2026-08-01', time: '10:00', counselorUid: 'c2' }), false);
   assert.equal(hasCounselorAppointmentConflict(appointments, students, { date: '2026-08-01', time: '11:00', counselorUid: 'c1' }), false);
+});
+
+test('student can book only an open future slot from the assigned counselor', () => {
+  const student = { id: 's1', counselorUid: 'c1' };
+  const slot = { id: 'slot-1', counselorUid: 'c1', date: '2026-08-01', time: '10:00', status: 'open' };
+  assert.equal(isAvailabilityBookable(slot, student, [], '2026-07-22', '09:00'), true);
+  assert.equal(isAvailabilityBookable({ ...slot, counselorUid: 'c2' }, student, [], '2026-07-22', '09:00'), false);
+  assert.equal(isAvailabilityBookable({ ...slot, status: 'closed' }, student, [], '2026-07-22', '09:00'), false);
+  assert.equal(isAvailabilityBookable(slot, student, [{ id: 'a1', availabilityId: 'slot-1', status: 'pending' }], '2026-07-22', '09:00'), false);
 });
 
 test('counselor signup requires a strong matching password', () => {
