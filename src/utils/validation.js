@@ -1,0 +1,52 @@
+const controlCharacters = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export function cleanText(value, maxLength = 500) {
+  return String(value ?? '').replace(controlCharacters, '').trim().slice(0, maxLength);
+}
+
+export function isDateKey(value) {
+  if (!datePattern.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+export function validateAccountInput(account, student, existingUsers = []) {
+  const email = cleanText(account.email, 254).toLowerCase();
+  const displayName = cleanText(account.displayName, 50);
+  if (!displayName) return { error: '이름을 입력해 주세요.' };
+  if (!emailPattern.test(email)) return { error: '유효한 이메일 형식으로 입력해 주세요.' };
+  if (existingUsers.some(item => item.email?.toLowerCase() === email)) return { error: '이미 등록된 이메일입니다.' };
+  if (account.role === 'student') {
+    if (!cleanText(student.studentNo, 30) || !cleanText(student.department, 80) || !student.counselorUid) return { error: '학번, 학과, 담당 상담사를 확인해 주세요.' };
+  }
+  return { value: { ...account, displayName, email } };
+}
+
+export function validateAppointmentInput(form, nowDate, nowTime) {
+  if (!form.studentId) return { error: '상담할 학생을 선택해 주세요.' };
+  if (!isDateKey(form.date) || !timePattern.test(form.time)) return { error: '상담 날짜와 시간을 확인해 주세요.' };
+  if (`${form.date}T${form.time}` < `${nowDate}T${nowTime}`) return { error: '과거 시간으로는 상담을 예약할 수 없습니다.' };
+  const location = cleanText(form.location, 120);
+  if (!location) return { error: '상담 장소를 입력해 주세요.' };
+  return { value: { ...form, type: cleanText(form.type, 50), location, preparation: cleanText(form.preparation, 500) } };
+}
+
+export function validateFollowUpInput(form) {
+  const content = cleanText(form.content, 300);
+  if (!form.studentId || !content) return { error: '학생과 후속 조치 내용을 입력해 주세요.' };
+  if (!isDateKey(form.dueDate)) return { error: '유효한 완료 기한을 선택해 주세요.' };
+  return { value: { ...form, content } };
+}
+
+export function validateConsultationInput(form) {
+  const purpose = cleanText(form.purpose, 200);
+  const rawMemo = cleanText(form.rawMemo, 10000);
+  if (!isDateKey(form.date)) return { error: '상담 날짜를 확인해 주세요.' };
+  if (!purpose) return { error: '상담 목적을 입력해 주세요.' };
+  if (rawMemo.length < 10) return { error: '상담 메모를 10자 이상 입력해 주세요.' };
+  if (form.nextDate && !isDateKey(form.nextDate)) return { error: '다음 상담 예정일을 확인해 주세요.' };
+  return { value: { ...form, purpose, rawMemo, currentConcern: cleanText(form.currentConcern, 2000), guidance: cleanText(form.guidance, 3000), studentActions: cleanText(form.studentActions, 1000), counselorActions: cleanText(form.counselorActions, 1000), nextCheckItems: cleanText(form.nextCheckItems, 1000) } };
+}

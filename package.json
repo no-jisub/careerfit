@@ -8,6 +8,7 @@
     "dev:firebase": "vite --mode emulator",
     "build": "vite build && node scripts/prepare-sites.mjs",
     "preview": "vite preview",
+    "test": "node --test tests/*.test.js",
     "firebase:emulators": "firebase emulators:start --project careerfit-local",
     "firebase:seed": "node scripts/seed-emulator.mjs",
     "firebase:verify": "node scripts/verify-emulator-flow.mjs",
