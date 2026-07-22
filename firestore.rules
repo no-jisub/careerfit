@@ -156,7 +156,13 @@ service cloud.firestore {
         || (isCounselor()
           && resource.data.counselorUid == request.auth.uid
           && request.resource.data.counselorUid == resource.data.counselorUid
-          && request.resource.data.uid == resource.data.uid));
+          && request.resource.data.uid == resource.data.uid)
+        || (isStudent()
+          && resource.data.uid == request.auth.uid
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.counselorUid == resource.data.counselorUid
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['phone', 'interests', 'goal', 'concern', 'updatedAt'])));
       allow delete: if isAdmin();
     }
 

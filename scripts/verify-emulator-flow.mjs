@@ -142,6 +142,23 @@ try {
     where('uid', '==', studentCredential.user.uid),
   ));
   assert(ownStudents.size === 1 && ownStudents.docs[0].id === 's1', '학생 본인 문서를 찾지 못했습니다.');
+  const profileUpdatedAt = new Date().toISOString();
+  await updateDoc(doc(db, 'students', 's1'), {
+    phone: '010-0000-0000',
+    interests: ['UX', '서비스 기획'],
+    goal: '서비스 기획자',
+    concern: '프로필 수정 권한 검증',
+    updatedAt: profileUpdatedAt,
+  });
+  const updatedStudentProfile = await getDoc(doc(db, 'students', 's1'));
+  assert(updatedStudentProfile.data().goal === '서비스 기획자', '학생의 허용된 프로필 수정이 저장되지 않았습니다.');
+  let blockedAcademicUpdate = false;
+  try {
+    await updateDoc(doc(db, 'students', 's1'), { department: '임의 변경 학과' });
+  } catch (error) {
+    blockedAcademicUpdate = error.code === 'permission-denied';
+  }
+  assert(blockedAcademicUpdate, '학생의 학적 정보 변경이 차단되지 않았습니다.');
   const ownAppointments = await getDocs(query(
     collection(db, 'appointments'),
     where('studentUid', '==', studentCredential.user.uid),
@@ -169,6 +186,7 @@ try {
   console.log('- assigned student query (s1 only)');
   console.log('- unassigned student read denied');
   console.log('- student login and own profile query');
+  console.log('- student profile update limited to self-managed fields');
   console.log('- atomic consultation/note/follow-up document save');
   console.log('- student follow-up completion update');
   console.log('- counselor appointment save and student appointment query');
