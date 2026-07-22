@@ -1,5 +1,5 @@
 import { createContext, lazy, Suspense, useContext, useEffect, useMemo, useState } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import AppLayout from './components/AppLayout';
 import { initialStudents } from './data/students';
 import { initialConsultations } from './data/consultations';
@@ -45,6 +45,12 @@ const read = (key, fallback) => {
 };
 
 export function useApp() { return useContext(AppContext); }
+
+function RouteScrollManager() {
+  const location = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [location.pathname]);
+  return null;
+}
 
 function AppProvider({ children }) {
   const { user, role } = useAuth();
@@ -199,7 +205,7 @@ export default function App() {
   const { user, role, loading } = useAuth();
   if (loading) return <main className="app-loading" role="status">로그인 정보를 확인하고 있어요...</main>;
   const dataSessionKey = firestoreSyncEnabled && user && role ? `firebase:${user.uid}:${role}` : user ? `pending:${user.uid}` : 'demo';
-  return <AppProvider key={dataSessionKey}><Suspense fallback={<main className="app-loading" role="status">화면을 준비하고 있어요...</main>}><Routes>
+  return <AppProvider key={dataSessionKey}><RouteScrollManager /><Suspense fallback={<main className="app-loading" role="status">화면을 준비하고 있어요...</main>}><Routes>
     <Route path="/login" element={role ? <Navigate to={role === 'student' ? '/student' : '/dashboard'} replace /> : user ? <Navigate to="/account-status" replace /> : <LoginPage />} />
     <Route path="/signup" element={<SignupPage />} />
     <Route path="/account-status" element={<AccountStatusPage />} />

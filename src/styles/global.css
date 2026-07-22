@@ -1379,3 +1379,95 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
   .student-request-actions { display:grid; grid-template-columns:1fr; }
   .student-request-actions .button { width:100%; }
 }
+
+/* 2026 full-interface consistency audit */
+h1, h2, h3,
+.page-intro p,
+.section-header p,
+.empty-state p,
+.auth-card p,
+.student-booking-intro p {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.page-intro p,
+.section-header p,
+.empty-state p,
+.program-management-main p,
+.student-record-info > div > span {
+  line-height: 1.65;
+}
+
+.filter-card { align-items: end; }
+.filter-card > .text-button { align-self: end; justify-self: start; }
+
+.program-management-main h2 { font-size: 17px; line-height: 1.45; }
+.program-management-main p { font-size: 13px; }
+.program-management-meta dt { font-size: 11px; line-height: 1.4; }
+.program-management-meta dd { font-size: 12px; line-height: 1.45; }
+.program-status, .program-featured { font-size: 11px; }
+
+.student-dashboard-grid,
+.student-programs { align-items: start; }
+
+.student-appointment-actions {
+  margin-top: 18px;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.student-appointment-actions button {
+  min-height: 40px;
+  margin: 0 !important;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, .28);
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: white;
+  background: rgba(255, 255, 255, .12);
+  font-size: 12px;
+  font-weight: 800;
+}
+.student-appointment-actions button:hover { background: rgba(255, 255, 255, .2); }
+.student-appointment-actions button:last-child {
+  border-color: rgba(255, 220, 223, .32);
+  color: #ffe7e9;
+  background: rgba(117, 24, 34, .18);
+}
+
+@media (max-width: 600px) {
+  .modal-backdrop { padding: 12px; }
+  .modal,
+  .program-form-modal,
+  .recommendation-modal,
+  .consultation-edit-modal {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+  }
+
+  .pending-assignment-card .section-header,
+  .student-program-section .section-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .pending-assignment-card .section-header .button,
+  .student-program-section .student-program-toggle {
+    width: 100%;
+    margin: 0;
+  }
+
+  .availability-status {
+    width: max-content;
+    justify-self: start;
+  }
+
+  .student-appointment-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .student-appointment-actions button { width: 100%; }
+}
