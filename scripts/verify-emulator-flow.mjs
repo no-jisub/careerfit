@@ -412,6 +412,7 @@ try {
     status: 'cancelled',
     cancelledAt,
     cancelledBy: studentCredential.user.uid,
+    cancelledByRole: 'student',
     updatedAt: cancelledAt,
   });
   assert((await getDoc(doc(db, 'appointments', verificationAppointmentId))).data().status === 'cancelled', '학생의 상담 예약 취소가 저장되지 않았습니다.');
