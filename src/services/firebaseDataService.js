@@ -1,7 +1,11 @@
 import { collection, doc, onSnapshot, query, setDoc, where, writeBatch } from 'firebase/firestore';
 import { db, firestoreSyncEnabled } from '../lib/firebase';
 
-const collectionNamesFor = role => role === 'student' ? ['students', 'consultations', 'followUps'] : ['students', 'consultations', 'consultationNotes', 'followUps'];
+const collectionNamesFor = role => {
+  if (role === 'student') return ['students', 'consultations', 'followUps'];
+  if (role === 'admin') return ['users', 'students', 'consultations', 'consultationNotes', 'followUps'];
+  return ['students', 'consultations', 'consultationNotes', 'followUps'];
+};
 
 function constraintsFor(name, session) {
   if (session.role === 'admin') return [];

@@ -14,7 +14,7 @@ const navItems = [
   { to: '/programs', label: '비교과 프로그램', icon: 'spark' },
 ];
 
-const titles = { dashboard: '대시보드', students: '학생 관리', consultations: '상담 기록', 'follow-ups': '후속 조치', programs: '비교과 프로그램', settings: '설정' };
+const titles = { dashboard: '대시보드', students: '학생 관리', consultations: '상담 기록', 'follow-ups': '후속 조치', programs: '비교과 프로그램', settings: '설정', admin: '사용자 관리' };
 
 export default function AppLayout({ logout }) {
   const [open, setOpen] = useState(false);
@@ -22,7 +22,7 @@ export default function AppLayout({ logout }) {
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
   const { students, consultations, followUps } = useApp();
-  const { profile, user } = useAuth();
+  const { profile, user, role } = useAuth();
   const counselorName = profile?.displayName || user?.displayName || '상담 담당자';
   const shortCounselorName = counselorName.replace(/\s*상담사$/, '');
   const location = useLocation();
@@ -66,6 +66,7 @@ export default function AppLayout({ logout }) {
         {navItems.map(item => <NavLink key={item.to} to={item.to} className={({ isActive }) => isActive ? 'active' : ''}><Icon name={item.icon} /><span>{item.label}</span>{item.to === '/follow-ups' && pendingCount > 0 && <em>{pendingCount}</em>}</NavLink>)}
       </nav>
       <div className="sidebar-bottom">
+        {role === 'admin' && <NavLink to="/admin/users"><Icon name="students" /><span>사용자 관리</span></NavLink>}
         <NavLink to="/settings"><Icon name="settings" /><span>설정</span></NavLink>
         <button onClick={logout}><Icon name="logout" /><span>로그아웃</span></button>
         <div className="counselor-card"><div><strong>{counselorName}</strong><small>대학일자리플러스센터</small></div></div>

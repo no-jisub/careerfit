@@ -19,6 +19,7 @@ const FollowUpsPage = lazy(() => import('./pages/FollowUpsPage'));
 const ProgramsPage = lazy(() => import('./pages/ProgramsPage'));
 const StudentMyPage = lazy(() => import('./pages/StudentMyPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 
 const AppContext = createContext(null);
 const read = (key, fallback) => {
@@ -30,6 +31,7 @@ export function useApp() { return useContext(AppContext); }
 function AppProvider({ children }) {
   const { user, role } = useAuth();
   const syncingRemoteData = firestoreSyncEnabled && Boolean(user);
+  const [users, setUsers] = useState([]);
   const [students, setStudents] = useState(() => syncingRemoteData ? [] : read('careerfit_students', initialStudents).map(student => student.appointment && !student.appointmentDate ? { ...student, appointmentDate: toDateKey() } : student));
   const [consultations, setConsultations] = useState(() => syncingRemoteData ? [] : read('careerfit_consultations', initialConsultations));
   const [consultationNotes, setConsultationNotes] = useState(() => syncingRemoteData ? [] : read('careerfit_consultation_notes', []));
@@ -53,11 +55,13 @@ function AppProvider({ children }) {
     const loaded = new Set();
     const markLoaded = name => {
       loaded.add(name);
-      if (loaded.size === (role === 'student' ? 3 : 4)) setDataLoading(false);
+      const expectedCount = role === 'student' ? 3 : role === 'admin' ? 5 : 4;
+      if (loaded.size === expectedCount) setDataLoading(false);
     };
     return subscribeCareerData(
       { user, role },
       {
+        users: items => { setUsers(items); markLoaded('users'); },
         students: items => { setStudents(items); markLoaded('students'); },
         consultations: items => { setConsultations(items); markLoaded('consultations'); },
         consultationNotes: items => { setConsultationNotes(items); markLoaded('consultationNotes'); },
@@ -101,13 +105,13 @@ function AppProvider({ children }) {
     }
   };
 
-  const value = useMemo(() => ({ students, setStudents, consultations, setConsultations, consultationNotes, setConsultationNotes, followUps, setFollowUps, persistDocument, persistDocumentGroup, toast, notify: setToast, draftForm, setDraftForm }), [students, consultations, consultationNotes, followUps, toast, draftForm, user]);
+  const value = useMemo(() => ({ users, setUsers, students, setStudents, consultations, setConsultations, consultationNotes, setConsultationNotes, followUps, setFollowUps, persistDocument, persistDocumentGroup, toast, notify: setToast, draftForm, setDraftForm }), [users, students, consultations, consultationNotes, followUps, toast, draftForm, user]);
   if (dataLoading) return <main className="app-loading" role="status">상담 데이터를 불러오고 있어요...</main>;
   return <AppContext.Provider value={value}>{children}{toast && <div className="toast" role="status" aria-live="polite"><span>✓</span>{toast}</div>}</AppContext.Provider>;
 }
 
 function CounselorRoutes() {
-  const { logout } = useAuth();
+  const { logout, role } = useAuth();
   return <Routes>
     <Route element={<AppLayout logout={logout} />}>
       <Route path="dashboard" element={<DashboardPage />} />
@@ -118,6 +122,7 @@ function CounselorRoutes() {
       <Route path="follow-ups" element={<FollowUpsPage />} />
       <Route path="programs" element={<ProgramsPage />} />
       <Route path="settings" element={<SettingsPage />} />
+      <Route path="admin/users" element={role === 'admin' ? <AdminUsersPage /> : <Navigate to="/dashboard" replace />} />
       <Route index element={<Navigate to="dashboard" replace />} />
       <Route path="*" element={<Navigate to="dashboard" replace />} />
     </Route>

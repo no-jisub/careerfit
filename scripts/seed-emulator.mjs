@@ -41,6 +41,11 @@ async function upsertUser({ email, displayName, role }) {
   return user;
 }
 
+const admin = await upsertUser({
+  email: 'admin@careerfit.local',
+  displayName: '커리어핏 관리자',
+  role: 'admin',
+});
 const counselor = await upsertUser({
   email: 'counselor@careerfit.local',
   displayName: '박지현 상담사',
@@ -168,6 +173,7 @@ for (const [collectionName, records] of Object.entries(documents)) {
 await batch.commit();
 
 console.log('CareerFit Firebase Emulator seed completed.');
+console.log(`Admin:     admin@careerfit.local / ${password}`);
 console.log(`Counselor: counselor@careerfit.local / ${password}`);
 console.log(`Student:   student@careerfit.local / ${password}`);
 console.log('The second counselor/student pair verifies assigned-student filtering.');
