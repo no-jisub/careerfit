@@ -14,11 +14,12 @@ const navItems = [
   { to: '/appointments', label: '상담 일정', icon: 'calendar' },
   { to: '/consultations', label: '상담 기록', icon: 'note' },
   { to: '/follow-ups', label: '후속 조치', icon: 'check' },
+  { to: '/goals', label: '상담 목표·성과', icon: 'target' },
   { to: '/programs', label: '비교과 프로그램', icon: 'spark' },
   { to: '/insights', label: '운영 통계', icon: 'chart' },
 ];
 
-const titles = { dashboard: '대시보드', students: '학생 관리', appointments: '상담 일정', consultations: '상담 기록', 'follow-ups': '후속 조치', programs: '비교과 프로그램', insights: '운영 통계', notifications: '알림 센터', settings: '설정', admin: '사용자 관리' };
+const titles = { dashboard: '대시보드', students: '학생 관리', appointments: '상담 일정', consultations: '상담 기록', 'follow-ups': '후속 조치', goals: '상담 목표·성과', programs: '비교과 프로그램', insights: '운영 통계', notifications: '알림 센터', settings: '설정', admin: '사용자 관리' };
 
 export default function AppLayout({ logout }) {
   const [open, setOpen] = useState(false);

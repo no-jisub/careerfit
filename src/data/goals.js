@@ -1,0 +1,25 @@
+import { addDays, toDateKey } from '../utils/date';
+
+export const initialGoals = [{
+  id: 'goal-demo-1',
+  studentId: 's1',
+  studentUid: 'demo-student-s1',
+  counselorUid: 'demo-counselor',
+  title: '관심 직무 2개 비교 정리',
+  description: '서비스 기획과 UX 직무의 주요 업무와 필요한 역량을 표로 비교합니다.',
+  targetDate: addDays(toDateKey(), 7),
+  assigneeRole: 'student',
+  status: 'inProgress',
+  visibility: 'public',
+  consultationId: 'c1',
+  followUpId: 'f2',
+  studentProgress: '직무 소개 자료를 모으고 있습니다.',
+  createdByUid: 'demo-counselor',
+  createdByRole: 'counselor',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  lastModifiedByUid: 'demo-student-s1',
+  lastModifiedByName: '김하늘',
+  lastModifiedByRole: 'student',
+  achievedAt: '',
+}];
