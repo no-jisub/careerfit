@@ -1,4 +1,5 @@
 export const PROGRAM_STORE_VERSION = 1;
+export const PROGRAM_RECOMMENDATION_STORE_VERSION = 1;
 
 export const PROGRAM_TYPES = ['진로 탐색', '직무 역량', '취업 준비', '프로젝트', '창업'];
 export const PROGRAM_MODES = ['온라인', '오프라인', '혼합'];
@@ -111,4 +112,19 @@ export function restoreProgramStore(value, fallbackPrograms) {
     return fallbackPrograms.map(normalizeProgram);
   }
   return value.programs.map(normalizeProgram);
+}
+
+export function createProgramRecommendationStore(recommendations) {
+  return {
+    version: PROGRAM_RECOMMENDATION_STORE_VERSION,
+    recommendations,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function restoreProgramRecommendationStore(value, fallbackRecommendations) {
+  if (!value || value.version !== PROGRAM_RECOMMENDATION_STORE_VERSION || !Array.isArray(value.recommendations)) {
+    return fallbackRecommendations;
+  }
+  return value.recommendations.filter(item => item?.id && item?.studentId && item?.programId);
 }
