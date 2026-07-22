@@ -67,6 +67,23 @@ try {
   ));
   assert(assignedAppointments.size === 1 && assignedAppointments.docs[0].id === 'a1', '상담사의 배정 일정 조회가 올바르지 않습니다.');
 
+  let blockedInvalidAppointment = false;
+  try {
+    await setDoc(doc(db, 'appointments', 'invalid-appointment'), {
+      studentId: 's1',
+      studentUid: assignedStudents.docs[0].data().uid,
+      counselorUid: counselorCredential.user.uid,
+      date: '2026-07-30',
+      time: '15:00',
+      type: '진로 상담',
+      location: '',
+      status: 'scheduled',
+    });
+  } catch (error) {
+    blockedInvalidAppointment = error.code === 'permission-denied';
+  }
+  assert(blockedInvalidAppointment, '잘못된 상담 일정 데이터가 Firestore 규칙에서 차단되지 않았습니다.');
+
   const verificationId = 'verification-consultation';
   const verificationFollowUpId = 'verification-follow-up';
   const verificationAppointmentId = 'verification-appointment';
@@ -130,6 +147,13 @@ try {
     where('studentUid', '==', studentCredential.user.uid),
   ));
   assert(ownAppointments.size === 2, `학생 본인 상담 일정 조회 결과가 올바르지 않습니다: ${ownAppointments.size}`);
+  let blockedInternalNote = false;
+  try {
+    await getDoc(doc(db, 'consultationNotes', 'n1'));
+  } catch (error) {
+    blockedInternalNote = error.code === 'permission-denied';
+  }
+  assert(blockedInternalNote, '학생의 상담 담당자 전용 메모 조회가 차단되지 않았습니다.');
   const completedAt = new Date().toISOString();
   await updateDoc(doc(db, 'followUps', verificationFollowUpId), {
     status: 'complete',
@@ -148,6 +172,8 @@ try {
   console.log('- atomic consultation/note/follow-up document save');
   console.log('- student follow-up completion update');
   console.log('- counselor appointment save and student appointment query');
+  console.log('- invalid document shape denied by Firestore rules');
+  console.log('- counselor-only consultation note denied for student');
 } finally {
   await signOut(auth).catch(() => {});
   await deleteApp(app);

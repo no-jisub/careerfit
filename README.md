@@ -53,8 +53,16 @@
 
 ### 관리자(`admin`)
 
-- 프런트엔드에서는 상담 담당자 화면을 사용합니다.
-- Firestore 보안 규칙에서는 사용자·학생·상담·프로그램 데이터에 대한 관리 권한을 가질 수 있도록 준비되어 있습니다.
+- 관리자·상담사·학생 계정 등록과 학생별 담당 상담사 배정
+- 전체 상담 일정·기록·후속 조치·운영 통계 확인
+- 계정별 비밀번호 재설정 메일 발송
+
+### 공통 운영 기능
+
+- 학생·학번·상담 내용 통합 검색과 목록별 필터
+- 오늘 일정, 마감 임박, 기한 초과 알림 센터와 읽음 처리
+- 기간별 상담 실적, 후속 조치 완료율, 예약 완료율 통계
+- 입력값 정규화·형식 검증과 전역 오류 복구 화면
 
 ## 기술 스택
 
@@ -72,7 +80,7 @@
 | CI/CD | GitHub Actions | PR 기능 검증, `main` 검증 후 자동 배포 |
 | CI 인증 | Google Workload Identity Federation | 서비스 계정 JSON 키 없는 단기 OIDC 인증 |
 
-Firebase Emulator 통합 검증은 제공되지만 컴포넌트 단위 테스트, 린터와 포매터는 아직 없습니다. 기능을 확장할 때 Vitest/React Testing Library와 ESLint 도입을 검토하세요.
+Node 단위 테스트와 Firebase Emulator 통합·권한 테스트가 CI에서 실행됩니다. 컴포넌트 상호작용 테스트, 린터와 포매터는 추가 도입이 필요합니다.
 
 ## 애플리케이션 구조
 
@@ -126,6 +134,8 @@ design-system/careerfit/MASTER.md       # UI 디자인 시스템 기준
 | `/students/:studentId/consultation/new` | `/#/students/s1/consultation/new` | 상담 기록 작성 |
 | `/consultations` | `/#/consultations` | 전체 상담 기록 |
 | `/follow-ups` | `/#/follow-ups` | 후속 조치 관리 |
+| `/notifications` | `/#/notifications` | 일정·마감 알림 센터 |
+| `/insights` | `/#/insights` | 기간별 상담 운영 통계 |
 | `/programs` | `/#/programs` | 프로그램 추천 |
 | `/settings` | `/#/settings` | 설정 |
 | `/student` | `/#/student` | 학생 마이페이지 |
@@ -135,7 +145,7 @@ design-system/careerfit/MASTER.md       # UI 디자인 시스템 기준
 
 ## 데이터 저장 모드
 
-### 1. 현재 운영: 데모/localStorage 모드
+### 1. 로컬 팀 개발: 데모/localStorage 모드
 
 초기 데이터는 `src/data/`에 있으며 변경 내용은 다음 키로 저장됩니다.
 
@@ -144,10 +154,13 @@ design-system/careerfit/MASTER.md       # UI 디자인 시스템 기준
 - `careerfit_consultations`
 - `careerfit_consultation_notes`
 - `careerfit_followups`
+- `careerfit_appointments`
+- `careerfit_users`
+- `careerfit_read_notifications`
 
 브라우저나 도메인이 달라지면 데이터가 공유되지 않습니다. 브라우저 저장소를 지우면 초기 데모 데이터로 돌아갑니다. 현재 데이터는 모두 가상 데이터이며 실제 학교·학생 개인정보가 아닙니다.
 
-### 2. 준비된 실제 운영: Firebase Auth + Firestore 모드
+### 2. 현재 실제 운영: Firebase Auth + Firestore 모드
 
 실제 동기화가 활성화되면 다음 컬렉션을 사용합니다.
 
@@ -180,6 +193,8 @@ Firestore 복합 쿼리를 확장하면 `firestore.indexes.json`에 인덱스가
 허용 역할은 `counselor`, `student`, `admin`입니다. 실제 Auth를 켤 때 이메일/비밀번호 로그인을 Firebase Console에서 활성화하고, 각 계정에 역할 정보를 반드시 연결해야 합니다.
 
 데모 로그인의 역할은 `localStorage`에 저장됩니다. 실제 Firebase 로그인에 성공하면 데모 역할 값은 제거됩니다.
+
+운영 로그인 화면은 Firebase Authentication 이메일/비밀번호 로그인과 비밀번호 재설정 메일 발송을 제공합니다. 공개 회원가입은 제공하지 않으며 계정은 관리자가 등록합니다.
 
 ## 상담 초안 생성 기능
 
@@ -260,6 +275,7 @@ Emulator UI는 `http://127.0.0.1:4000`에서 확인할 수 있습니다.
 | `npm run dev` | Vite 개발 서버 |
 | `npm run dev:firebase` | Emulator 설정으로 Vite 개발 서버 실행 |
 | `npm run build` | 프로덕션 빌드 및 Sites 호환 산출물 생성 |
+| `npm test` | 입력 검증·알림·운영 통계 단위 테스트 |
 | `npm run preview` | `dist` 로컬 미리보기 |
 | `npm run firebase:emulators` | Auth/Firestore/Hosting Emulator 실행 |
 | `npm run firebase:seed` | Emulator 전용 가상 계정·담당 학생 데이터 생성 |
@@ -344,6 +360,9 @@ Vite `base`를 `/careerfit/` 등으로 변경하면 Firebase 루트에서 JS/CSS
 - 학생은 본인 후속 조치의 완료 상태와 완료 시각만 제한적으로 변경
 - 역할/학생 UID 연결, 담당 상담자 UID 등 권한 핵심 필드는 일반 사용자가 바꾸지 못함
 - 알 수 없는 컬렉션은 마지막 catch-all 규칙에서 거부
+- 비활성 계정은 custom claim이 남아 있어도 접근 거부
+- 문서별 필수 필드, 상태 범위, 문자열 크기 검증
+- 상담 원문은 `consultationNotes`에 분리하고 학생 조회 거부
 
 Hosting 자동 배포는 Firestore 규칙을 배포하지 않습니다. 규칙 변경 시 반드시 별도 검증 후 아래 명령을 실행해야 합니다.
 
@@ -361,6 +380,7 @@ PR 검증과 배포 흐름:
 PR 생성/갱신
 → npm ci
 → npm run build
+→ npm test
 → Firebase Emulator에서 로그인·담당 권한·문서 저장 검증
 
 main push 또는 PR merge
@@ -450,7 +470,7 @@ main push 또는 PR merge
 1. 운영 데이터는 최초 관리자 로그인 후 상담사·학생 계정을 등록해야 채워집니다.
 2. 상담 초안 생성은 실제 AI가 아니라 규칙 기반 로컬 함수입니다.
 3. 프로그램 정보는 `src/data/programs.js`의 정적 데이터입니다.
-4. Firebase 핵심 흐름 통합 검증은 있으나 컴포넌트 단위 테스트, 린트와 코드 포맷 검사는 없습니다.
+4. 입력 검증·알림·통계 단위 테스트와 Firebase 통합 검증은 있으나, React 컴포넌트 테스트·린트·포맷 검사는 아직 없습니다.
 5. Firebase App Check와 Analytics는 현재 초기화하지 않습니다.
 6. 복합 쿼리를 추가할 때는 `firestore.indexes.json`에 인덱스를 추가해야 합니다.
 7. 실제 대학 포털, 프로그램 신청과 외부 알림 시스템은 연동되지 않았습니다.
