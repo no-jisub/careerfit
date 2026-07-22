@@ -1,13 +1,26 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, demoModeEnabled, firebaseAuthEnabled } from '../lib/firebase';
 
 const AuthContext = createContext(null);
 
 async function resolveProfile(user) {
   const token = await user.getIdTokenResult();
-  const snapshot = await getDoc(doc(db, 'users', user.uid));
+  const profileRef = doc(db, 'users', user.uid);
+  let snapshot = await getDoc(profileRef);
+  if (!snapshot.exists() && ['admin', 'counselor'].includes(token.claims.role)) {
+    const now = new Date().toISOString();
+    await setDoc(profileRef, {
+      email: user.email,
+      displayName: user.displayName || user.email,
+      role: token.claims.role,
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+    snapshot = await getDoc(profileRef);
+  }
   const storedProfile = snapshot.exists() ? snapshot.data() : {};
   return {
     ...storedProfile,

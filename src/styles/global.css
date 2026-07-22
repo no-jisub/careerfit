@@ -938,3 +938,32 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
   .modal { width: calc(100% - 24px); max-height: calc(100vh - 24px); overflow-y: auto; }
   .toast { font-size: 12px; }
 }
+/* Operational administration */
+.admin-grid { display:grid; grid-template-columns:minmax(320px, .85fr) minmax(420px, 1.15fr); gap:24px; margin-bottom:24px; }
+.admin-create-card form, .student-account-fields { display:grid; gap:14px; }
+.admin-create-card h2 { margin:0 0 20px; }
+.student-account-fields { padding-top:16px; border-top:1px solid var(--border); }
+.admin-user-list article, .assignment-list article { display:grid; grid-template-columns:minmax(0, 1fr) auto auto; align-items:center; gap:16px; padding:15px 0; border-top:1px solid var(--border); }
+.admin-user-list article div, .assignment-list article div { display:grid; gap:4px; }
+.admin-user-list article span, .assignment-list article span { color:var(--muted); font-size:.86rem; }
+.admin-user-list article b { color:var(--blue); font-size:.82rem; }
+.assignment-card { margin-bottom:28px; }
+.assignment-list select { min-width:190px; }
+@media (max-width: 900px) { .admin-grid { grid-template-columns:1fr; } }
+@media (max-width: 600px) { .admin-user-list article, .assignment-list article { grid-template-columns:1fr; align-items:start; } .assignment-list select { width:100%; } }
+.appointment-list { display:grid; }
+.appointment-list article { min-height:108px; padding:18px 22px; border-top:1px solid var(--border); display:grid; grid-template-columns:130px minmax(0,1fr) auto auto; align-items:center; gap:20px; }
+.appointment-list article.cancelled { opacity:.58; }
+.appointment-list time { display:grid; gap:4px; }
+.appointment-list time span { color:var(--blue); font-size:1.15rem; font-weight:800; }
+.appointment-list article > div:nth-child(2) { display:grid; gap:5px; }
+.appointment-list article a { color:var(--navy); font-weight:800; }
+.appointment-list article p, .appointment-list article small { margin:0; color:var(--muted); }
+.appointment-status { padding:6px 10px; border-radius:999px; background:var(--blue-soft); color:var(--blue); font-size:.78rem; font-weight:800; }
+.appointment-status.cancelled { background:var(--red-soft); color:var(--red); }
+.appointment-status.completed { background:var(--green-soft); color:var(--green); }
+.appointment-actions { display:flex; align-items:center; gap:10px; }
+.text-button.danger { color:var(--red); }
+.empty-appointment { display:grid; align-content:center; gap:12px; }
+.empty-appointment h2, .empty-appointment p { margin:0; }
+@media (max-width: 760px) { .appointment-list article { grid-template-columns:1fr auto; gap:12px; } .appointment-list time, .appointment-list article > div:nth-child(2) { grid-column:1 / -1; } }

@@ -58,9 +58,12 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isAdmin() || (signedIn() && request.auth.uid == userId);
-      allow create: if signedIn()
-        && request.auth.uid == userId
-        && request.resource.data.role == 'student';
+      allow create: if isAdmin()
+        || (signedIn()
+          && request.auth.uid == userId
+          && (request.resource.data.role == 'student'
+            || (request.auth.token.role in ['admin', 'counselor']
+              && request.resource.data.role == request.auth.token.role)));
       allow update: if isAdmin()
         || (signedIn()
           && request.auth.uid == userId
@@ -143,6 +146,27 @@ service cloud.firestore {
         || (isStudent()
           && resource.data.assigneeUid == request.auth.uid
           && isValidStudentCompletion());
+      allow delete: if isAdmin();
+    }
+
+    match /appointments/{appointmentId} {
+      allow read: if isAdmin()
+        || (isCounselor() && resource.data.counselorUid == request.auth.uid)
+        || (isStudent() && resource.data.studentUid == request.auth.uid);
+      allow create: if isAdmin()
+        || (isCounselor()
+          && request.resource.data.counselorUid == request.auth.uid
+          && isAssignedStudent(request.resource.data.studentId)
+          && hasMatchingStudentUid(
+            request.resource.data.studentId,
+            request.resource.data.studentUid
+          ));
+      allow update: if isAdmin()
+        || (isCounselor()
+          && resource.data.counselorUid == request.auth.uid
+          && request.resource.data.counselorUid == resource.data.counselorUid
+          && request.resource.data.studentUid == resource.data.studentUid
+          && request.resource.data.studentId == resource.data.studentId);
       allow delete: if isAdmin();
     }
 

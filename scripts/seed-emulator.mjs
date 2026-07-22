@@ -41,6 +41,11 @@ async function upsertUser({ email, displayName, role }) {
   return user;
 }
 
+const admin = await upsertUser({
+  email: 'admin@careerfit.local',
+  displayName: '커리어핏 관리자',
+  role: 'admin',
+});
 const counselor = await upsertUser({
   email: 'counselor@careerfit.local',
   displayName: '박지현 상담사',
@@ -158,6 +163,32 @@ const documents = {
       updatedAt: now,
     },
   },
+  appointments: {
+    a1: {
+      studentId: 's1',
+      studentUid: student.uid,
+      counselorUid: counselor.uid,
+      date: '2026-07-22',
+      time: '10:00',
+      type: '진로 상담',
+      location: '대학일자리플러스센터 상담실 2',
+      preparation: '관심 직무 비교표',
+      status: 'scheduled',
+      updatedAt: now,
+    },
+    a2: {
+      studentId: 's2',
+      studentUid: otherStudent.uid,
+      counselorUid: otherCounselor.uid,
+      date: '2026-07-22',
+      time: '11:30',
+      type: '취업 상담',
+      location: '대학일자리플러스센터 상담실 1',
+      preparation: '포트폴리오 초안',
+      status: 'scheduled',
+      updatedAt: now,
+    },
+  },
 };
 
 for (const [collectionName, records] of Object.entries(documents)) {
@@ -168,6 +199,7 @@ for (const [collectionName, records] of Object.entries(documents)) {
 await batch.commit();
 
 console.log('CareerFit Firebase Emulator seed completed.');
+console.log(`Admin:     admin@careerfit.local / ${password}`);
 console.log(`Counselor: counselor@careerfit.local / ${password}`);
 console.log(`Student:   student@careerfit.local / ${password}`);
 console.log('The second counselor/student pair verifies assigned-student filtering.');
