@@ -52,6 +52,19 @@ test('program validation blocks invalid dates, URLs, and missing audiences', () 
   assert.equal(Boolean(errors.applicationUrl), true);
 });
 
+test('draft programs can be saved before recruitment dates are confirmed', () => {
+  const errors = validateProgram({
+    ...baseProgram,
+    status: 'draft',
+    recruitmentStartDate: '',
+    recruitmentEndDate: '',
+    programStartDate: '',
+    programEndDate: '',
+  });
+  assert.equal(errors.recruitmentDates, undefined);
+  assert.equal(errors.programDates, undefined);
+});
+
 test('program eligibility checks grade and department together', () => {
   const normalized = normalizeProgram(baseProgram);
   assert.equal(isProgramEligibleForStudent(normalized, { grade: '2학년', department: '컴퓨터공학과' }), true);

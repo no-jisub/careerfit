@@ -89,14 +89,15 @@ export function normalizeProgram(program, index = 0) {
 
 export function validateProgram(program) {
   const errors = {};
+  const requiresCompleteSchedule = program.status !== 'draft';
   if (!program.name?.trim()) errors.name = '프로그램명을 입력해 주세요.';
   if (!program.department?.trim()) errors.department = '담당 부서를 입력해 주세요.';
   if (!program.description?.trim()) errors.description = '프로그램 설명을 입력해 주세요.';
   if (!program.grades?.length) errors.grades = '참여 대상 학년을 하나 이상 선택해 주세요.';
-  if (!program.recruitmentStartDate || !program.recruitmentEndDate) errors.recruitmentDates = '모집 기간을 입력해 주세요.';
-  else if (program.recruitmentStartDate > program.recruitmentEndDate) errors.recruitmentDates = '모집 종료일은 시작일보다 빠를 수 없습니다.';
-  if (!program.programStartDate || !program.programEndDate) errors.programDates = '운영 기간을 입력해 주세요.';
-  else if (program.programStartDate > program.programEndDate) errors.programDates = '운영 종료일은 시작일보다 빠를 수 없습니다.';
+  if (requiresCompleteSchedule && (!program.recruitmentStartDate || !program.recruitmentEndDate)) errors.recruitmentDates = '모집 기간을 입력해 주세요.';
+  else if (program.recruitmentStartDate && program.recruitmentEndDate && program.recruitmentStartDate > program.recruitmentEndDate) errors.recruitmentDates = '모집 종료일은 시작일보다 빠를 수 없습니다.';
+  if (requiresCompleteSchedule && (!program.programStartDate || !program.programEndDate)) errors.programDates = '운영 기간을 입력해 주세요.';
+  else if (program.programStartDate && program.programEndDate && program.programStartDate > program.programEndDate) errors.programDates = '운영 종료일은 시작일보다 빠를 수 없습니다.';
   if (program.applicationUrl) {
     try {
       const url = new URL(program.applicationUrl);
