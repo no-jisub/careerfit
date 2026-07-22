@@ -42,6 +42,24 @@ test('bulk availability creates one-hour slots and skips existing or booked time
   assert.ok(result.slots.every(slot => slot.duration === 60 && slot.status === 'open'));
 });
 
+test('bulk availability omits lunch and other excluded time ranges', () => {
+  const result = buildHourlyAvailabilitySlots({
+    dates: ['2026-07-22'],
+    startTime: '09:00',
+    endTime: '18:00',
+    exclusions: [{ startTime: '12:00', endTime: '13:00' }],
+    location: '상담실 1',
+    counselorUid: 'counselor-1',
+    nowDate: '2026-07-20',
+  });
+
+  assert.equal(result.error, '');
+  assert.equal(result.slots.length, 8);
+  assert.equal(result.excluded, 1);
+  assert.equal(result.slots.some(slot => slot.time === '12:00'), false);
+  assert.equal(result.slots.some(slot => slot.time === '13:00'), true);
+});
+
 test('expired built-in demo slots roll forward without changing counselor-created slots', () => {
   const fallback = [{ id: 'availability-demo-1', date: '2026-07-23', time: '10:00', endTime: '11:00', duration: 60, status: 'open' }];
   const stored = [

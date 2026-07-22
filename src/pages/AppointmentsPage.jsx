@@ -9,7 +9,7 @@ import { activeAppointmentStatuses, buildHourlyAvailabilitySlots, buildMonthCale
 import { useAuth } from '../auth/AuthContext';
 
 const emptyForm = () => ({ studentId: '', date: toDateKey(), time: '10:00', endTime: '10:50', type: '진로 상담', location: '대학일자리플러스센터 상담실 2', preparation: '' });
-const emptyAvailabilityForm = () => ({ dates: [toDateKey()], startTime: '09:00', endTime: '18:00', location: '대학일자리플러스센터 상담실 2' });
+const emptyAvailabilityForm = () => ({ dates: [toDateKey()], startTime: '09:00', endTime: '18:00', exclusions: [], location: '대학일자리플러스센터 상담실 2' });
 const appointmentStatusLabels = { pending: '승인 대기', confirmed: '확정', scheduled: '확정', completed: '완료', cancelled: '취소' };
 const formatMonthTitle = monthKey => new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long' }).format(parseDateKey(monthKey));
 const shiftMonth = (monthKey, amount) => {
@@ -136,7 +136,7 @@ export default function AppointmentsPage() {
       setCounselorAvailability(items => [...items, ...availabilityPreview.slots.filter(slot => !items.some(item => item.id === slot.id))]);
       setAvailabilityForm(emptyAvailabilityForm());
       setShowAvailabilityForm(false);
-      notify(`1시간 상담 가능 시간 ${availabilityPreview.slots.length}개를 등록했습니다.${availabilityPreview.skipped ? ` 충돌 시간 ${availabilityPreview.skipped}개는 제외했습니다.` : ''}`);
+      notify(`1시간 상담 가능 시간 ${availabilityPreview.slots.length}개를 등록했습니다.${availabilityPreview.skipped ? ` 제외 설정 또는 기존 일정과 겹친 ${availabilityPreview.skipped}개 시간은 제외했습니다.` : ''}`);
     } catch { /* 공통 저장 오류 메시지를 사용합니다. */ }
     finally { setAvailabilitySaving(false); }
   };
@@ -153,6 +153,30 @@ export default function AppointmentsPage() {
     setExpandedAvailabilityDates(current => current.includes(date)
       ? current.filter(item => item !== date)
       : [...current, date]);
+  };
+
+  const addAvailabilityExclusion = () => {
+    setAvailabilityForm(current => ({
+      ...current,
+      exclusions: [...current.exclusions, { startTime: '12:00', endTime: '13:00' }],
+    }));
+    setAvailabilityError('');
+  };
+
+  const updateAvailabilityExclusion = (index, key, value) => {
+    setAvailabilityForm(current => ({
+      ...current,
+      exclusions: current.exclusions.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: value } : item),
+    }));
+    setAvailabilityError('');
+  };
+
+  const removeAvailabilityExclusion = index => {
+    setAvailabilityForm(current => ({
+      ...current,
+      exclusions: current.exclusions.filter((_, itemIndex) => itemIndex !== index),
+    }));
+    setAvailabilityError('');
   };
 
   const updateAvailabilityStatus = async (availability, status) => {
@@ -208,6 +232,34 @@ export default function AppointmentsPage() {
       {ordered.length ? <div className="appointment-list">{ordered.map(item => { const student = students.find(candidate => candidate.id === item.studentId); const active = activeAppointmentStatuses.includes(item.status); const cancellationLabel = getAppointmentCancellationLabel(item); return <article key={item.id} className={item.status}><time><strong>{item.date}</strong><span>{item.time}–{getTimeRangeEnd(item)}</span></time><div><Link to={`/students/${item.studentId}`}>{student?.name || '학생'}</Link><p>{item.type} · {item.location}</p>{item.requestedBy === 'student' ? <details className="appointment-request-details"><summary>학생 사전 상담 내용 보기</summary><dl><div><dt>상담 주제</dt><dd>{item.subject}</dd></div><div><dt>전달 내용</dt><dd>{item.requestMessage}</dd></div>{item.preferredOutcome && <div><dt>원하는 결과</dt><dd>{item.preferredOutcome}</dd></div>}</dl></details> : <small>{item.preparation ? `준비사항: ${item.preparation}` : '별도 준비사항 없음'}</small>}</div><span className={`appointment-status ${item.status}`}>{item.status === 'cancelled' ? cancellationLabel : appointmentStatusLabels[item.status] || item.status}</span><div className="appointment-actions">{active && <><button className="button secondary small" onClick={() => openEdit(item)}>변경</button>{item.status === 'pending' && <button className="button primary small" onClick={() => updateStatus(item, 'confirmed')}>확정</button>}{['confirmed', 'scheduled'].includes(item.status) && <button className="button primary small" onClick={() => updateStatus(item, 'completed')}>완료</button>}<button className="text-button danger" onClick={() => updateStatus(item, 'cancelled')}>취소</button></>}</div></article>; })}</div> : <EmptyState icon="calendar" title="등록된 상담 일정이 없습니다" description="상담 예약 버튼으로 첫 일정을 등록해 주세요." />}
     </section>
     {showForm && <div className="modal-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && !saving && setShowForm(false)}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="appointment-form-title"><button className="modal-close" aria-label="닫기" disabled={saving} onClick={() => setShowForm(false)}><Icon name="close" size={19} /></button><span className="eyebrow">상담 일정</span><h2 id="appointment-form-title">{editingId ? '예약 변경' : '새 상담 예약'}</h2><form onSubmit={save}><label>학생<select autoFocus value={form.studentId} onChange={event => setForm(current => ({ ...current, studentId: event.target.value }))} required disabled={Boolean(editingId)}><option value="">학생을 선택하세요</option>{students.map(item => <option key={item.id} value={item.id}>{item.name} · {item.department}</option>)}</select></label><label>날짜<input type="date" value={form.date} min={toDateKey()} onChange={event => setForm(current => ({ ...current, date: event.target.value }))} required /></label><div className="form-row"><label>상담 시작 시간<input type="time" value={form.time} onChange={event => setForm(current => ({ ...current, time: event.target.value }))} required /></label><label>종료 예정 시간<input type="time" value={form.endTime} onChange={event => setForm(current => ({ ...current, endTime: event.target.value }))} required /></label></div><label>상담 유형<select value={form.type} onChange={event => setForm(current => ({ ...current, type: event.target.value }))}>{['진로 상담','취업 상담','자기소개서 상담','면접 상담','기타 상담'].map(type => <option key={type}>{type}</option>)}</select></label><label>장소<input value={form.location} onChange={event => setForm(current => ({ ...current, location: event.target.value }))} required /></label><label>학생 준비사항<textarea rows="3" value={form.preparation} onChange={event => setForm(current => ({ ...current, preparation: event.target.value }))} /></label>{error && <p className="field-error" role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="button secondary" disabled={saving} onClick={() => setShowForm(false)}>닫기</button><button className="button primary" disabled={saving}>{saving ? '저장 중...' : '일정 저장'}</button></div></form></section></div>}
-    {showAvailabilityForm && <div className="modal-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && !availabilitySaving && setShowAvailabilityForm(false)}><section className="modal availability-form-modal bulk-availability-modal" role="dialog" aria-modal="true" aria-labelledby="availability-form-title"><button className="modal-close" aria-label="닫기" disabled={availabilitySaving} onClick={() => setShowAvailabilityForm(false)}><Icon name="close" size={19} /></button><span className="eyebrow">상담 신청 설정</span><h2 id="availability-form-title">1시간 상담 가능 시간 일괄 등록</h2><p className="availability-form-description">가능한 날짜를 여러 개 선택하고 운영 시간 범위를 지정하면 1시간 단위로 자동 생성됩니다.</p><form onSubmit={saveAvailability}><div className="bulk-availability-layout"><section className="availability-calendar-panel"><div className="calendar-toolbar"><button type="button" aria-label="이전 달" onClick={() => setAvailabilityMonth(month => shiftMonth(month, -1))}><Icon name="chevron" size={17} /></button><strong>{formatMonthTitle(availabilityMonth)}</strong><button type="button" aria-label="다음 달" onClick={() => setAvailabilityMonth(month => shiftMonth(month, 1))}><Icon name="chevron" size={17} /></button></div><div className="calendar-weekdays" aria-hidden="true">{['일','월','화','수','목','금','토'].map(day => <span key={day}>{day}</span>)}</div><div className="availability-calendar-grid">{availabilityCalendarDays.map(day => { const selected = availabilityForm.dates.includes(day.date); const disabled = day.isPast || !day.inMonth; return <button type="button" key={day.date} className={`${selected ? 'selected' : ''} ${!day.inMonth ? 'outside' : ''}`} disabled={disabled} aria-pressed={selected} onClick={() => toggleAvailabilityDate(day.date)}><span>{day.day}</span>{myAvailability.some(item => item.date === day.date) && <i aria-label="기존 일정 있음" />}</button>; })}</div><p>날짜를 여러 개 선택할 수 있습니다. 점이 있는 날짜에는 기존 시간이 있습니다.</p></section><section className="bulk-availability-settings"><div className="selected-date-summary"><span>선택한 날짜</span><strong>{availabilityForm.dates.length}일</strong><p>{availabilityForm.dates.length ? availabilityForm.dates.join(', ') : '달력에서 날짜를 선택해 주세요.'}</p></div><div className="form-row"><label>시작 시간<input type="time" step="3600" value={availabilityForm.startTime} onChange={event => setAvailabilityForm(current => ({ ...current, startTime: event.target.value }))} required /></label><label>종료 시간<input type="time" step="3600" value={availabilityForm.endTime} onChange={event => setAvailabilityForm(current => ({ ...current, endTime: event.target.value }))} required /></label></div><label>상담 장소<input value={availabilityForm.location} onChange={event => setAvailabilityForm(current => ({ ...current, location: event.target.value }))} placeholder="상담실 또는 온라인 상담 주소" required /></label><div className="availability-preview"><span>등록 예정</span><strong>{availabilityPreview.slots.length}개 시간</strong><small>각 60분{availabilityPreview.skipped ? ` · 기존 일정/마감 ${availabilityPreview.skipped}개 자동 제외` : ''}</small></div></section></div>{availabilityError && <p className="field-error" role="alert">{availabilityError}</p>}<div className="modal-actions"><button type="button" className="button secondary" disabled={availabilitySaving} onClick={() => setShowAvailabilityForm(false)}>취소</button><button className="button primary" disabled={availabilitySaving || !availabilityPreview.slots.length}>{availabilitySaving ? '등록 중...' : `${availabilityPreview.slots.length}개 시간 등록`}</button></div></form></section></div>}
+    {showAvailabilityForm && <div className="modal-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && !availabilitySaving && setShowAvailabilityForm(false)}>
+      <section className="modal availability-form-modal bulk-availability-modal" role="dialog" aria-modal="true" aria-labelledby="availability-form-title">
+        <button className="modal-close" aria-label="닫기" disabled={availabilitySaving} onClick={() => setShowAvailabilityForm(false)}><Icon name="close" size={19} /></button>
+        <span className="eyebrow">상담 신청 설정</span><h2 id="availability-form-title">1시간 상담 가능 시간 일괄 등록</h2>
+        <p className="availability-form-description">가능한 날짜를 여러 개 선택하고 운영 시간 범위를 지정하면 1시간 단위로 자동 생성됩니다.</p>
+        <form onSubmit={saveAvailability}>
+          <div className="bulk-availability-layout">
+            <section className="availability-calendar-panel">
+              <div className="calendar-toolbar"><button type="button" aria-label="이전 달" onClick={() => setAvailabilityMonth(month => shiftMonth(month, -1))}><Icon name="chevron" size={17} /></button><strong>{formatMonthTitle(availabilityMonth)}</strong><button type="button" aria-label="다음 달" onClick={() => setAvailabilityMonth(month => shiftMonth(month, 1))}><Icon name="chevron" size={17} /></button></div>
+              <div className="calendar-weekdays" aria-hidden="true">{['일','월','화','수','목','금','토'].map(day => <span key={day}>{day}</span>)}</div>
+              <div className="availability-calendar-grid">{availabilityCalendarDays.map(day => { const selected = availabilityForm.dates.includes(day.date); const disabled = day.isPast || !day.inMonth; return <button type="button" key={day.date} className={`${selected ? 'selected' : ''} ${!day.inMonth ? 'outside' : ''}`} disabled={disabled} aria-pressed={selected} onClick={() => toggleAvailabilityDate(day.date)}><span>{day.day}</span>{myAvailability.some(item => item.date === day.date) && <i aria-label="기존 일정 있음" />}</button>; })}</div>
+              <p>날짜를 여러 개 선택할 수 있습니다. 점이 있는 날짜에는 기존 시간이 있습니다.</p>
+            </section>
+            <section className="bulk-availability-settings">
+              <div className="selected-date-summary"><span>선택한 날짜</span><strong>{availabilityForm.dates.length}일</strong><p>{availabilityForm.dates.length ? availabilityForm.dates.join(', ') : '달력에서 날짜를 선택해 주세요.'}</p></div>
+              <div className="form-row"><label>시작 시간<input type="time" step="3600" value={availabilityForm.startTime} onChange={event => setAvailabilityForm(current => ({ ...current, startTime: event.target.value }))} required /></label><label>종료 시간<input type="time" step="3600" value={availabilityForm.endTime} onChange={event => setAvailabilityForm(current => ({ ...current, endTime: event.target.value }))} required /></label></div>
+              <section className="availability-exclusions">
+                <div className="availability-exclusions-heading"><div><strong>제외 시간</strong><span>점심시간처럼 상담을 받지 않는 시간을 제외할 수 있어요.</span></div><button type="button" className="text-button" onClick={addAvailabilityExclusion}><Icon name="plus" size={15} />제외 시간 추가</button></div>
+                {availabilityForm.exclusions.length ? <div className="availability-exclusion-list">{availabilityForm.exclusions.map((exclusion, index) => <div className="availability-exclusion-row" key={index}><label><span>시작</span><input type="time" value={exclusion.startTime} onChange={event => updateAvailabilityExclusion(index, 'startTime', event.target.value)} required /></label><span aria-hidden="true">–</span><label><span>종료</span><input type="time" value={exclusion.endTime} onChange={event => updateAvailabilityExclusion(index, 'endTime', event.target.value)} required /></label><button type="button" className="text-button danger" aria-label={`${exclusion.startTime}부터 ${exclusion.endTime} 제외 시간 삭제`} onClick={() => removeAvailabilityExclusion(index)}>삭제</button></div>)}</div> : <p>제외 시간이 없으면 선택한 운영 시간 전체가 등록됩니다.</p>}
+              </section>
+              <label>상담 장소<input value={availabilityForm.location} onChange={event => setAvailabilityForm(current => ({ ...current, location: event.target.value }))} placeholder="상담실 또는 온라인 상담 주소" required /></label>
+              <div className="availability-preview"><span>등록 예정</span><strong>{availabilityPreview.slots.length}개 시간</strong><small>각 60분{availabilityPreview.excluded ? ` · 설정한 제외 시간 ${availabilityPreview.excluded}개 제외` : ''}{availabilityPreview.skipped - (availabilityPreview.excluded || 0) > 0 ? ` · 기존 일정/마감 ${availabilityPreview.skipped - (availabilityPreview.excluded || 0)}개 제외` : ''}</small></div>
+            </section>
+          </div>
+          {availabilityError && <p className="field-error" role="alert">{availabilityError}</p>}
+          <div className="modal-actions"><button type="button" className="button secondary" disabled={availabilitySaving} onClick={() => setShowAvailabilityForm(false)}>취소</button><button className="button primary" disabled={availabilitySaving || !availabilityPreview.slots.length}>{availabilitySaving ? '등록 중...' : `${availabilityPreview.slots.length}개 시간 등록`}</button></div>
+        </form>
+      </section>
+    </div>}
   </>;
 }

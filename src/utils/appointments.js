@@ -62,6 +62,7 @@ export function buildHourlyAvailabilitySlots({
   endTime,
   location,
   counselorUid,
+  exclusions = [],
   existingAvailability = [],
   appointments = [],
   nowDate = toDateKey(),
@@ -71,25 +72,41 @@ export function buildHourlyAvailabilitySlots({
   const startMinutes = timeToMinutes(startTime);
   const endMinutes = timeToMinutes(endTime);
   const selectedDates = [...new Set(dates)].sort();
+  const normalizedExclusions = exclusions.filter(item => item.startTime || item.endTime).map(item => ({
+    time: item.startTime,
+    endTime: item.endTime,
+  }));
   if (!selectedDates.length) return { slots: [], skipped: 0, error: '상담 가능한 날짜를 한 개 이상 선택해 주세요.' };
   if (!counselorUid) return { slots: [], skipped: 0, error: '상담사 정보를 확인할 수 없습니다.' };
   if (!String(location || '').trim()) return { slots: [], skipped: 0, error: '상담 장소를 입력해 주세요.' };
   if (![startMinutes, endMinutes].every(Number.isFinite) || endMinutes <= startMinutes || (endMinutes - startMinutes) % 60 !== 0) {
     return { slots: [], skipped: 0, error: '시작과 종료 시간은 1시간 단위로 맞춰 주세요.' };
   }
+  if (normalizedExclusions.some(item => {
+    const exclusionStart = timeToMinutes(item.time);
+    const exclusionEnd = timeToMinutes(item.endTime);
+    return ![exclusionStart, exclusionEnd].every(Number.isFinite) || exclusionEnd <= exclusionStart;
+  })) return { slots: [], skipped: 0, excluded: 0, error: '제외 시간의 시작과 종료 시간을 확인해 주세요.' };
 
   const slots = [];
   let skipped = 0;
+  let excluded = 0;
   selectedDates.forEach(date => {
     for (let minutes = startMinutes; minutes + 60 <= endMinutes; minutes += 60) {
       const time = addMinutesToTime('00:00', minutes);
       const end = addMinutesToTime(time, 60);
       const candidate = { date, time, endTime: end, duration: 60, counselorUid };
       const isPast = date < nowDate || (date === nowDate && time <= nowTime);
+      const exclusionConflict = normalizedExclusions.some(item => timeRangesOverlap(item, candidate));
       const availabilityConflict = existingAvailability.some(item => item.counselorUid === counselorUid
         && item.date === date && timeRangesOverlap(item, candidate));
       const appointmentConflict = appointments.some(item => activeAppointmentStatuses.includes(item.status)
         && item.counselorUid === counselorUid && item.date === date && timeRangesOverlap(item, candidate));
+      if (exclusionConflict) {
+        skipped += 1;
+        excluded += 1;
+        continue;
+      }
       if (isPast || availabilityConflict || appointmentConflict) {
         skipped += 1;
         continue;
@@ -105,7 +122,7 @@ export function buildHourlyAvailabilitySlots({
       });
     }
   });
-  return { slots, skipped, error: slots.length ? '' : '선택한 범위에 새로 등록할 수 있는 시간이 없습니다.' };
+  return { slots, skipped, excluded, error: slots.length ? '' : '선택한 범위에 새로 등록할 수 있는 시간이 없습니다.' };
 }
 
 export function hasCounselorAppointmentConflict(appointments, students, candidate, ignoredId = '') {
