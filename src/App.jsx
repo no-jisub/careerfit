@@ -6,7 +6,7 @@ import { initialConsultations } from './data/consultations';
 import { initialFollowUps } from './data/followUps';
 import { resolveFollowUpStatus, toDateKey } from './utils/date';
 import { useAuth } from './auth/AuthContext';
-import { saveCareerRecords, subscribeCareerData } from './services/firebaseDataService';
+import { saveCareerDocument, saveCareerDocumentGroup, subscribeCareerData } from './services/firebaseDataService';
 import { firestoreSyncEnabled } from './lib/firebase';
 
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -67,18 +67,21 @@ function AppProvider({ children }) {
     );
   }, [user, role, syncingRemoteData]);
 
-  const persistRecords = async (name, records) => {
-    if (!user) return records;
-    const enriched = records.map(record => {
-      const student = students.find(item => item.id === record.studentId);
-      if (name === 'students') return { ...record, counselorUid: record.counselorUid || user.uid };
-      if (name === 'consultationNotes') return { ...record, counselorUid: record.counselorUid || user.uid };
-      if (name === 'consultations') return { ...record, counselorUid: record.counselorUid || user.uid, studentUid: record.studentUid || student?.uid || '', studentVisible: record.studentVisible ?? true };
-      if (name === 'followUps') return { ...record, ownerUid: record.ownerUid || user.uid, assigneeUid: record.assigneeUid || (record.owner === '학생' ? student?.uid || '' : user.uid) };
-      return record;
-    });
+  const enrichDocument = (name, record) => {
+    if (!user) return record;
+    const student = students.find(item => item.id === record.studentId);
+    if (name === 'students') return { ...record, counselorUid: record.counselorUid || user.uid };
+    if (name === 'consultationNotes') return { ...record, counselorUid: record.counselorUid || user.uid };
+    if (name === 'consultations') return { ...record, counselorUid: record.counselorUid || user.uid, studentUid: record.studentUid || student?.uid || '', studentVisible: record.studentVisible ?? true };
+    if (name === 'followUps') return { ...record, ownerUid: record.ownerUid || user.uid, assigneeUid: record.assigneeUid || (record.owner === '학생' ? student?.uid || '' : user.uid) };
+    return record;
+  };
+
+  const persistDocument = async (name, record) => {
+    if (!user) return record;
+    const enriched = enrichDocument(name, record);
     try {
-      await saveCareerRecords(name, enriched);
+      await saveCareerDocument(name, enriched);
       return enriched;
     } catch (error) {
       setToast('Firebase 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
@@ -86,7 +89,19 @@ function AppProvider({ children }) {
     }
   };
 
-  const value = useMemo(() => ({ students, setStudents, consultations, setConsultations, consultationNotes, setConsultationNotes, followUps, setFollowUps, persistRecords, toast, notify: setToast, draftForm, setDraftForm }), [students, consultations, consultationNotes, followUps, toast, draftForm, user]);
+  const persistDocumentGroup = async entries => {
+    if (!user) return entries;
+    const enriched = entries.map(({ name, record }) => ({ name, record: enrichDocument(name, record) }));
+    try {
+      await saveCareerDocumentGroup(enriched);
+      return enriched;
+    } catch (error) {
+      setToast('Firebase 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+      throw error;
+    }
+  };
+
+  const value = useMemo(() => ({ students, setStudents, consultations, setConsultations, consultationNotes, setConsultationNotes, followUps, setFollowUps, persistDocument, persistDocumentGroup, toast, notify: setToast, draftForm, setDraftForm }), [students, consultations, consultationNotes, followUps, toast, draftForm, user]);
   if (dataLoading) return <main className="app-loading" role="status">상담 데이터를 불러오고 있어요...</main>;
   return <AppContext.Provider value={value}>{children}{toast && <div className="toast" role="status" aria-live="polite"><span>✓</span>{toast}</div>}</AppContext.Provider>;
 }

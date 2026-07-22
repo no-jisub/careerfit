@@ -6,7 +6,7 @@ import { EmptyState, PageIntro, StatusBadge } from '../components/UI';
 import { addDays, resolveFollowUpStatus, toDateKey } from '../utils/date';
 
 export default function FollowUpsPage() {
-  const { students, followUps, setFollowUps, persistRecords, notify } = useApp();
+  const { students, followUps, setFollowUps, persistDocument, notify } = useApp();
   const [filter, setFilter] = useState('all');
   const [owner, setOwner] = useState('all');
   const [showAdd, setShowAdd] = useState(false);
@@ -26,7 +26,7 @@ export default function FollowUpsPage() {
     const changed = { ...current, ...changes, updatedAt: new Date().toISOString() };
     const updated = changes.dueDate ? { ...changed, status: resolveFollowUpStatus(changed) } : changed;
     try {
-      await persistRecords('followUps', [updated]);
+      await persistDocument('followUps', updated);
       setFollowUps(prev => prev.map(item => item.id === id ? updated : item));
       notify(message);
     } catch { /* 공통 저장 오류 안내를 사용합니다. */ }
@@ -52,7 +52,7 @@ export default function FollowUpsPage() {
     };
     setSaving(true);
     try {
-      await persistRecords('followUps', [nextTask]);
+      await persistDocument('followUps', nextTask);
       setFollowUps(prev => [...prev, nextTask]);
       setForm({ studentId: students[0]?.id || '', content: '', owner: '학생', dueDate: addDays(toDateKey(), 7) });
       setShowAdd(false);

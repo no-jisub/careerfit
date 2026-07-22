@@ -6,14 +6,23 @@ import { getAppointmentDateParts, getDayPeriod, toDateKey } from '../utils/date'
 import { useAuth } from '../auth/AuthContext';
 
 export default function StudentMyPage() {
-  const { students, consultations, followUps, setFollowUps, persistRecords, notify } = useApp();
+  const { students, consultations, followUps, setFollowUps, persistDocument, notify } = useApp();
   const { user, logout } = useAuth();
   const student = user ? students.find(item => item.uid === user.uid) : students[0];
   if (!student) return <main className="app-loading" role="status">연결된 학생 정보를 찾고 있어요...</main>;
   const latest = consultations.filter(c => c.studentId === student.id).sort((a,b) => b.date.localeCompare(a.date))[0];
   const tasks = followUps.filter(f => f.studentId === student.id);
   const appointmentDate = getAppointmentDateParts(student.appointmentDate || toDateKey());
-  const complete = id => { const current = followUps.find(f => f.id === id); if (!current) return; const updated = { ...current, status: 'complete', completedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }; setFollowUps(prev => prev.map(f => f.id === id ? updated : f)); void persistRecords('followUps', [updated]); notify('내 다음 행동을 완료 처리했습니다.'); };
+  const complete = async id => {
+    const current = followUps.find(f => f.id === id);
+    if (!current) return;
+    const updated = { ...current, status: 'complete', completedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    try {
+      await persistDocument('followUps', updated);
+      setFollowUps(items => items.map(followUp => followUp.id === id ? updated : followUp));
+      notify('내 다음 행동을 완료 처리했습니다.');
+    } catch { /* 공통 저장 오류 안내를 사용합니다. */ }
+  };
   return <div className="student-portal"><header><div className="brand"><span className="brand-mark"><Icon name="target" size={22} /></span><span>커리어<span>핏</span></span></div><div><button className="icon-button" aria-label="알림"><Icon name="bell" /></button><strong>{student.name}</strong><button className="text-button" onClick={logout}>로그아웃</button></div></header><main>
     <section className="student-welcome"><div><span className="eyebrow">나의 상담 여정</span><h1>{student.name}님, 다음 걸음을<br />차근차근 준비해 볼까요?</h1><p>상담에서 정한 행동과 추천 프로그램을 한곳에서 확인하세요.</p></div><div className="journey-progress"><div><strong>이번 주 진행률</strong><span>{tasks.filter(t => t.status === 'complete').length}/{tasks.length} 완료</span></div><div className="progress-track"><i style={{ width: `${tasks.length ? tasks.filter(t => t.status === 'complete').length / tasks.length * 100 : 0}%` }} /></div><p>한 걸음씩 충분히 잘하고 있어요!</p></div></section>
     <div className="student-dashboard-grid"><section className="next-appointment"><span className="eyebrow light">다음 상담 일정</span><div><span className="date-block"><strong>{appointmentDate.day}</strong><small>{appointmentDate.monthAndWeekday}</small></span><div><h2>박지현 상담사와 진로 상담</h2><p><Icon name="clock" size={16} />{getDayPeriod(student.appointment)} {student.appointment} · 대학일자리플러스센터 상담실 2</p><span>준비할 내용 · 관심 직무 비교표와 캠프 신청 여부</span></div></div><button onClick={() => notify('상담 일정 상세를 확인했습니다.')}>일정 자세히 보기 <Icon name="arrow" size={17} /></button></section><section className="card recent-summary"><span className="eyebrow">최근 상담 요약</span><h2>{latest?.purpose}</h2><p>{latest?.summary}</p><div><span>다음 확인</span><strong>{latest?.nextCheckItems}</strong></div><small>상담일 {latest?.date} · 박지현 상담사</small></section></div>

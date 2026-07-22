@@ -7,7 +7,7 @@ import { addDays, toDateKey } from '../utils/date';
 
 export default function StudentDetailPage() {
   const { studentId } = useParams();
-  const { students, setStudents, consultations, consultationNotes, followUps, setFollowUps, persistRecords, notify } = useApp();
+  const { students, setStudents, consultations, consultationNotes, followUps, setFollowUps, persistDocument, notify } = useApp();
   const student = students.find(s => s.id === studentId) || students[0];
   const history = consultations.filter(c => c.studentId === student.id).sort((a, b) => b.date.localeCompare(a.date));
   const tasks = followUps.filter(f => f.studentId === student.id && f.status !== 'complete');
@@ -60,7 +60,7 @@ export default function StudentDetailPage() {
     };
     setSavingStudent(true);
     try {
-      await persistRecords('students', [updated]);
+      await persistDocument('students', updated);
       setStudents(prev => prev.map(item => item.id === student.id ? updated : item));
       setShowEdit(false);
       notify('학생 정보를 수정했습니다.');
@@ -68,7 +68,19 @@ export default function StudentDetailPage() {
       setSavingStudent(false);
     }
   };
-  const addTask = e => { e.preventDefault(); if (!taskText.trim() || !dueDate) return; const nextTask = { id: `f${Date.now()}`, studentId: student.id, content: taskText.trim(), owner: taskOwner, dueDate, status: 'scheduled', consultationDate: toDateKey() }; setFollowUps(x => [...x, nextTask]); void persistRecords('followUps', [nextTask]); setTaskText(''); setTaskOwner('학생'); setShowAdd(false); notify('후속 조치를 추가했습니다.'); };
+  const addTask = async e => {
+    e.preventDefault();
+    if (!taskText.trim() || !dueDate) return;
+    const nextTask = { id: `f${Date.now()}`, studentId: student.id, content: taskText.trim(), owner: taskOwner, dueDate, status: 'scheduled', consultationDate: toDateKey() };
+    try {
+      await persistDocument('followUps', nextTask);
+      setFollowUps(items => [...items, nextTask]);
+      setTaskText('');
+      setTaskOwner('학생');
+      setShowAdd(false);
+      notify('후속 조치를 추가했습니다.');
+    } catch { /* 공통 저장 오류 안내를 사용합니다. */ }
+  };
   return <>
     <nav className="breadcrumb" aria-label="현재 위치"><Link to="/students">학생 관리</Link><Icon name="chevron" size={14} /><span>{student.name}</span></nav>
     <section className="profile-hero">
