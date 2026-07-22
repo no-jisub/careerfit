@@ -74,7 +74,7 @@ export default function StudentMyPage() {
   const cancelAppointment = async appointment => {
     if (!window.confirm('이 상담 예약을 취소할까요?')) return;
     const now = new Date().toISOString();
-    const updated = { ...appointment, status: 'cancelled', cancelledAt: now, cancelledBy: student.uid || user?.uid || 'demo-student-s1', updatedAt: now };
+    const updated = { ...appointment, status: 'cancelled', cancelledAt: now, cancelledBy: student.uid || user?.uid || 'demo-student-s1', cancelledByRole: 'student', updatedAt: now };
     try {
       await persistDocument('appointments', updated);
       setAppointments(items => items.map(item => item.id === updated.id ? updated : item));

@@ -1350,6 +1350,14 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .student-booking-intro { margin-bottom:24px; }
 .student-booking-intro h1 { margin:7px 0 10px; color:var(--navy); font-size:clamp(27px, 4vw, 36px); letter-spacing:-1.2px; }
 .student-booking-intro p { max-width:720px; margin:0; color:var(--muted); font-size:13px; line-height:1.7; }
+.student-appointment-history { margin-bottom:18px; padding:22px; }
+.student-appointment-history .section-header { margin-bottom:12px; }
+.student-appointment-history > div:last-child { display:grid; }
+.student-appointment-history article { min-height:74px; padding:13px 2px; border-top:1px solid var(--border); display:grid; grid-template-columns:150px minmax(0, 1fr) auto; align-items:center; gap:16px; }
+.student-appointment-history article.cancelled { opacity:.68; }
+.student-appointment-history time, .student-appointment-history article > div { display:grid; gap:4px; }
+.student-appointment-history time strong, .student-appointment-history article > div strong { color:var(--navy); font-size:13px; }
+.student-appointment-history time span, .student-appointment-history article > div span { color:var(--muted); font-size:11px; }
 .student-slot-groups { display:grid; gap:16px; }
 .student-slot-group { padding:22px; border:1px solid var(--border); border-radius:17px; background:#fff; box-shadow:var(--shadow); }
 .student-slot-group > div:first-child { margin-bottom:15px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
@@ -1387,6 +1395,9 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 
 @media (max-width:700px) {
   .student-booking-page main { width:calc(100% - 30px); padding-top:22px; }
+  .student-appointment-history { padding:19px 16px; }
+  .student-appointment-history article { grid-template-columns:1fr auto; gap:8px; }
+  .student-appointment-history article > div { grid-column:1 / -1; }
   .student-slot-group { padding:18px 15px; }
   .student-slot-group article { grid-template-columns:70px 1fr; gap:10px; }
   .student-slot-group article .button { grid-column:1 / -1; width:100%; }

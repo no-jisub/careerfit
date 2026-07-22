@@ -2,6 +2,13 @@ import { getTimeRangeEnd, timeToMinutes } from './date.js';
 
 export const activeAppointmentStatuses = ['pending', 'confirmed', 'scheduled'];
 
+export function getAppointmentCancellationLabel(appointment) {
+  if (appointment?.status !== 'cancelled') return '';
+  if (appointment.cancelledByRole === 'student' || (appointment.cancelledBy && appointment.cancelledBy === appointment.studentUid)) return '학생이 취소';
+  if (appointment.cancelledByRole === 'counselor' || (appointment.cancelledBy && appointment.cancelledBy === appointment.counselorUid)) return '상담사가 취소';
+  return '취소 주체 미확인';
+}
+
 export function upsertAppointmentById(items, appointment) {
   return items.some(item => item.id === appointment.id)
     ? items.map(item => item.id === appointment.id ? appointment : item)

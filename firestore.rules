@@ -426,8 +426,10 @@ service cloud.firestore {
           && request.resource.data.counselorUid == resource.data.counselorUid
           && resource.data.status in ['pending', 'confirmed', 'scheduled']
           && request.resource.data.status == 'cancelled'
+          && request.resource.data.cancelledBy == request.auth.uid
+          && request.resource.data.cancelledByRole == 'student'
           && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['status', 'cancelledAt', 'cancelledBy', 'updatedAt'])));
+            .hasOnly(['status', 'cancelledAt', 'cancelledBy', 'cancelledByRole', 'updatedAt'])));
       allow delete: if isStaff();
     }
 

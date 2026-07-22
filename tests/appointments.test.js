@@ -1,10 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  getAppointmentCancellationLabel,
   hasCounselorAppointmentConflict,
   hasCounselorAvailabilityConflict,
   upsertAppointmentById,
 } from '../src/utils/appointments.js';
+
+test('appointment cancellation label identifies student and counselor cancellations', () => {
+  assert.equal(getAppointmentCancellationLabel({ status: 'cancelled', cancelledByRole: 'student' }), '학생이 취소');
+  assert.equal(getAppointmentCancellationLabel({ status: 'cancelled', cancelledByRole: 'counselor' }), '상담사가 취소');
+  assert.equal(getAppointmentCancellationLabel({ status: 'cancelled', cancelledBy: 'student-1', studentUid: 'student-1' }), '학생이 취소');
+  assert.equal(getAppointmentCancellationLabel({ status: 'cancelled' }), '취소 주체 미확인');
+  assert.equal(getAppointmentCancellationLabel({ status: 'confirmed', cancelledByRole: 'student' }), '');
+});
 
 test('appointment upsert keeps one row when a realtime snapshot arrives before the save resolves', () => {
   const realtimeItem = { id: 'appointment-1', status: 'pending', updatedAt: 'first' };
