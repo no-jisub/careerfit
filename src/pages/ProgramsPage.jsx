@@ -4,6 +4,7 @@ import { useApp } from '../App';
 import Icon from '../components/Icon';
 import { EmptyState, PageIntro } from '../components/UI';
 import { recommendPrograms } from '../utils/programRecommendations';
+import { useAuth } from '../auth/AuthContext';
 import {
   normalizeProgram,
   PROGRAM_MODES,
@@ -144,13 +145,20 @@ function ProgramManagementPage() {
   </>;
 }
 
+function ProgramRecommendationModal({ program, student, onClose, onSave }) {
+  const [reason, setReason] = useState(program.reason || '학생의 관심 분야와 진로 목표에 도움이 되는 프로그램입니다.');
+  return <div className="modal-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && onClose()}><section className="modal recommendation-modal" role="dialog" aria-modal="true" aria-labelledby="recommendation-title"><button className="modal-close" aria-label="닫기" onClick={onClose}><Icon name="close" size={19} /></button><span className="eyebrow">학생별 프로그램 추천</span><h2 id="recommendation-title">{student.name} 학생에게 추천</h2><div className="recommendation-program-summary"><strong>{program.name}</strong><span>{program.department} · {program.mode}</span></div><label>추천 사유<textarea autoFocus rows="5" maxLength="500" value={reason} onChange={event => setReason(event.target.value)} /></label><p className="field-hint">학생 화면에 그대로 표시되므로 구체적이고 이해하기 쉬운 이유를 작성해 주세요.</p><div className="modal-actions"><button className="button secondary" onClick={onClose}>취소</button><button className="button primary" disabled={!reason.trim()} onClick={() => onSave(reason.trim())}>학생에게 추천</button></div></section></div>;
+}
+
 function ProgramRecommendationPage({ studentId, returnToForm }) {
   const navigate = useNavigate();
-  const { students, programs, draftForm, setDraftForm, notify } = useApp();
+  const { profile, user } = useAuth();
+  const { students, programs, programRecommendations, setProgramRecommendations, draftForm, setDraftForm, notify } = useApp();
   const student = students.find(item => item.id === studentId);
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState('전체');
   const [selected, setSelected] = useState(() => draftForm?.form?.programs || []);
+  const [recommending, setRecommending] = useState(null);
   const today = new Date().toISOString().slice(0, 10);
   const recommended = useMemo(() => {
     if (!student) return [];
@@ -159,6 +167,18 @@ function ProgramRecommendationPage({ studentId, returnToForm }) {
   }, [student, programs, query, mode, today]);
   if (!student) return <section className="card"><EmptyState title="프로그램을 추천할 학생을 찾을 수 없습니다" description="먼저 담당 학생을 선택해 주세요." action={<Link className="button secondary" to="/students">담당 학생 목록으로</Link>} /></section>;
   const toggle = program => setSelected(current => current.includes(program.name) ? current.filter(item => item !== program.name) : [...current, program.name]);
+  const saveRecommendation = reason => {
+    const now = new Date().toISOString();
+    const existing = programRecommendations.find(item => item.studentId === student.id && item.programId === recommending.id);
+    const next = { id: existing?.id || `pr-${Date.now()}`, studentId: student.id, programId: recommending.id, counselorId: user?.uid || 'demo-counselor', counselorName: profile?.displayName || user?.displayName || '상담 담당자', reason, status: existing?.status || 'recommended', createdAt: existing?.createdAt || now, updatedAt: now };
+    setProgramRecommendations(items => existing ? items.map(item => item.id === existing.id ? next : item) : [next, ...items]);
+    setRecommending(null);
+    notify(`${student.name} 학생에게 프로그램을 추천했습니다.`);
+  };
+  const cancelRecommendation = program => {
+    setProgramRecommendations(items => items.filter(item => !(item.studentId === student.id && item.programId === program.id)));
+    notify('학생 추천을 취소했습니다.');
+  };
   const apply = () => {
     if (!selected.length) return;
     if (draftForm?.studentId === student.id) setDraftForm({ ...draftForm, form: { ...draftForm.form, programs: selected } });
@@ -169,10 +189,11 @@ function ProgramRecommendationPage({ studentId, returnToForm }) {
     <PageIntro eyebrow="상담 보조 기능" title={`${student.name} 학생에게 맞는 프로그램`} description="학생의 관심 분야와 학년을 기준으로 참여 가능한 프로그램을 정렬했습니다." action={returnToForm && <Link className="button secondary" to={`/students/${student.id}/consultation/new`}>상담 기록으로 돌아가기</Link>} />
     <section className="recommend-context card"><div className="recommend-student"><span className="avatar">{student.name.slice(1, 3)}</span><div><strong>{student.name}</strong><p>{student.department} · {student.grade}</p></div></div><div className="context-tags"><span>관심 분야</span>{student.interests.map(item => <b key={item}>{item}</b>)}</div><div className="context-goal"><span>진로 목표</span><strong>{student.goal}</strong></div></section>
     <div className="recommend-toolbar"><div><strong>참여 가능한 프로그램 <em>{recommended.length}</em></strong><p>관심 분야 일치, 학년 적합성, 주요 프로그램 순서로 정렬됩니다.</p></div><div><label className="search-field"><span className="sr-only">프로그램 검색</span><Icon name="search" size={17} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="프로그램 검색" /></label><select aria-label="운영 방식" value={mode} onChange={event => setMode(event.target.value)}><option>전체</option>{PROGRAM_MODES.map(item => <option key={item}>{item}</option>)}</select></div></div>
-    <div className="program-grid">{recommended.map(program => <article className={`program-card card ${selected.includes(program.name) ? 'selected' : ''}`} key={program.id}><div className="program-card-top"><span className={`program-status status-${resolveProgramStatus(program, today)}`}>{PROGRAM_STATUS_LABELS[resolveProgramStatus(program, today)]}</span><button className="select-program" aria-pressed={selected.includes(program.name)} onClick={() => toggle(program)}><Icon name={selected.includes(program.name) ? 'check' : 'plus'} size={15} />{selected.includes(program.name) ? '선택됨' : '선택'}</button></div><span className="eyebrow">{program.type}</span><h2>{program.name}</h2><p className="recommend-reason"><Icon name="spark" size={17} /><span><b>추천 근거</b>{program.reason}</span></p><div className="program-tags">{program.tags.map(tag => <span key={tag}>{tag}</span>)}</div><dl className="program-info"><div><dt>신청 대상</dt><dd>{program.target}</dd></div><div><dt>모집 기간</dt><dd>{program.recruit}</dd></div><div><dt>운영 기간</dt><dd>{program.period}</dd></div><div><dt>일정</dt><dd>{program.schedule}</dd></div><div><dt>운영 방식</dt><dd>{program.mode}</dd></div><div><dt>담당 부서</dt><dd>{program.department}</dd></div></dl></article>)}</div>
+    <div className="program-grid">{recommended.map(program => { const directRecommendation = programRecommendations.find(item => item.studentId === student.id && item.programId === program.id); return <article className={`program-card card ${selected.includes(program.name) ? 'selected' : ''}`} key={program.id}><div className="program-card-top"><span className={`program-status status-${resolveProgramStatus(program, today)}`}>{PROGRAM_STATUS_LABELS[resolveProgramStatus(program, today)]}</span><button className="select-program" aria-pressed={selected.includes(program.name)} onClick={() => toggle(program)}><Icon name={selected.includes(program.name) ? 'check' : 'plus'} size={15} />{selected.includes(program.name) ? '선택됨' : '상담에 추가'}</button></div><span className="eyebrow">{program.type}</span><h2>{program.name}</h2><p className="recommend-reason"><Icon name="spark" size={17} /><span><b>추천 근거</b>{directRecommendation?.reason || program.reason}</span></p><div className="program-tags">{program.tags.map(tag => <span key={tag}>{tag}</span>)}</div><dl className="program-info"><div><dt>신청 대상</dt><dd>{program.target}</dd></div><div><dt>모집 기간</dt><dd>{program.recruit}</dd></div><div><dt>운영 기간</dt><dd>{program.period}</dd></div><div><dt>일정</dt><dd>{program.schedule}</dd></div><div><dt>운영 방식</dt><dd>{program.mode}</dd></div><div><dt>담당 부서</dt><dd>{program.department}</dd></div></dl><div className="program-recommend-actions">{directRecommendation ? <><span>학생에게 추천됨 · {directRecommendation.status === 'applied' ? '신청 완료' : directRecommendation.status === 'interested' ? '관심 있음' : '확인 전'}</span><button className="text-button" onClick={() => cancelRecommendation(program)}>추천 취소</button></> : <button className="button secondary small" onClick={() => setRecommending(program)}><Icon name="spark" size={15} />학생에게 추천</button>}</div></article>; })}</div>
     {!recommended.length && <EmptyState title="조건에 맞는 프로그램이 없습니다" description="검색어나 운영 방식 필터를 변경해 보세요." />}
     <p className="recommend-disclaimer"><Icon name="alert" size={16} />추천 결과는 학생 정보와 프로그램 태그를 비교한 참고 정보이며 최종 안내는 상담 담당자가 결정합니다.</p>
     {selected.length > 0 && <div className="selection-bar"><div><span>{selected.length}개 선택</span><strong>{selected.join(', ')}</strong></div><button className="button primary" onClick={apply}>상담 기록에 추가 <Icon name="arrow" size={17} /></button></div>}
+    {recommending && <ProgramRecommendationModal program={recommending} student={student} onClose={() => setRecommending(null)} onSave={saveRecommendation} />}
   </>;
 }
 
