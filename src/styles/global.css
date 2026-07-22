@@ -428,7 +428,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(35,86,216,.35); 
 .segmented button { min-height: 34px; padding: 0 12px; border: 0; border-radius: 8px; color: #6d788e; background: transparent; font-size: 10px; font-weight: 700; }
 .segmented button.active { color: var(--blue); background: var(--blue-soft); }
 .segmented button span { margin-left: 4px; padding: 2px 5px; border-radius: 7px; background: rgba(130,145,170,.13); font-size: 8px; }
-.task-filter-bar > select { width: 150px; }
+.task-filter-bar > select { width: 150px; min-width:150px; }
 .task-row { min-height: 92px; padding: 15px 20px; border-top: 1px solid #eef1f5; display: grid; grid-template-columns: 180px minmax(250px, 1fr) 110px 130px 175px; gap: 16px; align-items: center; }
 .task-row.overdue { background: #fffafa; }
 .task-student { display: flex; align-items: center; gap: 10px; }
