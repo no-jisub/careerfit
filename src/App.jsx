@@ -6,11 +6,14 @@ import { initialConsultations } from './data/consultations';
 import { initialFollowUps } from './data/followUps';
 import { initialAppointments } from './data/appointments';
 import { initialUsers } from './data/users';
+import { initialPrograms } from './data/programs';
+import { initialProgramRecommendations } from './data/programRecommendations';
 import { resolveFollowUpStatus, toDateKey } from './utils/date';
 import { useAuth } from './auth/AuthContext';
 import { saveCareerDocument, saveCareerDocumentGroup, subscribeCareerData } from './services/firebaseDataService';
 import { firestoreSyncEnabled } from './lib/firebase';
 import { isOperationsStaff } from './utils/roles';
+import { createProgramRecommendationStore, createProgramStore, restoreProgramRecommendationStore, restoreProgramStore } from './utils/programs';
 
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -43,6 +46,8 @@ function AppProvider({ children }) {
   const [consultationNotes, setConsultationNotes] = useState(() => syncingRemoteData ? [] : read('careerfit_consultation_notes', []));
   const [followUps, setFollowUps] = useState(() => syncingRemoteData ? [] : read('careerfit_followups', initialFollowUps).map(followUp => ({ ...followUp, status: resolveFollowUpStatus(followUp) })));
   const [appointments, setAppointments] = useState(() => syncingRemoteData ? [] : read('careerfit_appointments', initialAppointments));
+  const [programs, setPrograms] = useState(() => restoreProgramStore(read('careerfit_program_store', null), initialPrograms));
+  const [programRecommendations, setProgramRecommendations] = useState(() => restoreProgramRecommendationStore(read('careerfit_program_recommendation_store', null), initialProgramRecommendations));
   const [toast, setToast] = useState('');
   const [draftForm, setDraftForm] = useState(null);
   const [dataLoading, setDataLoading] = useState(syncingRemoteData);
@@ -53,6 +58,8 @@ function AppProvider({ children }) {
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_followups', JSON.stringify(followUps)); }, [followUps, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_appointments', JSON.stringify(appointments)); }, [appointments, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_users', JSON.stringify(users)); }, [users, syncingRemoteData]);
+  useEffect(() => { localStorage.setItem('careerfit_program_store', JSON.stringify(createProgramStore(programs))); }, [programs]);
+  useEffect(() => { localStorage.setItem('careerfit_program_recommendation_store', JSON.stringify(createProgramRecommendationStore(programRecommendations))); }, [programRecommendations]);
   useEffect(() => { if (!toast) return undefined; const timer = setTimeout(() => setToast(''), 3200); return () => clearTimeout(timer); }, [toast]);
   useEffect(() => { if (!role) setDraftForm(null); }, [role]);
 
@@ -116,7 +123,12 @@ function AppProvider({ children }) {
     }
   };
 
-  const value = useMemo(() => ({ users, setUsers, students, setStudents, consultations, setConsultations, consultationNotes, setConsultationNotes, followUps, setFollowUps, appointments, setAppointments, persistDocument, persistDocumentGroup, toast, notify: setToast, draftForm, setDraftForm }), [users, students, consultations, consultationNotes, followUps, appointments, toast, draftForm, user]);
+  const resetProgramDemo = () => {
+    setPrograms(initialPrograms);
+    setProgramRecommendations(initialProgramRecommendations);
+  };
+
+  const value = useMemo(() => ({ users, setUsers, students, setStudents, consultations, setConsultations, consultationNotes, setConsultationNotes, followUps, setFollowUps, appointments, setAppointments, programs, setPrograms, programRecommendations, setProgramRecommendations, resetProgramDemo, persistDocument, persistDocumentGroup, toast, notify: setToast, draftForm, setDraftForm }), [users, students, consultations, consultationNotes, followUps, appointments, programs, programRecommendations, toast, draftForm, user]);
   if (dataLoading) return <main className="app-loading" role="status">상담 데이터를 불러오고 있어요...</main>;
   return <AppContext.Provider value={value}>{children}{toast && <div className="toast" role="status" aria-live="polite"><span>✓</span>{toast}</div>}</AppContext.Provider>;
 }
