@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanText, isDateKey, validateAppointmentInput, validateConsultationInput, validateStudentRegistrationInput } from '../src/utils/validation.js';
+import { cleanText, isDateKey, validateAppointmentInput, validateAvailabilityInput, validateConsultationInput, validateStudentRegistrationInput } from '../src/utils/validation.js';
 
 test('cleanText removes control characters and applies a maximum length', () => {
   assert.equal(cleanText('  상\u0000담 내용  ', 4), '상담 내');
@@ -14,6 +14,12 @@ test('isDateKey rejects calendar dates that do not exist', () => {
 test('appointment validation blocks past appointments and empty locations', () => {
   assert.match(validateAppointmentInput({ studentId: 's1', date: '2026-07-21', time: '10:00', location: '상담실', type: '진로', preparation: '' }, '2026-07-22', '09:00').error, /과거/);
   assert.match(validateAppointmentInput({ studentId: 's1', date: '2026-07-23', time: '10:00', location: ' ', type: '진로', preparation: '' }, '2026-07-22', '09:00').error, /장소/);
+});
+
+test('counselor availability requires a future slot and reasonable duration', () => {
+  assert.match(validateAvailabilityInput({ date: '2026-07-21', time: '10:00', location: '상담실', duration: 50 }, '2026-07-22', '09:00').error, /과거/);
+  assert.match(validateAvailabilityInput({ date: '2026-07-23', time: '10:00', location: '상담실', duration: 10 }, '2026-07-22', '09:00').error, /15분/);
+  assert.equal(validateAvailabilityInput({ date: '2026-07-23', time: '10:00', location: '상담실', duration: 50 }, '2026-07-22', '09:00').value.duration, 50);
 });
 
 test('consultation validation requires a meaningful private memo', () => {

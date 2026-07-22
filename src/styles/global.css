@@ -1293,3 +1293,29 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
   .withdrawal-actions { display:grid; grid-template-columns:1fr; }
   .withdrawal-actions .button { width:100%; }
 }
+
+/* Counselor availability management */
+.availability-management-card { margin-bottom:20px; padding:26px; }
+.availability-management-card .section-header { align-items:center; }
+.availability-open-count { flex:0 0 auto; padding:7px 11px; border-radius:999px; color:var(--green); background:var(--green-soft); font-size:11px; font-weight:800; }
+.availability-slot-list { display:grid; gap:10px; }
+.availability-slot-list article { min-height:74px; padding:13px 16px; border:1px solid var(--border); border-radius:13px; display:grid; grid-template-columns:150px minmax(0,1fr) auto auto; align-items:center; gap:16px; background:#fbfcfe; }
+.availability-slot-list article.closed { opacity:.68; background:#f4f6f9; }
+.availability-slot-list time, .availability-slot-list article > div { display:grid; gap:4px; }
+.availability-slot-list time strong, .availability-slot-list article > div strong { color:var(--navy); font-size:13px; }
+.availability-slot-list time span, .availability-slot-list article > div span { color:var(--muted); font-size:11px; line-height:1.5; }
+.availability-status { padding:6px 9px; border-radius:999px; font-size:10px; font-weight:800; white-space:nowrap; }
+.availability-status.open { color:var(--green); background:var(--green-soft); }
+.availability-status.booked { color:var(--blue); background:var(--blue-soft); }
+.availability-status.closed { color:var(--muted); background:#e8ecf1; }
+.availability-form-description { margin:-10px 0 20px; color:var(--muted); font-size:12px; line-height:1.6; }
+.availability-form-modal form { display:grid; gap:15px; }
+.availability-form-modal form label { margin:0; }
+
+@media (max-width:700px) {
+  .availability-management-card { padding:21px 17px; }
+  .availability-management-card .section-header { align-items:flex-start; }
+  .availability-slot-list article { grid-template-columns:1fr auto; gap:10px 14px; }
+  .availability-slot-list article > div { grid-column:1 / -1; }
+  .availability-slot-list article > button { justify-self:end; }
+}

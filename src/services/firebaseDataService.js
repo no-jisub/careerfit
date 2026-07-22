@@ -3,8 +3,8 @@ import { db, firestoreSyncEnabled } from '../lib/firebase';
 import { isOperationsStaff } from '../utils/roles';
 
 const collectionNamesFor = role => {
-  if (role === 'student') return ['students', 'consultationSummaries', 'followUps', 'appointments', 'recordDeletionRequests'];
-  return ['users', 'studentRegistrations', 'students', 'consultations', 'consultationSummaries', 'consultationNotes', 'followUps', 'appointments', 'recordDeletionRequests'];
+  if (role === 'student') return ['students', 'consultationSummaries', 'followUps', 'appointments', 'counselorAvailability', 'recordDeletionRequests'];
+  return ['users', 'studentRegistrations', 'students', 'consultations', 'consultationSummaries', 'consultationNotes', 'followUps', 'appointments', 'counselorAvailability', 'recordDeletionRequests'];
 };
 
 function constraintsFor(name, session) {
@@ -13,6 +13,7 @@ function constraintsFor(name, session) {
   if (name === 'consultations') return [where('studentUid', '==', session.user.uid), where('studentVisible', '==', true)];
   if (name === 'consultationSummaries') return [where('studentUid', '==', session.user.uid), where('published', '==', true)];
   if (name === 'appointments') return [where('studentUid', '==', session.user.uid)];
+  if (name === 'counselorAvailability') return [where('status', '==', 'open')];
   if (name === 'recordDeletionRequests') return [where('studentUid', '==', session.user.uid)];
   return [where('assigneeUid', '==', session.user.uid)];
 }

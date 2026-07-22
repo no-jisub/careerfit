@@ -130,6 +130,19 @@ service cloud.firestore {
         && data.status in ['pending', 'confirmed', 'scheduled', 'completed', 'cancelled'];
     }
 
+    function validCounselorAvailability(data) {
+      return validText(data.counselorUid, 128)
+        && validText(data.date, 10)
+        && validText(data.time, 5)
+        && validText(data.location, 200)
+        && data.duration is int
+        && data.duration >= 15
+        && data.duration <= 240
+        && data.status in ['open', 'booked', 'closed']
+        && validOptionalText(data, 'appointmentId', 128)
+        && validOptionalText(data, 'bookedByUid', 128);
+    }
+
     function validRecordDeletionRequest(data) {
       return validText(data.consultationId, 128)
         && validText(data.studentId, 128)
@@ -331,6 +344,23 @@ service cloud.firestore {
           && resource.data.assigneeUid == request.auth.uid
           && isValidStudentCompletion()));
       allow delete: if isStaff();
+    }
+
+    match /counselorAvailability/{availabilityId} {
+      allow read: if isStaff()
+        || (isStudent() && resource.data.status == 'open');
+      allow create: if validCounselorAvailability(request.resource.data)
+        && request.resource.data.status == 'open'
+        && (isAdmin()
+          || (isCounselor()
+            && request.resource.data.counselorUid == request.auth.uid));
+      allow update: if validCounselorAvailability(request.resource.data)
+        && (isAdmin()
+          || (isCounselor()
+            && resource.data.counselorUid == request.auth.uid
+            && request.resource.data.counselorUid == resource.data.counselorUid));
+      allow delete: if isAdmin()
+        || (isCounselor() && resource.data.counselorUid == request.auth.uid);
     }
 
     match /appointments/{appointmentId} {

@@ -83,6 +83,16 @@ export function validateAppointmentInput(form, nowDate, nowTime) {
   return { value: { ...form, type: cleanText(form.type, 50), location, preparation: cleanText(form.preparation, 500) } };
 }
 
+export function validateAvailabilityInput(form, nowDate, nowTime) {
+  if (!isDateKey(form.date) || !timePattern.test(form.time)) return { error: '상담 가능 날짜와 시간을 확인해 주세요.' };
+  if (`${form.date}T${form.time}` < `${nowDate}T${nowTime}`) return { error: '과거 시간은 상담 가능 시간으로 등록할 수 없습니다.' };
+  const location = cleanText(form.location, 200);
+  const duration = Number(form.duration);
+  if (!location) return { error: '상담 장소를 입력해 주세요.' };
+  if (!Number.isInteger(duration) || duration < 15 || duration > 240) return { error: '상담 시간은 15분에서 240분 사이로 입력해 주세요.' };
+  return { value: { date: form.date, time: form.time, location, duration } };
+}
+
 export function validateFollowUpInput(form) {
   const content = cleanText(form.content, 300);
   if (!form.studentId || !content) return { error: '학생과 후속 조치 내용을 입력해 주세요.' };
