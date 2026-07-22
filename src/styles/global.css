@@ -981,7 +981,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .student-account-fields { margin-top:4px; padding:22px; border:1px solid var(--border); border-radius:14px; background:var(--bg); }
 .demo-admin-hint { margin:0; padding:13px 15px; border-radius:11px; color:var(--muted); background:var(--bg); font-size:12px; line-height:1.65; }
 .admin-create-card > form > .button { margin-top:3px; }
-.admin-user-list article, .assignment-list article { display:grid; grid-template-columns:minmax(0, 1fr) auto auto; align-items:center; gap:18px; min-height:72px; padding:16px 4px; border-top:1px solid var(--border); }
+.admin-user-list article, .assignment-list article { display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:center; gap:18px; min-height:72px; padding:16px 4px; border-top:1px solid var(--border); }
 .admin-user-list article:first-of-type, .assignment-list article:first-child { border-top:0; }
 .admin-user-list article div, .assignment-list article div { display:grid; gap:4px; }
 .admin-user-list article strong, .assignment-list article strong { line-height:1.4; }

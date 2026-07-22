@@ -1,7 +1,7 @@
-import { createUserWithEmailAndPassword, getAuth, sendEmailVerification, sendPasswordResetEmail, signOut, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, getAuth, sendEmailVerification, signOut, updateProfile } from 'firebase/auth';
 import { getApps, initializeApp } from 'firebase/app';
 import { doc, writeBatch } from 'firebase/firestore';
-import { auth, db, firebaseApp, firebaseConfig } from '../lib/firebase';
+import { db, firebaseApp, firebaseConfig } from '../lib/firebase';
 
 const provisioningAppName = 'careerfit-user-provisioning';
 
@@ -63,9 +63,4 @@ export async function createManagedUser({ account, student }) {
   } finally {
     await signOut(provisioningAuth).catch(() => {});
   }
-}
-
-export async function sendManagedPasswordReset(email) {
-  if (!auth) throw new Error('Firebase Authentication이 연결되지 않았습니다.');
-  await sendPasswordResetEmail(auth, email);
 }

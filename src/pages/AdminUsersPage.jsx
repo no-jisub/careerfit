@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../App';
-import { createManagedUser, sendManagedPasswordReset } from '../services/adminUserService';
+import { createManagedUser } from '../services/adminUserService';
 import { PageIntro } from '../components/UI';
 import { useAuth } from '../auth/AuthContext';
 import { validateAccountInput } from '../utils/validation';
@@ -153,15 +153,6 @@ export default function AdminUsersPage() {
     } catch { /* 공통 오류 메시지를 사용합니다. */ }
   };
 
-  const resetPassword = async user => {
-    try {
-      await sendManagedPasswordReset(user.email);
-      notify(`${user.email}로 비밀번호 재설정 메일을 보냈습니다.`);
-    } catch {
-      notify('비밀번호 재설정 메일을 보내지 못했습니다.');
-    }
-  };
-
   const toggleRegistration = registrationId => {
     setSelectedRegistrationIds(current => current.includes(registrationId) ? current.filter(id => id !== registrationId) : [...current, registrationId]);
   };
@@ -258,7 +249,7 @@ export default function AdminUsersPage() {
       </section>
       <section className="card admin-user-list">
         <div className="section-header"><div><span className="eyebrow">등록 계정</span><h2>사용자 {users.length}명</h2><p>현재 등록된 계정의 역할과 승인 상태를 확인하세요.</p></div></div>
-        {users.map(item => <article key={item.id}><div><strong>{item.displayName}</strong><span>{item.email}</span></div><b>{item.approvalStatus === 'pending' ? '승인 대기' : item.approvalStatus === 'rejected' ? '가입 거절' : item.role === 'admin' ? '관리자' : item.role === 'student' ? '학생' : '상담사'}</b>{useRemoteAdmin && <button className="text-button" onClick={() => resetPassword(item)}>비밀번호 재설정</button>}</article>)}
+        {users.map(item => <article key={item.id}><div><strong>{item.displayName}</strong><span>{item.email}</span></div><b>{item.approvalStatus === 'pending' ? '승인 대기' : item.approvalStatus === 'rejected' ? '가입 거절' : item.role === 'admin' ? '관리자' : item.role === 'student' ? '학생' : '상담사'}</b></article>)}
       </section>
     </div>
     <section className="card assignment-card">
