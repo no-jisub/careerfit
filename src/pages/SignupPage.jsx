@@ -56,16 +56,25 @@ export default function SignupPage() {
     <section className="auth-card signup-card">
       <div className="auth-card-heading"><span className="brand-mark"><Icon name="target" size={24} /></span><div><span className="eyebrow">회원가입</span><h1>{form.role === 'counselor' ? '상담사 승인을 요청하세요' : '상담을 시작할 정보를 알려주세요'}</h1><p>{form.role === 'counselor' ? '이메일 인증 후 기존 상담사의 승인을 받으면 업무 화면을 사용할 수 있어요.' : '가입 후 이메일 인증과 상담사 배정을 완료하면 서비스를 이용할 수 있어요.'}</p></div></div>
       <form className="signup-form" onSubmit={submit}>
-        <label>가입 역할<select value={form.role} onChange={event => update('role', event.target.value)}><option value="student">학생</option><option value="counselor">상담사</option></select></label>
-        <div className="form-row"><label>이름<input autoComplete="name" value={form.displayName} onChange={event => update('displayName', event.target.value)} required /></label><label>학교 이메일<input type="email" autoComplete="email" value={form.email} onChange={event => update('email', event.target.value)} required /></label></div>
-        <div className="form-row"><label>비밀번호<input type="password" minLength="8" autoComplete="new-password" value={form.password} onChange={event => update('password', event.target.value)} required /><small>영문과 숫자를 포함해 8자 이상</small></label><label>비밀번호 확인<input type="password" minLength="8" autoComplete="new-password" value={form.passwordConfirm} onChange={event => update('passwordConfirm', event.target.value)} required /></label></div>
-        {form.role === 'student' && <><div className="form-row"><label>학번<input value={form.studentNo} onChange={event => update('studentNo', event.target.value)} required /></label><label>학년<select value={form.grade} onChange={event => update('grade', event.target.value)}>{['1학년','2학년','3학년','4학년','졸업생'].map(grade => <option key={grade}>{grade}</option>)}</select></label></div>
-        <label>학과<input value={form.department} onChange={event => update('department', event.target.value)} required /></label>
-        <label>연락처 <small>선택</small><input autoComplete="tel" value={form.phone} onChange={event => update('phone', event.target.value)} placeholder="010-0000-0000" /></label>
-        <label>관심 분야 <small>선택 · 쉼표로 구분</small><input value={form.interests} onChange={event => update('interests', event.target.value)} placeholder="서비스 기획, 데이터 분석" /></label>
-        <label>진로 목표 <small>선택</small><input value={form.goal} onChange={event => update('goal', event.target.value)} placeholder="관심 직무나 진로 목표" /></label>
-        <label>상담받고 싶은 내용 <small>선택</small><textarea rows="3" value={form.concern} onChange={event => update('concern', event.target.value)} /></label>
-        <label className="consent-check"><input type="checkbox" checked={form.privacyConsent} onChange={event => update('privacyConsent', event.target.checked)} /><span>회원가입과 상담사 배정을 위한 개인정보 수집·이용에 동의합니다.</span></label></>}
+        <section className="signup-form-section role-section">
+          <div className="signup-section-heading"><strong>가입 유형</strong><span>서비스에서 사용할 역할을 선택하세요.</span></div>
+          <label>가입 역할<select value={form.role} onChange={event => update('role', event.target.value)}><option value="student">학생</option><option value="counselor">상담사</option></select></label>
+        </section>
+        <section className="signup-form-section">
+          <div className="signup-section-heading"><strong>계정 정보</strong><span>로그인과 본인 확인에 사용됩니다.</span></div>
+          <div className="form-row"><label>이름<input autoComplete="name" value={form.displayName} onChange={event => update('displayName', event.target.value)} required /></label><label>학교 이메일<input type="email" autoComplete="email" value={form.email} onChange={event => update('email', event.target.value)} required /></label></div>
+          <div className="form-row"><label>비밀번호<input type="password" minLength="8" autoComplete="new-password" value={form.password} onChange={event => update('password', event.target.value)} required /><small>영문과 숫자를 포함해 8자 이상</small></label><label>비밀번호 확인<input type="password" minLength="8" autoComplete="new-password" value={form.passwordConfirm} onChange={event => update('passwordConfirm', event.target.value)} required /></label></div>
+        </section>
+        {form.role === 'student' && <section className="signup-form-section">
+          <div className="signup-section-heading"><strong>학생 정보</strong><span>상담사 배정과 맞춤 상담 준비에 활용됩니다.</span></div>
+          <div className="form-row"><label>학번<input value={form.studentNo} onChange={event => update('studentNo', event.target.value)} required /></label><label>학년<select value={form.grade} onChange={event => update('grade', event.target.value)}>{['1학년','2학년','3학년','4학년','졸업생'].map(grade => <option key={grade}>{grade}</option>)}</select></label></div>
+          <label>학과<input value={form.department} onChange={event => update('department', event.target.value)} required /></label>
+          <label>연락처 <small>선택</small><input autoComplete="tel" value={form.phone} onChange={event => update('phone', event.target.value)} placeholder="010-0000-0000" /></label>
+          <label>관심 분야 <small>선택 · 쉼표로 구분</small><input value={form.interests} onChange={event => update('interests', event.target.value)} placeholder="서비스 기획, 데이터 분석" /></label>
+          <label>진로 목표 <small>선택</small><input value={form.goal} onChange={event => update('goal', event.target.value)} placeholder="관심 직무나 진로 목표" /></label>
+          <label>상담받고 싶은 내용 <small>선택</small><textarea rows="3" value={form.concern} onChange={event => update('concern', event.target.value)} placeholder="현재 고민이나 상담에서 나누고 싶은 내용을 적어주세요." /></label>
+          <label className="consent-check"><input type="checkbox" checked={form.privacyConsent} onChange={event => update('privacyConsent', event.target.checked)} /><span>회원가입과 상담사 배정을 위한 개인정보 수집·이용에 동의합니다.</span></label>
+        </section>}
         {error && <p className="field-error" role="alert">{error}</p>}
         <button className="button primary full" disabled={saving}>{saving ? '가입 처리 중...' : form.role === 'counselor' ? '상담사 승인 요청' : '학생 회원가입'}</button>
       </form>

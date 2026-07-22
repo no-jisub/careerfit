@@ -234,9 +234,9 @@ export default function AdminUsersPage() {
         </article>)}
       </div> : <p className="empty-assignment">현재 배정 대기 중인 학생이 없습니다.</p>}
     </section>
-    <div className="admin-grid">
+    <div className="admin-grid admin-account-grid">
       <section className="card admin-create-card">
-        <h2>새 계정 등록</h2>
+        <div className="section-header"><div><span className="eyebrow">직접 등록</span><h2>새 계정 등록</h2><p>상담사 또는 학생 계정을 필요한 정보와 함께 등록합니다.</p></div></div>
         <form onSubmit={submit}>
           <label>역할<select value={account.role} onChange={event => updateAccount('role', event.target.value)}><option value="counselor">상담사</option><option value="student">학생</option></select></label>
           <label>이름<input value={account.displayName} onChange={event => updateAccount('displayName', event.target.value)} required /></label>
@@ -257,7 +257,7 @@ export default function AdminUsersPage() {
         </form>
       </section>
       <section className="card admin-user-list">
-        <div className="section-header"><div><span className="eyebrow">등록 계정</span><h2>사용자 {users.length}명</h2></div></div>
+        <div className="section-header"><div><span className="eyebrow">등록 계정</span><h2>사용자 {users.length}명</h2><p>현재 등록된 계정의 역할과 승인 상태를 확인하세요.</p></div></div>
         {users.map(item => <article key={item.id}><div><strong>{item.displayName}</strong><span>{item.email}</span></div><b>{item.approvalStatus === 'pending' ? '승인 대기' : item.approvalStatus === 'rejected' ? '가입 거절' : item.role === 'admin' ? '관리자' : item.role === 'student' ? '학생' : '상담사'}</b>{useRemoteAdmin && <button className="text-button" onClick={() => resetPassword(item)}>비밀번호 재설정</button>}</article>)}
       </section>
     </div>
