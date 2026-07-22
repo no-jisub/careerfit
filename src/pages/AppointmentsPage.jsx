@@ -8,7 +8,6 @@ import { validateAppointmentInput } from '../utils/validation';
 import { activeAppointmentStatuses, buildHourlyAvailabilitySlots, buildMonthCalendar, canBulkReopenAvailability, canRescheduleAppointment, closeAvailabilityAfterCancellation, createRescheduleRequest, getAppointmentCancellationLabel, hasCounselorAppointmentConflict, holdAvailabilityForReschedule, resolveCancelledAvailability, resolveRescheduleRequest, upsertAppointmentById } from '../utils/appointments';
 import { useAuth } from '../auth/AuthContext';
 import { buildEventNotification } from '../utils/notifications';
-import { buildFeedbackRequestNotification } from '../utils/feedback';
 import RecurringAvailabilityForm from '../components/RecurringAvailabilityForm';
 import { openAttachment } from '../services/attachmentService';
 
@@ -127,7 +126,7 @@ export default function AppointmentsPage() {
       : null;
     const linkedAvailability = status === 'cancelled' ? counselorAvailability.find(item => item.id === appointment.availabilityId) : null;
     const closedAvailability = closeAvailabilityAfterCancellation(linkedAvailability, appointment, now);
-    const eventNotification = status === 'completed' && appointment.studentUid ? buildFeedbackRequestNotification(appointment, now) : ['confirmed', 'cancelled'].includes(status) && appointment.studentUid ? buildEventNotification({ eventId: `${appointment.id}-${status}`, recipientUid: appointment.studentUid, actorUid: counselorUid, type: 'appointment', title: status === 'confirmed' ? '상담 예약이 확정되었습니다' : '상담사가 예약을 취소했습니다', description: `${appointment.date} ${appointment.time} · ${appointment.location}`, to: '/student/appointments', createdAt: now }) : null;
+    const eventNotification = ['confirmed', 'cancelled'].includes(status) && appointment.studentUid ? buildEventNotification({ eventId: `${appointment.id}-${status}`, recipientUid: appointment.studentUid, actorUid: counselorUid, type: 'appointment', title: status === 'confirmed' ? '상담 예약이 확정되었습니다' : '상담사가 예약을 취소했습니다', description: `${appointment.date} ${appointment.time} · ${appointment.location}`, to: '/student/appointments', createdAt: now }) : null;
     try {
       await persistDocumentGroup([{ name: 'appointments', record: updated }, ...(updatedStudent ? [{ name: 'students', record: updatedStudent }] : []), ...(closedAvailability ? [{ name: 'counselorAvailability', record: closedAvailability }] : []), ...(eventNotification ? [{ name: 'notifications', record: eventNotification }] : [])]);
       setAppointments(items => items.map(item => item.id === appointment.id ? updated : item));
