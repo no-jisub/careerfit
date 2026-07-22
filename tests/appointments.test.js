@@ -3,10 +3,14 @@ import assert from 'node:assert/strict';
 import {
   buildHourlyAvailabilitySlots,
   buildMonthCalendar,
+  canRescheduleAppointment,
+  closeAvailabilityAfterCancellation,
+  createRescheduleRequest,
   getAppointmentCancellationLabel,
   hasCounselorAppointmentConflict,
   hasCounselorAvailabilityConflict,
   restoreCounselorAvailabilityStore,
+  resolveCancelledAvailability,
   upsertAppointmentById,
 } from '../src/utils/appointments.js';
 
@@ -16,6 +20,30 @@ test('month calendar includes six complete weeks and marks past dates', () => {
   assert.equal(days.find(day => day.date === '2026-07-21').isPast, true);
   assert.equal(days.find(day => day.date === '2026-07-22').isPast, false);
   assert.equal(days.filter(day => day.inMonth).length, 31);
+});
+
+test('cancelled booking remains closed until counselor explicitly reopens it', () => {
+  const appointment = { id: 'appointment-1', studentUid: 'student-1' };
+  const slot = { id: 'slot-1', date: '2026-07-30', time: '10:00', status: 'booked' };
+  const closed = closeAvailabilityAfterCancellation(slot, appointment, '2026-07-23T00:00:00.000Z');
+  assert.equal(closed.status, 'closed');
+  assert.equal(closed.reopenDecision, 'pending');
+  const reopened = resolveCancelledAvailability(closed, 'reopen', new Date('2026-07-24T00:00:00.000Z')).value;
+  assert.equal(reopened.status, 'open');
+  assert.equal('appointmentId' in reopened, false);
+});
+
+test('past cancelled slot cannot be reopened', () => {
+  const slot = { id: 'slot-1', date: '2026-07-20', time: '10:00', status: 'closed', closedReason: 'appointment-cancelled' };
+  assert.match(resolveCancelledAvailability(slot, 'reopen', new Date('2026-07-23T00:00:00.000Z')).error, /지난/);
+});
+
+test('reschedule is blocked within 24 hours and creates a pending request otherwise', () => {
+  const appointment = { id: 'appointment-1', counselorUid: 'counselor-1', date: '2026-07-25', time: '12:00', status: 'confirmed' };
+  assert.equal(canRescheduleAppointment(appointment, new Date('2026-07-24T13:00:00')), false);
+  const result = createRescheduleRequest(appointment, { id: 'slot-2', counselorUid: 'counselor-1', date: '2026-07-27', time: '14:00', endTime: '15:00', duration: 60, location: '상담실', status: 'open' }, 'student', '', new Date('2026-07-23T00:00:00'));
+  assert.equal(result.value.rescheduleRequest.status, 'pending');
+  assert.equal(result.value.rescheduleRequest.date, '2026-07-27');
 });
 
 test('bulk availability creates one-hour slots and skips existing or booked times', () => {

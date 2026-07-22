@@ -6,9 +6,10 @@ import { EmptyState, StatusBadge } from '../components/UI';
 import { getAppointmentDateParts, getDayPeriod, getTimeRangeEnd, toDateKey } from '../utils/date';
 import { useAuth } from '../auth/AuthContext';
 import StudentProgramSection from '../components/StudentProgramSection';
+import { closeAvailabilityAfterCancellation } from '../utils/appointments';
 
 export default function StudentMyPage() {
-  const { students, setStudents, consultationSummaries, followUps, appointments, setAppointments, setFollowUps, persistDocument, notify } = useApp();
+  const { students, setStudents, consultationSummaries, followUps, appointments, setAppointments, setFollowUps, counselorAvailability, setCounselorAvailability, persistDocument, persistDocumentGroup, notify } = useApp();
   const { user, logout } = useAuth();
   const student = user ? students.find(item => item.uid === user.uid) : students[0];
   const [showProfileEdit, setShowProfileEdit] = useState(false);
@@ -78,10 +79,13 @@ export default function StudentMyPage() {
     if (!window.confirm('이 상담 예약을 취소할까요?')) return;
     const now = new Date().toISOString();
     const updated = { ...appointment, status: 'cancelled', cancelledAt: now, cancelledBy: student.uid || user?.uid || 'demo-student-s1', cancelledByRole: 'student', updatedAt: now };
+    const availability = counselorAvailability.find(item => item.id === appointment.availabilityId);
+    const closedAvailability = closeAvailabilityAfterCancellation(availability, appointment, now);
     try {
-      await persistDocument('appointments', updated);
+      await persistDocumentGroup([{ name: 'appointments', record: updated }, ...(closedAvailability ? [{ name: 'counselorAvailability', record: closedAvailability }] : [])]);
       setAppointments(items => items.map(item => item.id === updated.id ? updated : item));
-      notify('상담 예약을 취소했습니다.');
+      if (closedAvailability) setCounselorAvailability(items => items.map(item => item.id === closedAvailability.id ? closedAvailability : item));
+      notify('상담 예약을 취소했습니다. 해당 시간은 상담사가 다시 열기 전까지 마감됩니다.');
     } catch { /* 공통 저장 오류 안내를 사용합니다. */ }
   };
   return <div className="student-portal"><header><div className="brand"><span className="brand-mark"><Icon name="target" size={22} /></span><span>커리어<span>핏</span></span></div><div><button className="icon-button" aria-label="알림"><Icon name="bell" /></button><strong>{student.name}</strong><button className="text-button" onClick={logout}>로그아웃</button></div></header><main>

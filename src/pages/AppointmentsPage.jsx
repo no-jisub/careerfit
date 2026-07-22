@@ -5,7 +5,7 @@ import Icon from '../components/Icon';
 import { EmptyState, PageIntro } from '../components/UI';
 import { getTimeRangeEnd, parseDateKey, toDateKey } from '../utils/date';
 import { validateAppointmentInput } from '../utils/validation';
-import { activeAppointmentStatuses, buildHourlyAvailabilitySlots, buildMonthCalendar, getAppointmentCancellationLabel, hasCounselorAppointmentConflict, upsertAppointmentById } from '../utils/appointments';
+import { activeAppointmentStatuses, buildHourlyAvailabilitySlots, buildMonthCalendar, closeAvailabilityAfterCancellation, getAppointmentCancellationLabel, hasCounselorAppointmentConflict, resolveCancelledAvailability, upsertAppointmentById } from '../utils/appointments';
 import { useAuth } from '../auth/AuthContext';
 
 const emptyForm = () => ({ studentId: '', date: toDateKey(), time: '10:00', endTime: '10:50', type: '진로 상담', location: '대학일자리플러스센터 상담실 2', preparation: '' });
@@ -118,10 +118,13 @@ export default function AppointmentsPage() {
     const updatedStudent = ['completed', 'cancelled'].includes(status) && student && student.appointmentDate === appointment.date && student.appointment === appointment.time
       ? { ...student, appointmentDate: '', appointment: '', status: 'complete', updatedAt: updated.updatedAt }
       : null;
+    const linkedAvailability = status === 'cancelled' ? counselorAvailability.find(item => item.id === appointment.availabilityId) : null;
+    const closedAvailability = closeAvailabilityAfterCancellation(linkedAvailability, appointment, now);
     try {
-      await persistDocumentGroup([{ name: 'appointments', record: updated }, ...(updatedStudent ? [{ name: 'students', record: updatedStudent }] : [])]);
+      await persistDocumentGroup([{ name: 'appointments', record: updated }, ...(updatedStudent ? [{ name: 'students', record: updatedStudent }] : []), ...(closedAvailability ? [{ name: 'counselorAvailability', record: closedAvailability }] : [])]);
       setAppointments(items => items.map(item => item.id === appointment.id ? updated : item));
       if (updatedStudent) setStudents(items => items.map(item => item.id === updatedStudent.id ? updatedStudent : item));
+      if (closedAvailability) setCounselorAvailability(items => items.map(item => item.id === closedAvailability.id ? closedAvailability : item));
       notify(`상담 일정을 ${appointmentStatusLabels[status]} 상태로 변경했습니다.`);
     } catch { /* 공통 오류 메시지를 사용합니다. */ }
   };
@@ -180,17 +183,20 @@ export default function AppointmentsPage() {
   };
 
   const updateAvailabilityStatus = async (availability, status) => {
-    const updated = { ...availability, status, updatedAt: new Date().toISOString() };
-    if (status === 'open') {
-      delete updated.appointmentId;
-      delete updated.bookedByUid;
-    }
+    const cancellationResolution = availability.closedReason === 'appointment-cancelled'
+      ? resolveCancelledAvailability(availability, status === 'open' ? 'reopen' : 'keep-closed')
+      : null;
+    if (cancellationResolution?.error) { notify(cancellationResolution.error); return; }
+    const updated = cancellationResolution?.value || { ...availability, status, updatedAt: new Date().toISOString() };
+    if (status === 'open' && !cancellationResolution) { delete updated.appointmentId; delete updated.bookedByUid; }
     try {
       await persistDocument('counselorAvailability', updated);
       setCounselorAvailability(items => items.map(item => item.id === updated.id ? updated : item));
       notify(status === 'open' ? '상담 신청 가능 시간을 다시 열었습니다.' : '상담 신청 가능 시간을 마감했습니다.');
     } catch { /* 공통 저장 오류 메시지를 사용합니다. */ }
   };
+
+  const keepCancelledAvailabilityClosed = availability => updateAvailabilityStatus(availability, 'closed');
 
   const updateAvailabilityDateStatus = async (date, status) => {
     const targets = myAvailability.filter(item => item.date === date && (status === 'closed' ? item.status === 'open' : item.status === 'closed'));
@@ -221,7 +227,7 @@ export default function AppointmentsPage() {
           </button>
           {expanded && <div id={contentId} className="availability-date-content">
             <div className="availability-date-actions">{openCount > 0 ? <button className="text-button danger" onClick={() => updateAvailabilityDateStatus(date, 'closed')}>이 날짜 전체 마감</button> : closedCount > 0 && <button className="text-button" onClick={() => updateAvailabilityDateStatus(date, 'open')}>닫힌 시간 다시 열기</button>}</div>
-            <div className="availability-slot-list">{slots.map(item => { const linkedAppointment = appointments.find(appointment => appointment.id === item.appointmentId); const linkedStudent = linkedAppointment ? students.find(student => student.id === linkedAppointment.studentId) : null; const canReopen = item.status === 'booked' && linkedAppointment?.status === 'cancelled'; const cancellationLabel = getAppointmentCancellationLabel(linkedAppointment); return <article key={item.id} className={item.status}><time><strong>{item.time}–{getTimeRangeEnd(item)}</strong><span>{item.duration}분</span></time><div><strong>{item.location}</strong><span>{item.status === 'booked' ? `${linkedStudent?.name || '학생'} ${linkedAppointment?.status === 'cancelled' ? `신청 취소 · ${cancellationLabel}` : '상담 신청 접수'}` : item.status === 'closed' ? '학생에게 표시되지 않음' : '학생 신청 가능'}</span></div><span className={`availability-status ${item.status}`}>{item.status === 'open' ? '신청 가능' : item.status === 'booked' ? linkedAppointment?.status === 'cancelled' ? cancellationLabel : '신청 접수' : '마감'}</span>{(item.status !== 'booked' || canReopen) && <button className="text-button" onClick={() => updateAvailabilityStatus(item, item.status === 'open' ? 'closed' : 'open')}>{item.status === 'open' ? '마감' : '다시 열기'}</button>}</article>; })}</div>
+            <div className="availability-slot-list">{slots.map(item => { const linkedAppointment = appointments.find(appointment => appointment.id === item.appointmentId); const linkedStudent = linkedAppointment ? students.find(student => student.id === linkedAppointment.studentId) : null; const cancelledSlot = item.closedReason === 'appointment-cancelled'; const cancellationLabel = getAppointmentCancellationLabel(linkedAppointment); return <article key={item.id} className={item.status}><time><strong>{item.time}–{getTimeRangeEnd(item)}</strong><span>{item.duration}분</span></time><div><strong>{item.location}</strong><span>{cancelledSlot ? `${linkedStudent?.name || '학생'} 예약 취소 · ${item.reopenDecision === 'pending' ? '재오픈 결정 필요' : '마감 유지'}` : item.status === 'booked' ? `${linkedStudent?.name || '학생'} 상담 신청 접수` : item.status === 'closed' ? '학생에게 표시되지 않음' : '학생 신청 가능'}</span></div><span className={`availability-status ${item.status}`}>{cancelledSlot ? cancellationLabel || '취소 시간' : item.status === 'open' ? '신청 가능' : item.status === 'booked' ? '신청 접수' : '마감'}</span>{cancelledSlot && item.reopenDecision === 'pending' ? <div className="appointment-actions"><button className="text-button" onClick={() => updateAvailabilityStatus(item, 'open')}>다시 열기</button><button className="text-button danger" onClick={() => keepCancelledAvailabilityClosed(item)}>마감 유지</button></div> : item.status !== 'booked' && <button className="text-button" onClick={() => updateAvailabilityStatus(item, item.status === 'open' ? 'closed' : 'open')}>{item.status === 'open' ? '마감' : '다시 열기'}</button>}</article>; })}</div>
           </div>}
         </section>;
       })}</div> : <EmptyState icon="calendar" title="등록한 상담 가능 시간이 없습니다" description="가능 시간 일괄 등록 버튼으로 학생이 신청할 날짜와 시간을 열어 주세요." />}

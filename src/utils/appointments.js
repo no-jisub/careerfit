@@ -9,6 +9,69 @@ export function getAppointmentCancellationLabel(appointment) {
   return '취소 주체 미확인';
 }
 
+export function getAppointmentStart(appointment) {
+  const value = appointment?.date && appointment?.time ? new Date(`${appointment.date}T${appointment.time}:00`) : null;
+  return value && !Number.isNaN(value.getTime()) ? value : null;
+}
+
+export function canRescheduleAppointment(appointment, now = new Date()) {
+  const start = getAppointmentStart(appointment);
+  return Boolean(start
+    && activeAppointmentStatuses.includes(appointment?.status)
+    && start.getTime() - now.getTime() >= 24 * 60 * 60 * 1000
+    && !appointment?.rescheduleRequest?.status?.includes('pending'));
+}
+
+export function closeAvailabilityAfterCancellation(availability, appointment, now = new Date().toISOString()) {
+  if (!availability) return null;
+  return {
+    ...availability,
+    status: 'closed',
+    appointmentId: appointment.id,
+    bookedByUid: appointment.studentUid || availability.bookedByUid || '',
+    closedReason: 'appointment-cancelled',
+    reopenDecision: 'pending',
+    updatedAt: now,
+  };
+}
+
+export function resolveCancelledAvailability(availability, decision, now = new Date()) {
+  if (!availability || availability.closedReason !== 'appointment-cancelled') return { error: '취소된 예약 시간만 처리할 수 있습니다.' };
+  if (decision === 'reopen') {
+    const slotStart = getAppointmentStart(availability);
+    if (!slotStart || slotStart <= now) return { error: '이미 지난 상담 시간은 다시 열 수 없습니다.' };
+    const updated = { ...availability, status: 'open', reopenDecision: 'reopened', updatedAt: now.toISOString() };
+    delete updated.appointmentId;
+    delete updated.bookedByUid;
+    return { value: updated };
+  }
+  return { value: { ...availability, status: 'closed', reopenDecision: 'kept-closed', updatedAt: now.toISOString() } };
+}
+
+export function createRescheduleRequest(appointment, availability, role, message = '', now = new Date()) {
+  if (!canRescheduleAppointment(appointment, now)) return { error: '상담 시작 24시간 전부터는 일정을 변경할 수 없습니다.' };
+  if (!availability || availability.status !== 'open' || availability.counselorUid !== appointment.counselorUid) return { error: '선택한 시간은 예약할 수 없습니다.' };
+  return {
+    value: {
+      ...appointment,
+      rescheduleRequest: {
+        id: `change-${appointment.id}-${now.getTime()}`,
+        status: 'pending',
+        initiatedByRole: role,
+        availabilityId: availability.id,
+        date: availability.date,
+        time: availability.time,
+        endTime: getTimeRangeEnd(availability),
+        duration: availability.duration,
+        location: availability.location,
+        message,
+        createdAt: now.toISOString(),
+      },
+      updatedAt: now.toISOString(),
+    },
+  };
+}
+
 export function upsertAppointmentById(items, appointment) {
   return items.some(item => item.id === appointment.id)
     ? items.map(item => item.id === appointment.id ? appointment : item)
