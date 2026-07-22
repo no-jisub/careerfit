@@ -1113,8 +1113,8 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .signup-section-heading { display:grid; align-content:start; gap:5px; }
 .signup-section-heading strong { color:var(--navy); font-size:16px; letter-spacing:-.3px; }
 .signup-section-heading span { color:var(--muted); font-size:12px; line-height:1.6; }
-.signup-form .consent-check { display:flex; grid-column:1 / -1; grid-template-columns:auto 1fr; align-items:flex-start; gap:9px; padding:13px; border-radius:10px; background:var(--bg); }
-.signup-form .consent-check input { width:17px; height:17px; margin-top:1px; }
+.signup-form .consent-check { display:flex; grid-column:1 / -1; align-items:center; gap:9px; padding:13px; border-radius:10px; background:var(--bg); }
+.signup-form .consent-check input { flex:0 0 auto; width:17px; height:17px; margin:0; }
 .signup-form .consent-check span { font-size:12px; line-height:1.5; }
 .auth-switch { margin:20px 0 0; text-align:center; font-size:13px; }
 .status-card { text-align:center; }
