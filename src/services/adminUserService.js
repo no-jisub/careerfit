@@ -1,4 +1,4 @@
-import { createUserWithEmailAndPassword, getAuth, sendPasswordResetEmail, signOut, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, getAuth, sendEmailVerification, sendPasswordResetEmail, signOut, updateProfile } from 'firebase/auth';
 import { getApps, initializeApp } from 'firebase/app';
 import { doc, writeBatch } from 'firebase/firestore';
 import { auth, db, firebaseApp, firebaseConfig } from '../lib/firebase';
@@ -49,6 +49,7 @@ export async function createManagedUser({ account, student }) {
     }
 
     await batch.commit();
+    await sendEmailVerification(credential.user).catch(() => {});
     return { uid: credential.user.uid };
   } catch (error) {
     if (credential?.user) {

@@ -9,13 +9,17 @@ const emptyAccount = { role: 'counselor', displayName: '', email: '', password: 
 const emptyStudent = { studentNo: '', department: '', grade: '1학년', phone: '', goal: '', concern: '', interests: '', counselorUid: '' };
 
 export default function AdminUsersPage() {
-  const { users, setUsers, students, setStudents, persistDocument, notify } = useApp();
-  const { firebaseAuthEnabled } = useAuth();
+  const { users, setUsers, studentRegistrations, setStudentRegistrations, students, setStudents, persistDocument, persistDocumentGroup, notify } = useApp();
+  const { firebaseAuthEnabled, user, profile } = useAuth();
   const counselors = useMemo(() => users.filter(item => item.role === 'counselor' && item.active !== false), [users]);
   const [account, setAccount] = useState(emptyAccount);
   const [student, setStudent] = useState(emptyStudent);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [assigning, setAssigning] = useState(false);
+  const [selectedRegistrationIds, setSelectedRegistrationIds] = useState([]);
+  const pendingRegistrations = useMemo(() => studentRegistrations.filter(item => item.status === 'pending' && !students.some(studentItem => studentItem.uid === item.uid)), [studentRegistrations, students]);
+  const currentCounselorUid = user?.uid || profile?.id || '';
 
   const updateAccount = (key, value) => setAccount(current => ({ ...current, [key]: value }));
   const updateStudent = (key, value) => setStudent(current => ({ ...current, [key]: value }));
@@ -99,8 +103,68 @@ export default function AdminUsersPage() {
     }
   };
 
+  const toggleRegistration = registrationId => {
+    setSelectedRegistrationIds(current => current.includes(registrationId) ? current.filter(id => id !== registrationId) : [...current, registrationId]);
+  };
+
+  const assignSelectedToMe = async () => {
+    if (assigning || !selectedRegistrationIds.length || !currentCounselorUid) return;
+    const selected = pendingRegistrations.filter(item => selectedRegistrationIds.includes(item.id) && item.emailVerified !== false);
+    if (!selected.length) { setError('이메일 인증이 완료된 학생을 선택해 주세요.'); return; }
+    setAssigning(true);
+    setError('');
+    const now = new Date().toISOString();
+    const counselorName = (profile?.displayName || counselors.find(item => item.id === currentCounselorUid)?.displayName || '담당 상담사').replace(/\s*상담사$/, '');
+    const assignedStudents = selected.map(registration => ({
+      id: `student-${registration.uid}`,
+      uid: registration.uid,
+      counselorUid: currentCounselorUid,
+      counselor: counselorName,
+      name: registration.displayName,
+      studentNo: registration.studentNo,
+      department: registration.department,
+      grade: registration.grade,
+      phone: registration.phone || '',
+      interests: registration.interests || [],
+      goal: registration.goal || '',
+      concern: registration.concern || '',
+      status: 'scheduled',
+      appointmentDate: '',
+      appointment: '',
+      lastConsultation: '',
+      initials: registration.displayName.slice(-2),
+      createdAt: now,
+      updatedAt: now,
+    }));
+    const approvedRegistrations = selected.map(item => ({ ...item, status: 'approved', counselorUid: currentCounselorUid, assignedAt: now, updatedAt: now }));
+    const approvedUsers = selected.map(item => ({ id: item.uid, active: true, approvalStatus: 'approved', updatedAt: now }));
+    try {
+      await persistDocumentGroup([
+        ...assignedStudents.map(record => ({ name: 'students', record })),
+        ...approvedRegistrations.map(record => ({ name: 'studentRegistrations', record })),
+        ...approvedUsers.map(record => ({ name: 'users', record })),
+      ]);
+      setStudents(items => [...items, ...assignedStudents.filter(record => !items.some(item => item.uid === record.uid))]);
+      setStudentRegistrations(items => items.map(item => approvedRegistrations.find(record => record.id === item.id) || item));
+      setUsers(items => items.map(item => approvedUsers.find(record => record.id === item.id) ? { ...item, ...approvedUsers.find(record => record.id === item.id) } : item));
+      setSelectedRegistrationIds([]);
+      notify(`${selected.length}명의 학생을 내 담당으로 배정했습니다.`);
+    } catch { /* 공통 저장 오류 메시지를 사용합니다. */ }
+    finally { setAssigning(false); }
+  };
+
   return <>
     <PageIntro eyebrow="운영 관리" title="사용자와 담당 학생 관리" description="상담 담당자가 상담사와 학생 계정을 등록하고 담당 상담사를 배정합니다." />
+    <section className="card pending-assignment-card">
+      <div className="section-header"><div><span className="eyebrow">회원가입 학생</span><h2>배정 대기 {pendingRegistrations.length}명</h2><p>이메일 인증을 마친 학생을 선택해 내 담당 학생으로 배정하세요.</p></div><button className="button primary" onClick={assignSelectedToMe} disabled={assigning || !selectedRegistrationIds.length}>{assigning ? '배정 중...' : `선택 학생 내게 배정 (${selectedRegistrationIds.length})`}</button></div>
+      {pendingRegistrations.length ? <div className="pending-registration-list">
+        {pendingRegistrations.map(item => <article key={item.id} className={selectedRegistrationIds.includes(item.id) ? 'selected' : ''}>
+          <label className="pending-registration-select"><input type="checkbox" checked={selectedRegistrationIds.includes(item.id)} disabled={item.emailVerified === false} onChange={() => toggleRegistration(item.id)} /><span className="sr-only">{item.displayName} 선택</span></label>
+          <div><strong>{item.displayName}</strong><span>{item.studentNo} · {item.department} · {item.grade}</span><small>{item.email}</small></div>
+          <span className={`verification-badge ${item.emailVerified === false ? 'waiting' : ''}`}>{item.emailVerified === false ? '이메일 인증 대기' : '이메일 인증 완료'}</span>
+        </article>)}
+      </div> : <p className="empty-assignment">현재 배정 대기 중인 학생이 없습니다.</p>}
+    </section>
     <div className="admin-grid">
       <section className="card admin-create-card">
         <h2>새 계정 등록</h2>

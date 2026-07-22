@@ -8,6 +8,7 @@ service cloud.firestore {
 
     function hasRole(role) {
       return signedIn()
+        && request.auth.token.email_verified == true
         && (!exists(/databases/$(database)/documents/users/$(request.auth.uid))
           || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('active', true) == true)
         && (request.auth.token.role == role
@@ -27,7 +28,27 @@ service cloud.firestore {
       return validText(data.email, 254)
         && validText(data.displayName, 80)
         && data.role in ['admin', 'counselor', 'student']
-        && (!( 'active' in data) || data.active is bool);
+        && (!( 'active' in data) || data.active is bool)
+        && (!('approvalStatus' in data)
+          || data.approvalStatus in ['pending', 'approved', 'rejected']);
+    }
+
+    function validStudentRegistration(data) {
+      return validText(data.uid, 128)
+        && validText(data.email, 254)
+        && validText(data.displayName, 80)
+        && validText(data.studentNo, 40)
+        && validText(data.department, 100)
+        && validText(data.grade, 20)
+        && validOptionalText(data, 'phone', 40)
+        && validOptionalText(data, 'goal', 1000)
+        && validOptionalText(data, 'concern', 5000)
+        && data.get('interests', []) is list
+        && data.get('interests', []).size() <= 20
+        && data.emailVerified is bool
+        && data.status in ['pending', 'approved', 'rejected']
+        && data.counselorUid is string
+        && data.counselorUid.size() <= 128;
     }
 
     function validStudent(data) {
@@ -144,11 +165,43 @@ service cloud.firestore {
       allow create: if validUserProfile(request.resource.data) && (isStaff()
         || (signedIn()
           && request.auth.uid == userId
-          && (request.resource.data.role == 'student'
-            || (request.auth.token.role in ['admin', 'counselor']
-              && request.resource.data.role == request.auth.token.role))));
+          && request.resource.data.email == request.auth.token.email
+          && request.resource.data.role == 'student'
+          && request.resource.data.active == false
+          && request.resource.data.approvalStatus == 'pending'));
       allow update: if isStaff() && validUserProfile(request.resource.data);
       allow delete: if isStaff();
+    }
+
+    match /studentRegistrations/{userId} {
+      allow read: if isStaff() || (signedIn() && request.auth.uid == userId);
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && validStudentRegistration(request.resource.data)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.emailVerified == false
+        && request.resource.data.status == 'pending'
+        && request.resource.data.counselorUid == '';
+      allow update: if validStudentRegistration(request.resource.data) && (
+        isAdmin()
+        || (isCounselor()
+          && resource.data.status == 'pending'
+          && request.resource.data.status == 'approved'
+          && request.resource.data.emailVerified == true
+          && request.resource.data.counselorUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'counselorUid', 'assignedAt', 'updatedAt']))
+        || (signedIn()
+          && request.auth.uid == userId
+          && request.auth.token.email_verified == true
+          && resource.data.status == 'pending'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.counselorUid == ''
+          && request.resource.data.emailVerified == true
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['emailVerified', 'updatedAt'])));
+      allow delete: if isAdmin();
     }
 
     match /students/{studentId} {
