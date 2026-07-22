@@ -1,3 +1,5 @@
+import { timeToMinutes } from './date.js';
+
 const controlCharacters = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
@@ -78,19 +80,23 @@ export function validateAppointmentInput(form, nowDate, nowTime) {
   if (!form.studentId) return { error: '상담할 학생을 선택해 주세요.' };
   if (!isDateKey(form.date) || !timePattern.test(form.time)) return { error: '상담 날짜와 시간을 확인해 주세요.' };
   if (`${form.date}T${form.time}` < `${nowDate}T${nowTime}`) return { error: '과거 시간으로는 상담을 예약할 수 없습니다.' };
+  if (!timePattern.test(form.endTime)) return { error: '상담 종료 예정 시간을 확인해 주세요.' };
+  const duration = timeToMinutes(form.endTime) - timeToMinutes(form.time);
+  if (duration < 15 || duration > 240) return { error: '상담 시간은 15분에서 240분 사이로 설정해 주세요.' };
   const location = cleanText(form.location, 120);
   if (!location) return { error: '상담 장소를 입력해 주세요.' };
-  return { value: { ...form, type: cleanText(form.type, 50), location, preparation: cleanText(form.preparation, 500) } };
+  return { value: { ...form, duration, type: cleanText(form.type, 50), location, preparation: cleanText(form.preparation, 500) } };
 }
 
 export function validateAvailabilityInput(form, nowDate, nowTime) {
   if (!isDateKey(form.date) || !timePattern.test(form.time)) return { error: '상담 가능 날짜와 시간을 확인해 주세요.' };
   if (`${form.date}T${form.time}` < `${nowDate}T${nowTime}`) return { error: '과거 시간은 상담 가능 시간으로 등록할 수 없습니다.' };
   const location = cleanText(form.location, 200);
-  const duration = Number(form.duration);
+  if (!timePattern.test(form.endTime)) return { error: '상담 종료 예정 시간을 확인해 주세요.' };
+  const duration = timeToMinutes(form.endTime) - timeToMinutes(form.time);
   if (!location) return { error: '상담 장소를 입력해 주세요.' };
-  if (!Number.isInteger(duration) || duration < 15 || duration > 240) return { error: '상담 시간은 15분에서 240분 사이로 입력해 주세요.' };
-  return { value: { date: form.date, time: form.time, location, duration } };
+  if (!Number.isInteger(duration) || duration < 15 || duration > 240) return { error: '종료 예정 시간은 시작 시간보다 15분 이상, 240분 이내로 설정해 주세요.' };
+  return { value: { date: form.date, time: form.time, endTime: form.endTime, location, duration } };
 }
 
 export function validateStudentAppointmentRequest(form) {

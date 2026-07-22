@@ -124,6 +124,7 @@ service cloud.firestore {
         && validText(data.counselorUid, 128)
         && validText(data.date, 10)
         && validText(data.time, 5)
+        && validOptionalText(data, 'endTime', 5)
         && validText(data.type, 80)
         && validText(data.location, 200)
         && validOptionalText(data, 'preparation', 1000)
@@ -140,6 +141,7 @@ service cloud.firestore {
       return validText(data.counselorUid, 128)
         && validText(data.date, 10)
         && validText(data.time, 5)
+        && validOptionalText(data, 'endTime', 5)
         && validText(data.location, 200)
         && data.duration is int
         && data.duration >= 15
@@ -371,6 +373,7 @@ service cloud.firestore {
             && request.resource.data.counselorUid == resource.data.counselorUid
             && request.resource.data.date == resource.data.date
             && request.resource.data.time == resource.data.time
+            && request.resource.data.get('endTime', '') == resource.data.get('endTime', '')
             && request.resource.data.duration == resource.data.duration
             && request.resource.data.location == resource.data.location
             && request.resource.data.bookedByUid == request.auth.uid
@@ -395,6 +398,7 @@ service cloud.firestore {
           && validText(request.resource.data.subject, 200)
           && validText(request.resource.data.requestMessage, 2000)
           && validText(request.resource.data.availabilityId, 128)
+          && validText(request.resource.data.endTime, 5)
           && hasMatchingStudentUid(request.resource.data.studentId, request.resource.data.studentUid)
           && get(/databases/$(database)/documents/students/$(request.resource.data.studentId)).data.counselorUid == request.resource.data.counselorUid
           && exists(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId))
@@ -402,6 +406,9 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId)).data.counselorUid == request.resource.data.counselorUid
           && get(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId)).data.date == request.resource.data.date
           && get(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId)).data.time == request.resource.data.time
+          && get(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId)).data.duration == request.resource.data.duration
+          && (!('endTime' in get(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId)).data)
+            || get(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId)).data.endTime == request.resource.data.endTime)
           && existsAfter(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId))
           && getAfter(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId)).data.status == 'booked'
           && getAfter(/databases/$(database)/documents/counselorAvailability/$(request.resource.data.availabilityId)).data.appointmentId == appointmentId

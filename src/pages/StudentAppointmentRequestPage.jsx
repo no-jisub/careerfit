@@ -3,8 +3,8 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../App';
 import { useAuth } from '../auth/AuthContext';
 import Icon from '../components/Icon';
-import { isAvailabilityBookable } from '../utils/appointments';
-import { toDateKey } from '../utils/date';
+import { isAvailabilityBookable, upsertAppointmentById } from '../utils/appointments';
+import { getTimeRangeEnd, toDateKey } from '../utils/date';
 import { validateStudentAppointmentRequest } from '../utils/validation';
 
 const initialForm = { type: '진로 상담', subject: '', requestMessage: '', preferredOutcome: '' };
@@ -46,6 +46,7 @@ export default function StudentAppointmentRequestPage() {
       counselorUid: slot.counselorUid,
       date: slot.date,
       time: slot.time,
+      endTime: getTimeRangeEnd(slot),
       duration: slot.duration,
       location: slot.location,
       ...validated.value,
@@ -60,7 +61,7 @@ export default function StudentAppointmentRequestPage() {
     setError('');
     try {
       await persistDocumentGroup([{ name: 'appointments', record: appointment }, { name: 'counselorAvailability', record: bookedSlot }]);
-      setAppointments(items => [...items, appointment]);
+      setAppointments(items => upsertAppointmentById(items, appointment));
       setCounselorAvailability(items => items.map(item => item.id === slot.id ? bookedSlot : item));
       notify('상담 신청을 완료했습니다. 상담사가 확인하면 일정이 확정됩니다.');
       navigate('/student', { replace: true });
@@ -76,7 +77,7 @@ export default function StudentAppointmentRequestPage() {
     <main>
       <Link className="withdrawal-back-link" to="/student/appointments"><Icon name="arrow" size={16} />다른 시간 선택하기</Link>
       <div className="student-request-layout">
-        <aside className="student-selected-slot"><span className="eyebrow light">선택한 상담 시간</span><strong>{slot.date}</strong><b>{slot.time}</b><p>{slot.duration}분 · {slot.location}</p><small>{student.counselor || '담당 상담사'} 상담사</small></aside>
+        <aside className="student-selected-slot"><span className="eyebrow light">선택한 상담 시간</span><strong>{slot.date}</strong><b>{slot.time}–{getTimeRangeEnd(slot)}</b><p>{slot.duration}분 · {slot.location}</p><small>{student.counselor || '담당 상담사'} 상담사</small></aside>
         <section className="card student-request-card">
           <span className="eyebrow">상담 사전 내용</span><h1>상담사에게 미리 알려주세요</h1><p>작성한 내용은 담당 상담사만 확인하며, 상담 준비를 위해 사용됩니다.</p>
           {!bookable && <p className="student-slot-warning" role="alert">선택한 시간이 더 이상 신청 가능하지 않습니다. 다른 시간을 선택해 주세요.</p>}

@@ -26,6 +26,21 @@ export function getDayPeriod(time) {
   return Number(time?.split(':')[0]) < 12 ? '오전' : '오후';
 }
 
+export function timeToMinutes(time) {
+  const [hour, minute] = String(time || '').split(':').map(Number);
+  return Number.isInteger(hour) && Number.isInteger(minute) ? hour * 60 + minute : Number.NaN;
+}
+
+export function addMinutesToTime(time, minutes) {
+  const total = timeToMinutes(time) + Number(minutes || 0);
+  if (!Number.isFinite(total) || total < 0 || total >= 24 * 60) return '';
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+export function getTimeRangeEnd(record, fallbackMinutes = 50) {
+  return record?.endTime || addMinutesToTime(record?.time, record?.duration || fallbackMinutes);
+}
+
 export function getAppointmentDateParts(dateKey) {
   const date = parseDateKey(dateKey);
   return {

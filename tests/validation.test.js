@@ -11,15 +11,17 @@ test('isDateKey rejects calendar dates that do not exist', () => {
   assert.equal(isDateKey('2026-07-22'), true);
 });
 
-test('appointment validation blocks past appointments and empty locations', () => {
-  assert.match(validateAppointmentInput({ studentId: 's1', date: '2026-07-21', time: '10:00', location: '상담실', type: '진로', preparation: '' }, '2026-07-22', '09:00').error, /과거/);
-  assert.match(validateAppointmentInput({ studentId: 's1', date: '2026-07-23', time: '10:00', location: ' ', type: '진로', preparation: '' }, '2026-07-22', '09:00').error, /장소/);
+test('appointment validation blocks past appointments, empty locations, and invalid time ranges', () => {
+  assert.match(validateAppointmentInput({ studentId: 's1', date: '2026-07-21', time: '10:00', endTime: '10:50', location: '상담실', type: '진로', preparation: '' }, '2026-07-22', '09:00').error, /과거/);
+  assert.match(validateAppointmentInput({ studentId: 's1', date: '2026-07-23', time: '10:00', endTime: '10:50', location: ' ', type: '진로', preparation: '' }, '2026-07-22', '09:00').error, /장소/);
+  assert.match(validateAppointmentInput({ studentId: 's1', date: '2026-07-23', time: '10:00', endTime: '10:10', location: '상담실', type: '진로', preparation: '' }, '2026-07-22', '09:00').error, /15분/);
+  assert.equal(validateAppointmentInput({ studentId: 's1', date: '2026-07-23', time: '10:00', endTime: '10:50', location: '상담실', type: '진로', preparation: '' }, '2026-07-22', '09:00').value.duration, 50);
 });
 
 test('counselor availability requires a future slot and reasonable duration', () => {
-  assert.match(validateAvailabilityInput({ date: '2026-07-21', time: '10:00', location: '상담실', duration: 50 }, '2026-07-22', '09:00').error, /과거/);
-  assert.match(validateAvailabilityInput({ date: '2026-07-23', time: '10:00', location: '상담실', duration: 10 }, '2026-07-22', '09:00').error, /15분/);
-  assert.equal(validateAvailabilityInput({ date: '2026-07-23', time: '10:00', location: '상담실', duration: 50 }, '2026-07-22', '09:00').value.duration, 50);
+  assert.match(validateAvailabilityInput({ date: '2026-07-21', time: '10:00', endTime: '10:50', location: '상담실' }, '2026-07-22', '09:00').error, /과거/);
+  assert.match(validateAvailabilityInput({ date: '2026-07-23', time: '10:00', endTime: '10:10', location: '상담실' }, '2026-07-22', '09:00').error, /15분/);
+  assert.equal(validateAvailabilityInput({ date: '2026-07-23', time: '10:00', endTime: '10:50', location: '상담실' }, '2026-07-22', '09:00').value.duration, 50);
 });
 
 test('student appointment request requires a clear subject and message', () => {
