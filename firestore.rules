@@ -166,7 +166,7 @@ service cloud.firestore {
         || (signedIn()
           && request.auth.uid == userId
           && request.resource.data.email == request.auth.token.email
-          && request.resource.data.role == 'student'
+          && request.resource.data.role in ['student', 'counselor']
           && request.resource.data.active == false
           && request.resource.data.approvalStatus == 'pending'));
       allow update: if isStaff() && validUserProfile(request.resource.data);

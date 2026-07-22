@@ -995,6 +995,9 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .pending-registration-list article strong { color:var(--navy); }
 .verification-badge { padding:6px 9px; border-radius:999px; color:#177348 !important; background:#eaf8f1; font-size:11px !important; font-weight:800; white-space:nowrap; }
 .verification-badge.waiting { color:#966614 !important; background:#fff5df; }
+.approval-avatar { width:38px; height:38px; display:grid; place-items:center; border-radius:12px; color:var(--blue); background:var(--blue-soft); font-weight:900; }
+.approval-actions { display:flex!important; align-items:center; gap:9px!important; }
+.counselor-approval-list article { grid-template-columns:auto minmax(0, 1fr) auto; }
 .empty-assignment { margin:4px 0 0; padding:22px; border-radius:12px; color:var(--muted); background:var(--bg); text-align:center; }
 @media (max-width: 900px) { .admin-grid { grid-template-columns:1fr; } }
 @media (max-width: 600px) { .admin-user-list article, .assignment-list article { grid-template-columns:1fr; align-items:start; } .assignment-list select { width:100%; } .pending-assignment-card .section-header { align-items:stretch; } .pending-registration-list article { grid-template-columns:auto 1fr; } .verification-badge { grid-column:2; justify-self:start; } }

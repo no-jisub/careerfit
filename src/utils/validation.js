@@ -63,6 +63,17 @@ export function validateStudentRegistrationInput(form) {
   };
 }
 
+export function validateCounselorRegistrationInput(form) {
+  const displayName = cleanText(form.displayName, 80);
+  const email = cleanText(form.email, 254).toLowerCase();
+  if (!displayName) return { error: '이름을 입력해 주세요.' };
+  if (!emailPattern.test(email)) return { error: '유효한 이메일 형식으로 입력해 주세요.' };
+  if (String(form.password || '').length < 8) return { error: '비밀번호는 8자 이상으로 입력해 주세요.' };
+  if (!/[A-Za-z]/.test(form.password) || !/[0-9]/.test(form.password)) return { error: '비밀번호에 영문과 숫자를 모두 포함해 주세요.' };
+  if (form.password !== form.passwordConfirm) return { error: '비밀번호 확인이 일치하지 않습니다.' };
+  return { value: { displayName, email, password: form.password } };
+}
+
 export function validateAppointmentInput(form, nowDate, nowTime) {
   if (!form.studentId) return { error: '상담할 학생을 선택해 주세요.' };
   if (!isDateKey(form.date) || !timePattern.test(form.time)) return { error: '상담 날짜와 시간을 확인해 주세요.' };

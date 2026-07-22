@@ -40,7 +40,7 @@ function resolveAccountStatus(user, profile) {
   if (!user.emailVerified) return 'emailVerificationRequired';
   if (!profile?.role) return 'profileMissing';
   if (profile.approvalStatus === 'rejected') return 'rejected';
-  if (profile.active === false || profile.approvalStatus === 'pending') return 'assignmentPending';
+  if (profile.active === false || profile.approvalStatus === 'pending') return profile.role === 'counselor' ? 'counselorApprovalPending' : 'assignmentPending';
   return 'approved';
 }
 
@@ -139,6 +139,30 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const registerCounselor = async registration => {
+    if (!firebaseAuthEnabled || !auth || !db) throw new Error('Firebase 회원가입이 활성화되지 않았습니다.');
+    let credential;
+    try {
+      credential = await createUserWithEmailAndPassword(auth, registration.email, registration.password);
+      await updateProfile(credential.user, { displayName: registration.displayName });
+      const now = new Date().toISOString();
+      await setDoc(doc(db, 'users', credential.user.uid), {
+        email: registration.email,
+        displayName: registration.displayName,
+        role: 'counselor',
+        active: false,
+        approvalStatus: 'pending',
+        createdAt: now,
+        updatedAt: now,
+      });
+      await sendEmailVerification(credential.user).catch(() => {});
+      return applyFirebaseSession(credential.user);
+    } catch (error) {
+      if (credential?.user && !error?.code?.startsWith('auth/')) await deleteUser(credential.user).catch(() => {});
+      throw error;
+    }
+  };
+
   const loginDemo = async nextRole => {
     if (!demoModeEnabled || !Object.hasOwn(demoProfiles, nextRole)) {
       throw new Error('데모 로그인이 허용되지 않았습니다.');
@@ -185,7 +209,7 @@ export function AuthProvider({ children }) {
     setAccountStatus(null);
   };
 
-  const value = useMemo(() => ({ user, role, profile, accountStatus, loading, demoModeEnabled, firebaseAuthEnabled, loginWithEmail, loginDemo, registerStudent, refreshAccount, resendVerificationEmail, requestPasswordReset, logout }), [user, role, profile, accountStatus, loading]);
+  const value = useMemo(() => ({ user, role, profile, accountStatus, loading, demoModeEnabled, firebaseAuthEnabled, loginWithEmail, loginDemo, registerStudent, registerCounselor, refreshAccount, resendVerificationEmail, requestPasswordReset, logout }), [user, role, profile, accountStatus, loading]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

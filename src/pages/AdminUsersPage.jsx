@@ -9,7 +9,7 @@ const emptyAccount = { role: 'counselor', displayName: '', email: '', password: 
 const emptyStudent = { studentNo: '', department: '', grade: '1학년', phone: '', goal: '', concern: '', interests: '', counselorUid: '' };
 
 export default function AdminUsersPage() {
-  const { users, setUsers, studentRegistrations, setStudentRegistrations, students, setStudents, persistDocument, persistDocumentGroup, notify } = useApp();
+  const { users, setUsers, studentRegistrations, setStudentRegistrations, students, setStudents, consultations, followUps, setFollowUps, appointments, setAppointments, persistDocument, persistDocumentGroup, notify } = useApp();
   const { firebaseAuthEnabled, user, profile } = useAuth();
   const counselors = useMemo(() => users.filter(item => item.role === 'counselor' && item.active !== false), [users]);
   const [account, setAccount] = useState(emptyAccount);
@@ -19,6 +19,7 @@ export default function AdminUsersPage() {
   const [assigning, setAssigning] = useState(false);
   const [selectedRegistrationIds, setSelectedRegistrationIds] = useState([]);
   const pendingRegistrations = useMemo(() => studentRegistrations.filter(item => item.status === 'pending' && !students.some(studentItem => studentItem.uid === item.uid)), [studentRegistrations, students]);
+  const pendingCounselors = useMemo(() => users.filter(item => item.role === 'counselor' && item.approvalStatus === 'pending'), [users]);
   const currentCounselorUid = user?.uid || profile?.id || '';
 
   const updateAccount = (key, value) => setAccount(current => ({ ...current, [key]: value }));
@@ -81,16 +82,56 @@ export default function AdminUsersPage() {
   const assignCounselor = async (studentRecord, counselorUid) => {
     const counselor = counselors.find(item => item.id === counselorUid);
     if (!counselor) return;
+    if (studentRecord.counselorUid === counselorUid) return;
+    const now = new Date().toISOString();
     const updated = {
       ...studentRecord,
       counselorUid,
       counselor: counselor.displayName.replace(/\s*상담사$/, ''),
-      updatedAt: new Date().toISOString(),
+      assignmentHistory: [
+        ...(studentRecord.assignmentHistory || []),
+        { fromCounselorUid: studentRecord.counselorUid || '', toCounselorUid: counselorUid, transferredAt: now, transferredBy: currentCounselorUid },
+      ].slice(-20),
+      updatedAt: now,
+    };
+    const transferredAppointments = appointments
+      .filter(item => item.studentId === studentRecord.id && ['pending', 'confirmed', 'scheduled'].includes(item.status))
+      .map(item => ({ ...item, counselorUid, transferredAt: now, updatedAt: now }));
+    const transferredFollowUps = followUps
+      .filter(item => item.studentId === studentRecord.id && item.owner === '교직원' && item.status !== 'complete')
+      .map(item => ({ ...item, ownerUid: counselorUid, assigneeUid: counselorUid, transferredAt: now, updatedAt: now }));
+    const registration = studentRegistrations.find(item => item.uid === studentRecord.uid);
+    const updatedRegistration = registration ? { ...registration, counselorUid, updatedAt: now } : null;
+    try {
+      await persistDocumentGroup([
+        { name: 'students', record: updated },
+        ...transferredAppointments.map(record => ({ name: 'appointments', record })),
+        ...transferredFollowUps.map(record => ({ name: 'followUps', record })),
+        ...(updatedRegistration ? [{ name: 'studentRegistrations', record: updatedRegistration }] : []),
+      ]);
+      setStudents(items => items.map(item => item.id === updated.id ? updated : item));
+      setAppointments(items => items.map(item => transferredAppointments.find(record => record.id === item.id) || item));
+      setFollowUps(items => items.map(item => transferredFollowUps.find(record => record.id === item.id) || item));
+      if (updatedRegistration) setStudentRegistrations(items => items.map(item => item.id === updatedRegistration.id ? updatedRegistration : item));
+      const historyCount = consultations.filter(item => item.studentId === studentRecord.id).length;
+      notify(`${studentRecord.name} 학생과 상담 이력 ${historyCount}건을 ${counselor.displayName}에게 재배정했습니다.`);
+    } catch { /* 공통 오류 메시지를 사용합니다. */ }
+  };
+
+  const reviewCounselor = async (candidate, decision) => {
+    const now = new Date().toISOString();
+    const updated = {
+      ...candidate,
+      active: decision === 'approved',
+      approvalStatus: decision,
+      reviewedAt: now,
+      reviewedBy: currentCounselorUid,
+      updatedAt: now,
     };
     try {
-      await persistDocument('students', updated);
-      setStudents(items => items.map(item => item.id === updated.id ? updated : item));
-      notify(`${studentRecord.name} 학생의 담당 상담사를 변경했습니다.`);
+      await persistDocument('users', updated);
+      setUsers(items => items.map(item => item.id === updated.id ? updated : item));
+      notify(`${candidate.displayName} 상담사 가입을 ${decision === 'approved' ? '승인' : '거절'}했습니다.`);
     } catch { /* 공통 오류 메시지를 사용합니다. */ }
   };
 
@@ -156,6 +197,12 @@ export default function AdminUsersPage() {
   return <>
     <PageIntro eyebrow="운영 관리" title="사용자와 담당 학생 관리" description="상담 담당자가 상담사와 학생 계정을 등록하고 담당 상담사를 배정합니다." />
     <section className="card pending-assignment-card">
+      <div className="section-header"><div><span className="eyebrow">상담사 가입 승인</span><h2>승인 대기 {pendingCounselors.length}명</h2><p>이메일 인증을 마친 신규 상담사의 가입 요청을 승인하거나 거절하세요.</p></div></div>
+      {pendingCounselors.length ? <div className="pending-registration-list counselor-approval-list">
+        {pendingCounselors.map(item => <article key={item.id}><span className="approval-avatar">{item.displayName.slice(0, 1)}</span><div><strong>{item.displayName}</strong><small>{item.email}</small></div><div className="approval-actions"><button className="button primary small" onClick={() => reviewCounselor(item, 'approved')}>승인</button><button className="text-button danger" onClick={() => reviewCounselor(item, 'rejected')}>거절</button></div></article>)}
+      </div> : <p className="empty-assignment">현재 승인 대기 중인 상담사가 없습니다.</p>}
+    </section>
+    <section className="card pending-assignment-card">
       <div className="section-header"><div><span className="eyebrow">회원가입 학생</span><h2>배정 대기 {pendingRegistrations.length}명</h2><p>이메일 인증을 마친 학생을 선택해 내 담당 학생으로 배정하세요.</p></div><button className="button primary" onClick={assignSelectedToMe} disabled={assigning || !selectedRegistrationIds.length}>{assigning ? '배정 중...' : `선택 학생 내게 배정 (${selectedRegistrationIds.length})`}</button></div>
       {pendingRegistrations.length ? <div className="pending-registration-list">
         {pendingRegistrations.map(item => <article key={item.id} className={selectedRegistrationIds.includes(item.id) ? 'selected' : ''}>
@@ -189,12 +236,12 @@ export default function AdminUsersPage() {
       </section>
       <section className="card admin-user-list">
         <div className="section-header"><div><span className="eyebrow">등록 계정</span><h2>사용자 {users.length}명</h2></div></div>
-        {users.map(item => <article key={item.id}><div><strong>{item.displayName}</strong><span>{item.email}</span></div><b>{item.role === 'admin' ? '관리자' : item.role === 'student' ? '학생' : '상담사'}</b>{firebaseAuthEnabled && <button className="text-button" onClick={() => resetPassword(item)}>비밀번호 재설정</button>}</article>)}
+        {users.map(item => <article key={item.id}><div><strong>{item.displayName}</strong><span>{item.email}</span></div><b>{item.approvalStatus === 'pending' ? '승인 대기' : item.approvalStatus === 'rejected' ? '가입 거절' : item.role === 'admin' ? '관리자' : item.role === 'student' ? '학생' : '상담사'}</b>{firebaseAuthEnabled && <button className="text-button" onClick={() => resetPassword(item)}>비밀번호 재설정</button>}</article>)}
       </section>
     </div>
     <section className="card assignment-card">
       <div className="section-header"><div><span className="eyebrow">담당 배정</span><h2>학생별 담당 상담사</h2></div></div>
-      {students.length ? <div className="assignment-list">{students.map(item => <article key={item.id}><div><strong>{item.name}</strong><span>{item.studentNo} · {item.department}</span></div><label><span className="sr-only">{item.name} 담당 상담사</span><select value={item.counselorUid || ''} onChange={event => assignCounselor(item, event.target.value)}><option value="">미배정</option>{counselors.map(counselor => <option key={counselor.id} value={counselor.id}>{counselor.displayName}</option>)}</select></label></article>)}</div> : <p>등록된 학생이 없습니다.</p>}
+      {students.length ? <div className="assignment-list">{students.map(item => <article key={item.id}><div><strong>{item.name}</strong><span>{item.studentNo} · {item.department} · 상담 기록 {consultations.filter(record => record.studentId === item.id).length}건</span></div><label><span className="sr-only">{item.name} 담당 상담사</span><select value={item.counselorUid || ''} onChange={event => assignCounselor(item, event.target.value)}><option value="">미배정</option>{counselors.map(counselor => <option key={counselor.id} value={counselor.id}>{counselor.displayName}</option>)}</select></label></article>)}</div> : <p>등록된 학생이 없습니다.</p>}
     </section>
   </>;
 }
