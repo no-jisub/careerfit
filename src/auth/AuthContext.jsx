@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, demoModeEnabled, firebaseAuthEnabled } from '../lib/firebase';
 
@@ -94,6 +94,13 @@ export function AuthProvider({ children }) {
     return nextRole;
   };
 
+  const requestPasswordReset = async email => {
+    if (!firebaseAuthEnabled || !auth) throw new Error('Firebase 로그인이 활성화되지 않았습니다.');
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) throw new Error('이메일을 입력해 주세요.');
+    await sendPasswordResetEmail(auth, normalizedEmail);
+  };
+
   const logout = async () => {
     if (user && auth) await signOut(auth);
     localStorage.removeItem('careerfit_role');
@@ -102,7 +109,7 @@ export function AuthProvider({ children }) {
     setRole(null);
   };
 
-  const value = useMemo(() => ({ user, role, profile, loading, demoModeEnabled, firebaseAuthEnabled, loginWithEmail, loginDemo, logout }), [user, role, profile, loading]);
+  const value = useMemo(() => ({ user, role, profile, loading, demoModeEnabled, firebaseAuthEnabled, loginWithEmail, loginDemo, requestPasswordReset, logout }), [user, role, profile, loading]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

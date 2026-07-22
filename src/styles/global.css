@@ -1003,3 +1003,9 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .fatal-error span { color: var(--red); font-weight: 800; }
 .fatal-error h1 { margin: 10px 0; }
 .fatal-error p { color: var(--muted); line-height: 1.7; }
+.login-reset-toggle { width: 100%; border: 0; background: transparent; color: var(--blue); font-size: 13px; font-weight: 700; }
+.password-reset-form { margin-top: 18px; padding: 18px; border: 1px solid var(--border); border-radius: 13px; background: var(--bg); }
+.password-reset-form > strong { display: block; margin-bottom: 4px; }
+.password-reset-form > p { margin-bottom: 12px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.password-reset-form label { margin-bottom: 10px; }
+.password-reset-form .reset-message { margin: 12px 0 0; color: var(--blue-dark); }
