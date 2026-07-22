@@ -964,4 +964,6 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .appointment-status.completed { background:var(--green-soft); color:var(--green); }
 .appointment-actions { display:flex; align-items:center; gap:10px; }
 .text-button.danger { color:var(--red); }
+.empty-appointment { display:grid; align-content:center; gap:12px; }
+.empty-appointment h2, .empty-appointment p { margin:0; }
 @media (max-width: 760px) { .appointment-list article { grid-template-columns:1fr auto; gap:12px; } .appointment-list time, .appointment-list article > div:nth-child(2) { grid-column:1 / -1; } }

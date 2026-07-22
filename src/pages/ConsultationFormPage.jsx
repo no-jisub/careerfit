@@ -17,16 +17,15 @@ export default function ConsultationFormPage() {
   const { studentId } = useParams();
   const navigate = useNavigate();
   const { profile, user } = useAuth();
-  const { students, consultations, setConsultations, setConsultationNotes, setFollowUps, persistDocumentGroup, notify, draftForm, setDraftForm } = useApp();
+  const { students, setStudents, setConsultations, setConsultationNotes, setFollowUps, appointments, setAppointments, persistDocumentGroup, notify, draftForm, setDraftForm } = useApp();
   const student = students.find(s => s.id === studentId);
-  const latest = student ? consultations.filter(c => c.studentId === student.id).sort((a, b) => b.date.localeCompare(a.date))[0] : null;
-  const [form, setForm] = useState(() => draftForm?.studentId === student?.id ? draftForm.form : { ...createEmptyForm(), currentConcern: student?.concern || '', rawMemo: '개발 수업 경험을 되짚어 보니 문제를 정의하고 팀의 의견을 정리하는 과정에 흥미를 느꼈다고 함. 서비스 기획 직무를 직접 경험해 본 뒤 개발 직무와 비교하고 싶어 함.', studentActions: '관심 직무 비교표 작성 및 UX 서비스 기획 캠프 신청', counselorActions: '직무 비교표 양식과 캠프 상세 일정 전달', nextCheckItems: '직무 비교 결과와 캠프 신청 여부' });
+  const [form, setForm] = useState(() => draftForm?.studentId === student?.id ? draftForm.form : { ...createEmptyForm(), currentConcern: student?.concern || '' });
   const [aiDraft, setAiDraft] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [studentTask, setStudentTask] = useState('관심 직무 비교표 작성');
-  const [counselorTask, setCounselorTask] = useState('직무 비교표 양식 전달');
+  const [studentTask, setStudentTask] = useState('');
+  const [counselorTask, setCounselorTask] = useState('');
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
   useEffect(() => {
     if (!student) return undefined;
@@ -48,11 +47,22 @@ export default function ConsultationFormPage() {
     if (saving) return;
     if (!form.purpose.trim() || !form.rawMemo.trim()) { setError('필수 항목을 입력해 주세요.'); document.querySelector('#rawMemo')?.focus(); return; }
     const final = aiDraft || generateConsultationDraft(form);
-    const consultation = { id: `c${Date.now()}`, studentId: student.id, date: form.date, type: form.type, purpose: final.purpose, counselor: (profile?.displayName || user?.displayName || '상담 담당자').replace(/\s*상담사$/, ''), summary: final.summary, concern: final.concern, guidance: final.guidance, programs: final.programs, studentActions: final.studentActions, counselorActions: final.counselorActions, nextCheckItems: final.nextCheckItems, studentVisible: form.studentVisible };
-    const internalNote = { id: consultation.id, consultationId: consultation.id, studentId: student.id, note: form.rawMemo.trim(), updatedAt: new Date().toISOString() };
+    const now = new Date().toISOString();
+    const consultation = { id: `c${Date.now()}`, studentId: student.id, date: form.date, type: form.type, purpose: final.purpose, counselor: (profile?.displayName || user?.displayName || '상담 담당자').replace(/\s*상담사$/, ''), summary: final.summary, concern: final.concern, guidance: final.guidance, programs: final.programs, studentActions: final.studentActions, counselorActions: final.counselorActions, nextCheckItems: final.nextCheckItems, studentVisible: form.studentVisible, createdAt: now, updatedAt: now };
+    const internalNote = { id: consultation.id, consultationId: consultation.id, studentId: student.id, note: form.rawMemo.trim(), createdAt: now, updatedAt: now };
     const newTasks = [];
-    if (studentTask.trim()) newTasks.push({ id: `f${Date.now()}a`, studentId: student.id, content: studentTask.trim(), owner: '학생', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date });
-    if (counselorTask.trim()) newTasks.push({ id: `f${Date.now()}b`, studentId: student.id, content: counselorTask.trim(), owner: '교직원', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date });
+    if (studentTask.trim()) newTasks.push({ id: `f${Date.now()}a`, studentId: student.id, content: studentTask.trim(), owner: '학생', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date, createdAt: now, updatedAt: now });
+    if (counselorTask.trim()) newTasks.push({ id: `f${Date.now()}b`, studentId: student.id, content: counselorTask.trim(), owner: '교직원', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date, createdAt: now, updatedAt: now });
+    const matchingAppointment = appointments.find(item => item.studentId === student.id && item.date === form.date && item.status === 'scheduled');
+    const completedAppointment = matchingAppointment ? { ...matchingAppointment, status: 'completed', completedAt: now, updatedAt: now } : null;
+    const updatedStudent = {
+      ...student,
+      status: 'complete',
+      lastConsultation: form.date,
+      appointmentDate: matchingAppointment ? '' : student.appointmentDate,
+      appointment: matchingAppointment ? '' : student.appointment,
+      updatedAt: now,
+    };
     setSaving(true);
     setError('');
     try {
@@ -60,10 +70,14 @@ export default function ConsultationFormPage() {
         { name: 'consultations', record: consultation },
         { name: 'consultationNotes', record: internalNote },
         ...newTasks.map(record => ({ name: 'followUps', record })),
+        { name: 'students', record: updatedStudent },
+        ...(completedAppointment ? [{ name: 'appointments', record: completedAppointment }] : []),
       ]);
       setConsultations(current => appendMissingDocuments(current, [consultation]));
       setConsultationNotes(current => appendMissingDocuments(current, [internalNote]));
       setFollowUps(current => appendMissingDocuments(current, newTasks));
+      setStudents(current => current.map(item => item.id === student.id ? updatedStudent : item));
+      if (completedAppointment) setAppointments(current => current.map(item => item.id === completedAppointment.id ? completedAppointment : item));
       setDraftForm(null);
       notify('상담 기록을 저장했습니다.');
       navigate(`/students/${student.id}`);
