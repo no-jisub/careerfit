@@ -1,6 +1,8 @@
 import { deleteApp, initializeApp } from 'firebase/app';
 import { connectAuthEmulator, createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { collection, connectFirestoreEmulator, doc, getDoc, getDocs, getFirestore, query, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { deleteApp as deleteAdminApp, initializeApp as initializeAdminApp } from 'firebase-admin/app';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 
 const app = initializeApp({
   apiKey: 'careerfit-emulator-key',
@@ -10,6 +12,8 @@ const app = initializeApp({
 });
 const auth = getAuth(app);
 const db = getFirestore(app);
+const adminApp = initializeAdminApp({ projectId: 'careerfit-local' }, 'careerfit-verification-admin');
+const adminAuth = getAdminAuth(adminApp);
 connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
 connectFirestoreEmulator(db, '127.0.0.1', 8080);
 
@@ -63,6 +67,17 @@ try {
     blockedFakeEmailVerification = error.code === 'permission-denied';
   }
   assert(blockedFakeEmailVerification, '이메일 미인증 사용자가 인증 상태를 직접 변경할 수 있습니다.');
+  await adminAuth.updateUser(signupCredential.user.uid, { emailVerified: true });
+  await signupCredential.user.reload();
+  await signupCredential.user.getIdToken(true);
+  await updateDoc(doc(db, 'studentRegistrations', signupCredential.user.uid), {
+    emailVerified: true,
+    updatedAt: new Date().toISOString(),
+  });
+  assert(
+    (await getDoc(doc(db, 'studentRegistrations', signupCredential.user.uid))).data().emailVerified === true,
+    '인증 완료 학생의 가입 문서가 최신 상태로 동기화되지 않았습니다.',
+  );
   await signOut(auth);
 
   const adminCredential = await signInWithEmailAndPassword(
@@ -348,6 +363,7 @@ try {
   console.log('- counselor global student access for combined operations role');
   console.log('- counselor managed user and student creation');
   console.log('- student self-signup and protected email verification status');
+  console.log('- verified student token refresh and registration status sync');
   console.log('- counselor self-assignment for verified pending students');
   console.log('- student login and own profile query');
   console.log('- student profile update limited to self-managed fields');
@@ -360,5 +376,6 @@ try {
   console.log('- counselor-only consultation note denied for student');
 } finally {
   await signOut(auth).catch(() => {});
+  await deleteAdminApp(adminApp);
   await deleteApp(app);
 }

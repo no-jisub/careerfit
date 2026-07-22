@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import Icon from '../components/Icon';
 import { useAuth } from '../auth/AuthContext';
@@ -40,6 +40,18 @@ export default function AccountStatusPage() {
   const { user, role, profile, accountStatus, refreshAccount, resendVerificationEmail, logout } = useAuth();
   const [message, setMessage] = useState('');
   const [working, setWorking] = useState(false);
+  useEffect(() => {
+    if (accountStatus !== 'emailVerificationRequired') return undefined;
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') refreshAccount().catch(() => {});
+    };
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [accountStatus, refreshAccount]);
   if (role) return <Navigate to={role === 'student' ? '/student' : '/dashboard'} replace />;
   if (!user) return <Navigate to="/login" replace />;
   const copy = statusCopy[accountStatus] || statusCopy.profileMissing;

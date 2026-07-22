@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { createUserWithEmailAndPassword, deleteUser, onAuthStateChanged, reload, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { auth, db, demoModeEnabled, firebaseAuthEnabled } from '../lib/firebase';
 
 const AuthContext = createContext(null);
@@ -45,6 +45,22 @@ function resolveAccountStatus(user, profile) {
   return 'approved';
 }
 
+async function syncStudentEmailVerification(user, profile) {
+  if (!user.emailVerified || profile?.role !== 'student') return;
+
+  // Firebase Auth의 이메일 인증 상태가 바뀐 직후에는 기존 ID 토큰에
+  // email_verified=false가 남아 있을 수 있으므로 Firestore 요청 전에 갱신합니다.
+  await user.getIdToken(true);
+  const registrationRef = doc(db, 'studentRegistrations', user.uid);
+  const registration = await getDoc(registrationRef);
+  if (!registration.exists() || registration.data().emailVerified === true) return;
+
+  await updateDoc(registrationRef, {
+    emailVerified: true,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(() => firebaseAuthEnabled ? null : localStorage.getItem('careerfit_role'));
@@ -57,6 +73,7 @@ export function AuthProvider({ children }) {
 
   const applyFirebaseSession = async nextUser => {
     const nextProfile = await resolveProfile(nextUser);
+    await syncStudentEmailVerification(nextUser, nextProfile);
     const nextStatus = resolveAccountStatus(nextUser, nextProfile);
     setUser(nextUser);
     setProfile(nextProfile);
@@ -77,6 +94,8 @@ export function AuthProvider({ children }) {
         return;
       }
       try {
+        // 인증 링크 처리 후 복귀한 세션에서도 최신 emailVerified 값을 읽습니다.
+        await reload(nextUser);
         await applyFirebaseSession(nextUser);
       } catch {
         setProfile(null);
@@ -180,12 +199,6 @@ export function AuthProvider({ children }) {
   const refreshAccount = async () => {
     if (!auth?.currentUser) return { role: null, status: null };
     await reload(auth.currentUser);
-    if (auth.currentUser.emailVerified) {
-      await setDoc(doc(db, 'studentRegistrations', auth.currentUser.uid), {
-        emailVerified: true,
-        updatedAt: new Date().toISOString(),
-      }, { merge: true }).catch(() => {});
-    }
     return applyFirebaseSession(auth.currentUser);
   };
 
