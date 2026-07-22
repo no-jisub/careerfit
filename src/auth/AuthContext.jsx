@@ -4,6 +4,11 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, demoModeEnabled, firebaseAuthEnabled } from '../lib/firebase';
 
 const AuthContext = createContext(null);
+const demoProfiles = {
+  admin: { displayName: '개발 관리자', role: 'admin', active: true },
+  counselor: { displayName: '박지현 상담사', role: 'counselor', active: true },
+  student: { displayName: '김하늘', role: 'student', active: true },
+};
 
 async function resolveProfile(user) {
   const token = await user.getIdTokenResult();
@@ -33,7 +38,10 @@ async function resolveProfile(user) {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(() => firebaseAuthEnabled ? null : localStorage.getItem('careerfit_role'));
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(() => {
+    const savedRole = firebaseAuthEnabled ? null : localStorage.getItem('careerfit_role');
+    return demoProfiles[savedRole] || null;
+  });
   const [loading, setLoading] = useState(firebaseAuthEnabled);
 
   useEffect(() => {
@@ -42,7 +50,7 @@ export function AuthProvider({ children }) {
       setUser(nextUser);
       if (!nextUser) {
         setRole(demoModeEnabled ? localStorage.getItem('careerfit_role') : null);
-        setProfile(null);
+        setProfile(demoProfiles[localStorage.getItem('careerfit_role')] || null);
         setLoading(false);
         return;
       }
@@ -75,13 +83,13 @@ export function AuthProvider({ children }) {
   };
 
   const loginDemo = async nextRole => {
-    if (!demoModeEnabled || !['counselor', 'student'].includes(nextRole)) {
+    if (!demoModeEnabled || !Object.hasOwn(demoProfiles, nextRole)) {
       throw new Error('데모 로그인이 허용되지 않았습니다.');
     }
     if (auth?.currentUser) await signOut(auth);
     localStorage.setItem('careerfit_role', nextRole);
     setUser(null);
-    setProfile(null);
+    setProfile(demoProfiles[nextRole]);
     setRole(nextRole);
     return nextRole;
   };
