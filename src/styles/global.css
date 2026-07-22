@@ -233,6 +233,10 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(35,86,216,.35); 
 .filter-card label > span { display: none; }
 .search-field { height: 44px; padding-left: 13px; border: 1px solid #dce2ec; border-radius: 11px; display: flex; align-items: center; gap: 8px; color: #8d97a8; background: white; }
 .search-field input { height: 42px; padding: 0; border: 0; box-shadow: none; font-size: 12px; }
+.tag-filter-card { margin: -6px 0 18px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: white; }
+.tag-filter-card > span { margin-right: 4px; color: #748096; font-size: 11px; font-weight: 800; }
+.tag-filter-card button, .tag-picker button { min-height: 32px; padding: 0 11px; border: 1px solid #dce3ed; border-radius: 10px; color: #5b677c; background: #f8fafc; font-size: 11px; font-weight: 800; }
+.tag-filter-card button.active, .tag-picker button.active { border-color: #8fb0f5; color: var(--blue); background: var(--blue-soft); }
 .student-list-card, .task-table-card { overflow: hidden; }
 .list-toolbar { min-height: 77px; padding: 19px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
 .list-toolbar h2 { margin: 0; font-size: 16px; }
@@ -314,6 +318,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(35,86,216,.35); 
 .modal-actions { margin-top: 8px; display: flex; justify-content: flex-end; gap: 8px; }
 .student-edit-modal { max-height: calc(100vh - 40px); overflow-y: auto; }
 .student-edit-modal textarea { margin-top: 7px; }
+.tag-picker { margin: 8px 0 3px; display: flex; gap: 7px; flex-wrap: wrap; }
 
 /* Consultation form */
 .form-page-header { margin-bottom: 22px; display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; }
@@ -459,6 +464,8 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(35,86,216,.35); 
 .student-welcome { min-height: 215px; padding: 36px 42px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; color: white; background: #1f438f; }
 .student-welcome h1 { margin: 10px 0; color: white; font-size: 31px; line-height: 1.35; letter-spacing: -1.4px; }
 .student-welcome p { margin: 0; color: #c3d4f8; font-size: 12px; }
+.student-profile-edit { min-height: 38px; margin-top: 18px; padding: 0 13px; border: 1px solid rgba(255,255,255,.28); border-radius: 11px; display: inline-flex; align-items: center; gap: 7px; color: white; background: rgba(255,255,255,.12); font-size: 11px; font-weight: 800; }
+.student-profile-edit:hover { background: rgba(255,255,255,.2); }
 .journey-progress { width: 310px; padding: 22px; border: 1px solid rgba(255,255,255,.12); border-radius: 15px; background: rgba(255,255,255,.08); }
 .journey-progress > div:first-child { display: flex; justify-content: space-between; }
 .journey-progress strong { color: white; font-size: 12px; }.journey-progress span { color: #cbd8f5; font-size: 10px; }
@@ -480,9 +487,29 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(35,86,216,.35); 
 .student-task-grid, .student-programs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .student-task-card { min-height: 130px; padding: 18px; border: 1px solid var(--border); border-radius: 14px; display: flex; gap: 12px; background: white; }
 .student-task-card > button { width: 24px; height: 24px; flex: 0 0 24px; padding: 0; border: 2px solid #b8c3d5; border-radius: 50%; background: white; }
+.student-task-card.complete { opacity: .46; }
+.student-task-card.complete h3 { text-decoration: line-through; }
+.student-task-card.complete > button { border-color: var(--green); color: white; background: var(--green); }
+.student-task-card.complete > button span { display: grid; place-items: center; }
 .student-task-card h3 { margin: 11px 0; font-size: 12px; line-height: 1.55; }.student-task-card p { margin: 0; display: flex; align-items: center; gap: 5px; color: #7e899b; font-size: 9px; }
 .student-programs { grid-template-columns: 1fr 1fr; }
-.student-programs article { padding: 22px; }.student-programs h3 { font-size: 16px; }.student-programs p { color: #69758c; font-size: 10px; line-height: 1.7; }.student-programs article > div { display: flex; justify-content: space-between; color: #7e899c; font-size: 9px; }.student-programs article > div span { display: flex; align-items: center; gap: 5px; }.student-programs article > button { margin-top: 15px; padding: 0; border: 0; display: flex; align-items: center; gap: 5px; color: var(--blue); background: transparent; font-size: 10px; font-weight: 700; }
+.student-program-toggle { flex: 0 0 auto; }
+.student-program-section.recommended { padding: 20px; border: 1px solid #dfe8fb; border-radius: 18px; background: #f7faff; }
+.student-program-section.all { padding-top: 4px; border-top: 1px solid #e5eaf2; }
+.student-program-keywords { margin: 2px 0 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+.student-program-keywords button { min-height: 34px; padding: 0 12px; border: 1px solid #dce3ed; border-radius: 999px; color: #5d687c; background: white; font-size: 11px; font-weight: 800; }
+.student-program-keywords button.active { border-color: var(--blue); color: white; background: var(--blue); }
+.student-program-section.recommended .student-programs { grid-template-columns: 1fr 1fr; }
+.student-program-section.all .student-programs { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.student-program-card { padding: 22px; }
+.student-program-card-top { margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.student-program-card-top strong { padding: 6px 9px; border-radius: 999px; color: #155c41; background: #ddf5e9; font-size: 10px; }
+.student-program-card-top small { color: #8a94a6; font-size: 9px; font-weight: 700; text-align: right; }
+.student-program-card.recommend-card, .student-program-card.all-card { border-color: #d7e0ef; background: white; box-shadow: 0 12px 28px rgba(38,76,151,.1); }
+.student-program-card.recommend-card, .student-program-card.recommend-in-all { border-color: var(--green); box-shadow: 0 12px 28px rgba(38,76,151,.1), 0 0 0 1px rgba(38,160,105,.16); }
+.student-program-card.all-card h3 { min-height: 52px; font-size: 16px; }
+.student-program-card.all-card p { min-height: 92px; }
+.student-programs h3 { font-size: 16px; }.student-programs p { color: #69758c; font-size: 10px; line-height: 1.7; }.student-programs article > div:not(.student-program-card-top) { display: flex; justify-content: space-between; color: #7e899c; font-size: 9px; }.student-programs article > div span { display: flex; align-items: center; gap: 5px; }.student-programs article > button { margin-top: 15px; padding: 0; border: 0; display: flex; align-items: center; gap: 5px; color: var(--blue); background: transparent; font-size: 10px; font-weight: 700; }
 .student-portal footer { min-height: 70px; padding: 0 max(24px, calc((100vw - 1100px)/2)); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; color: #8e98a9; background: white; font-size: 9px; }
 
 @media (max-width: 1120px) {
@@ -527,6 +554,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(35,86,216,.35); 
   .login-form-panel { min-height: 100vh; padding: 35px; }
   .mobile-logo { margin-bottom: 70px; display: flex; align-items: center; gap: 9px; color: var(--navy); font-weight: 800; font-size: 19px; }
   .student-dashboard-grid { grid-template-columns: 1fr; }
+  .student-program-section.all .student-programs { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 600px) {
@@ -607,6 +635,9 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(35,86,216,.35); 
   .task-due { grid-column: 2; grid-row: 3; }
   .task-actions { grid-column: 1 / -1; grid-row: 4; justify-content: stretch; }
   .task-actions label { flex: 1; }.task-actions select { width: 100%; }.task-actions .button { flex: 1; }
+  .student-program-section.recommended, .student-program-section.all { padding: 0; border: 0; background: transparent; }
+  .student-program-section.recommended .student-programs, .student-program-section.all .student-programs { grid-template-columns: 1fr; }
+  .student-program-toggle { width: 100%; justify-content: center; margin-top: 12px; }
   .consultation-index > a { padding: 16px; grid-template-columns: minmax(0, 1fr) 18px; gap: 10px; }
   .consultation-index time { grid-column: 1; grid-row: 1; align-self: end; }
   .consultation-index a > div { grid-column: 1; }.consultation-index a > svg { grid-column: 2; grid-row: 1 / 3; }
