@@ -484,6 +484,18 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(35,86,216,.35); 
 .recent-summary { padding: 23px; }
 .recent-summary h2 { margin: 0 0 10px; font-size: 15px; }.recent-summary > p { color: #667289; font-size: 10px; line-height: 1.75; }.recent-summary > div { padding: 11px; border-radius: 9px; background: #f3f6fb; }.recent-summary > div span, .recent-summary > div strong { display: block; font-size: 9px; }.recent-summary > div strong { margin-top: 4px; }.recent-summary > small { display: block; margin-top: 12px; color: #919bac; font-size: 8px; }
 .student-section { margin-top: 30px; }
+.student-ai-qa { margin-top: 24px; padding: 24px; }
+.qa-thread { max-height: 310px; overflow-y: auto; padding: 14px; border: 1px solid #e1e8f3; border-radius: 14px; display: flex; flex-direction: column; gap: 10px; background: #f8fbff; }
+.qa-message { max-width: 82%; padding: 12px 14px; border-radius: 14px; color: #526079; background: white; box-shadow: 0 1px 0 rgba(23,34,59,.04); }
+.qa-message strong { display: block; margin-bottom: 5px; color: #647089; font-size: 10px; }
+.qa-message p { margin: 0; white-space: pre-line; font-size: 11px; line-height: 1.65; }
+.qa-message.user { align-self: flex-end; color: white; background: var(--blue); }
+.qa-message.user strong, .qa-message.user p { color: white; }
+.qa-message.assistant { align-self: flex-start; border: 1px solid #dce7f8; }
+.qa-quick { margin: 13px 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.qa-quick button { min-height: 34px; padding: 0 11px; border: 1px solid #dce3ed; border-radius: 999px; color: #4f5d73; background: white; font-size: 11px; font-weight: 800; }
+.qa-quick button:hover { border-color: #b9cef8; color: var(--blue); background: var(--blue-soft); }
+.qa-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
 .student-task-grid, .student-programs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .student-task-card { min-height: 130px; padding: 18px; border: 1px solid var(--border); border-radius: 14px; display: flex; gap: 12px; background: white; }
 .student-task-card > button { width: 24px; height: 24px; flex: 0 0 24px; padding: 0; border: 2px solid #b8c3d5; border-radius: 50%; background: white; }
@@ -638,6 +650,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(35,86,216,.35); 
   .student-program-section.recommended, .student-program-section.all { padding: 0; border: 0; background: transparent; }
   .student-program-section.recommended .student-programs, .student-program-section.all .student-programs { grid-template-columns: 1fr; }
   .student-program-toggle { width: 100%; justify-content: center; margin-top: 12px; }
+  .qa-form { grid-template-columns: 1fr; }
   .consultation-index > a { padding: 16px; grid-template-columns: minmax(0, 1fr) 18px; gap: 10px; }
   .consultation-index time { grid-column: 1; grid-row: 1; align-self: end; }
   .consultation-index a > div { grid-column: 1; }.consultation-index a > svg { grid-column: 2; grid-row: 1 / 3; }
