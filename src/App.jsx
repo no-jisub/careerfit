@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import AppLayout from './components/AppLayout';
 import { initialStudents } from './data/students';
 import { initialConsultations } from './data/consultations';
+import { initialConsultationSummaries } from './data/consultationSummaries';
 import { initialFollowUps } from './data/followUps';
 import { initialAppointments } from './data/appointments';
 import { initialUsers } from './data/users';
@@ -48,6 +49,7 @@ function AppProvider({ children }) {
   const [studentRegistrations, setStudentRegistrations] = useState(() => syncingRemoteData ? [] : read('careerfit_student_registrations', initialStudentRegistrations));
   const [students, setStudents] = useState(() => syncingRemoteData ? [] : read('careerfit_students', initialStudents).map(student => student.appointment && !student.appointmentDate ? { ...student, appointmentDate: toDateKey() } : student));
   const [consultations, setConsultations] = useState(() => syncingRemoteData ? [] : read('careerfit_consultations', initialConsultations));
+  const [consultationSummaries, setConsultationSummaries] = useState(() => syncingRemoteData ? [] : read('careerfit_consultation_summaries', initialConsultationSummaries));
   const [consultationNotes, setConsultationNotes] = useState(() => syncingRemoteData ? [] : read('careerfit_consultation_notes', []));
   const [followUps, setFollowUps] = useState(() => syncingRemoteData ? [] : read('careerfit_followups', initialFollowUps).map(followUp => ({ ...followUp, status: resolveFollowUpStatus(followUp) })));
   const [appointments, setAppointments] = useState(() => syncingRemoteData ? [] : read('careerfit_appointments', initialAppointments));
@@ -60,6 +62,7 @@ function AppProvider({ children }) {
 
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_students', JSON.stringify(students)); }, [students, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_consultations', JSON.stringify(consultations)); }, [consultations, syncingRemoteData]);
+  useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_consultation_summaries', JSON.stringify(consultationSummaries)); }, [consultationSummaries, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_consultation_notes', JSON.stringify(consultationNotes)); }, [consultationNotes, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_followups', JSON.stringify(followUps)); }, [followUps, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_appointments', JSON.stringify(appointments)); }, [appointments, syncingRemoteData]);
@@ -79,7 +82,7 @@ function AppProvider({ children }) {
     const loaded = new Set();
     const markLoaded = name => {
       loaded.add(name);
-      const expectedCount = isOperationsStaff(role) ? 8 : 5;
+      const expectedCount = isOperationsStaff(role) ? 9 : 5;
       if (loaded.size === expectedCount) setDataLoading(false);
     };
     return subscribeCareerData(
@@ -89,6 +92,7 @@ function AppProvider({ children }) {
         studentRegistrations: items => { setStudentRegistrations(items); markLoaded('studentRegistrations'); },
         students: items => { setStudents(items); markLoaded('students'); },
         consultations: items => { setConsultations(items); markLoaded('consultations'); },
+        consultationSummaries: items => { setConsultationSummaries(items); markLoaded('consultationSummaries'); },
         consultationNotes: items => { setConsultationNotes(items); markLoaded('consultationNotes'); },
         followUps: items => { setFollowUps(items.map(followUp => ({ ...followUp, status: resolveFollowUpStatus(followUp) }))); markLoaded('followUps'); },
         appointments: items => { setAppointments(items); markLoaded('appointments'); },
@@ -104,6 +108,7 @@ function AppProvider({ children }) {
     if (name === 'students') return { ...record, counselorUid: record.counselorUid || user.uid };
     if (name === 'consultationNotes') return { ...record, counselorUid: record.counselorUid || user.uid };
     if (name === 'consultations') return { ...record, counselorUid: record.counselorUid || user.uid, studentUid: record.studentUid || student?.uid || '', studentVisible: record.studentVisible ?? true };
+    if (name === 'consultationSummaries') return { ...record, counselorUid: record.counselorUid || user.uid, studentUid: record.studentUid || student?.uid || '' };
     if (name === 'followUps') return { ...record, ownerUid: record.ownerUid || user.uid, assigneeUid: record.assigneeUid || (record.owner === '학생' ? student?.uid || '' : user.uid) };
     if (name === 'appointments') return { ...record, counselorUid: record.counselorUid || student?.counselorUid || user.uid, studentUid: record.studentUid || student?.uid || '' };
     return record;
@@ -138,7 +143,23 @@ function AppProvider({ children }) {
     setProgramRecommendations(initialProgramRecommendations);
   };
 
-  const value = useMemo(() => ({ users, setUsers, studentRegistrations, setStudentRegistrations, students, setStudents, consultations, setConsultations, consultationNotes, setConsultationNotes, followUps, setFollowUps, appointments, setAppointments, recordDeletionRequests, setRecordDeletionRequests, programs, setPrograms, programRecommendations, setProgramRecommendations, resetProgramDemo, persistDocument, persistDocumentGroup, toast, notify: setToast, draftForm, setDraftForm }), [users, studentRegistrations, students, consultations, consultationNotes, followUps, appointments, recordDeletionRequests, programs, programRecommendations, toast, draftForm, user]);
+  const resetDemoData = () => {
+    setUsers(initialUsers);
+    setStudentRegistrations(initialStudentRegistrations);
+    setStudents(initialStudents.map(student => student.appointment && !student.appointmentDate ? { ...student, appointmentDate: toDateKey() } : student));
+    setConsultations(initialConsultations);
+    setConsultationSummaries(initialConsultationSummaries);
+    setConsultationNotes([]);
+    setFollowUps(initialFollowUps.map(followUp => ({ ...followUp, status: resolveFollowUpStatus(followUp) })));
+    setAppointments(initialAppointments);
+    setRecordDeletionRequests(initialRecordDeletionRequests);
+    setPrograms(initialPrograms);
+    setProgramRecommendations(initialProgramRecommendations);
+    setDraftForm(null);
+    setToast('발표용 데모 데이터를 처음 상태로 되돌렸습니다.');
+  };
+
+  const value = useMemo(() => ({ users, setUsers, studentRegistrations, setStudentRegistrations, students, setStudents, consultations, setConsultations, consultationSummaries, setConsultationSummaries, consultationNotes, setConsultationNotes, followUps, setFollowUps, appointments, setAppointments, recordDeletionRequests, setRecordDeletionRequests, programs, setPrograms, programRecommendations, setProgramRecommendations, resetProgramDemo, resetDemoData, persistDocument, persistDocumentGroup, toast, notify: setToast, draftForm, setDraftForm }), [users, studentRegistrations, students, consultations, consultationSummaries, consultationNotes, followUps, appointments, recordDeletionRequests, programs, programRecommendations, toast, draftForm, user]);
   if (dataLoading) return <main className="app-loading" role="status">상담 데이터를 불러오고 있어요...</main>;
   return <AppContext.Provider value={value}>{children}{toast && <div className="toast" role="status" aria-live="polite"><span>✓</span>{toast}</div>}</AppContext.Provider>;
 }

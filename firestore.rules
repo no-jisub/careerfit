@@ -76,10 +76,29 @@ service cloud.firestore {
         && validText(data.summary, 5000)
         && data.studentVisible is bool
         && validOptionalText(data, 'guidance', 5000)
+        && validOptionalText(data, 'strengths', 2000)
         && validOptionalText(data, 'concern', 5000)
         && validOptionalText(data, 'studentActions', 2000)
         && validOptionalText(data, 'counselorActions', 2000)
         && validOptionalText(data, 'nextCheckItems', 2000);
+    }
+
+    function validConsultationSummary(data) {
+      return validText(data.consultationId, 128)
+        && validText(data.studentId, 128)
+        && validText(data.studentUid, 128)
+        && validText(data.counselorUid, 128)
+        && validText(data.date, 10)
+        && validText(data.type, 80)
+        && validText(data.purpose, 500)
+        && validOptionalText(data, 'summary', 5000)
+        && validOptionalText(data, 'strengths', 2000)
+        && validOptionalText(data, 'concern', 5000)
+        && validOptionalText(data, 'studentActions', 2000)
+        && validOptionalText(data, 'nextCheckItems', 2000)
+        && data.get('programs', []) is list
+        && data.get('visibleFields', []) is list
+        && data.published is bool;
     }
 
     function validConsultationNote(data) {
@@ -108,7 +127,7 @@ service cloud.firestore {
         && validText(data.type, 80)
         && validText(data.location, 200)
         && validOptionalText(data, 'preparation', 1000)
-        && data.status in ['scheduled', 'completed', 'cancelled'];
+        && data.status in ['pending', 'confirmed', 'scheduled', 'completed', 'cancelled'];
     }
 
     function validRecordDeletionRequest(data) {
@@ -214,6 +233,11 @@ service cloud.firestore {
           && request.resource.data.counselorUid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['status', 'counselorUid', 'assignedAt', 'updatedAt']))
+        || (isCounselor()
+          && resource.data.status == 'approved'
+          && request.resource.data.status == 'approved'
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['counselorUid', 'updatedAt']))
         || (signedIn()
           && request.auth.uid == userId
           && request.auth.token.email_verified == true
@@ -243,10 +267,7 @@ service cloud.firestore {
     }
 
     match /consultations/{consultationId} {
-      allow read: if isStaff()
-        || (isStudent()
-          && resource.data.studentUid == request.auth.uid
-          && resource.data.studentVisible == true);
+      allow read: if isStaff();
       allow create: if validConsultation(request.resource.data) && (isStaff()
         || (isCounselor()
           && request.resource.data.counselorUid == request.auth.uid
@@ -261,6 +282,16 @@ service cloud.firestore {
           && request.resource.data.counselorUid == resource.data.counselorUid
           && request.resource.data.studentUid == resource.data.studentUid
           && request.resource.data.studentId == resource.data.studentId));
+      allow delete: if isStaff();
+    }
+
+    match /consultationSummaries/{summaryId} {
+      allow read: if isStaff()
+        || (isStudent()
+          && resource.data.studentUid == request.auth.uid
+          && resource.data.published == true);
+      allow create, update: if isStaff()
+        && validConsultationSummary(request.resource.data);
       allow delete: if isStaff();
     }
 
@@ -318,7 +349,16 @@ service cloud.firestore {
           && resource.data.counselorUid == request.auth.uid
           && request.resource.data.counselorUid == resource.data.counselorUid
           && request.resource.data.studentUid == resource.data.studentUid
-          && request.resource.data.studentId == resource.data.studentId));
+          && request.resource.data.studentId == resource.data.studentId)
+        || (isStudent()
+          && resource.data.studentUid == request.auth.uid
+          && request.resource.data.studentUid == resource.data.studentUid
+          && request.resource.data.studentId == resource.data.studentId
+          && request.resource.data.counselorUid == resource.data.counselorUid
+          && resource.data.status in ['pending', 'confirmed', 'scheduled']
+          && request.resource.data.status == 'cancelled'
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'cancelledAt', 'cancelledBy', 'updatedAt'])));
       allow delete: if isStaff();
     }
 

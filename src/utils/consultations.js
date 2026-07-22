@@ -1,0 +1,38 @@
+export const consultationPublicFieldOptions = [
+  { key: 'summary', label: '상담 요약' },
+  { key: 'strengths', label: '학생의 강점' },
+  { key: 'concern', label: '개선 또는 고민 사항' },
+  { key: 'programs', label: '추천 프로그램' },
+  { key: 'studentActions', label: '후속 조치' },
+  { key: 'nextCheckItems', label: '다음 상담 계획' },
+];
+
+export const defaultConsultationVisibility = Object.fromEntries(
+  consultationPublicFieldOptions.map(item => [item.key, true]),
+);
+
+export function buildConsultationSummary(consultation, visibility = defaultConsultationVisibility) {
+  const visibleFields = consultationPublicFieldOptions.filter(item => visibility[item.key]).map(item => item.key);
+  const isVisible = key => visibleFields.includes(key);
+  return {
+    id: consultation.id,
+    consultationId: consultation.id,
+    studentId: consultation.studentId,
+    studentUid: consultation.studentUid || '',
+    counselorUid: consultation.counselorUid || '',
+    counselor: consultation.counselor || '',
+    date: consultation.date,
+    type: consultation.type,
+    purpose: consultation.purpose,
+    summary: isVisible('summary') ? consultation.summary || '' : '',
+    strengths: isVisible('strengths') ? consultation.strengths || '' : '',
+    concern: isVisible('concern') ? consultation.concern || '' : '',
+    programs: isVisible('programs') ? consultation.programs || [] : [],
+    studentActions: isVisible('studentActions') ? consultation.studentActions || '' : '',
+    nextCheckItems: isVisible('nextCheckItems') ? consultation.nextCheckItems || '' : '',
+    visibleFields,
+    published: visibleFields.length > 0 && consultation.studentVisible !== false,
+    createdAt: consultation.createdAt,
+    updatedAt: consultation.updatedAt,
+  };
+}

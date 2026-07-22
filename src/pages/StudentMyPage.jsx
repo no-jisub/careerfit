@@ -7,7 +7,7 @@ import { useAuth } from '../auth/AuthContext';
 import StudentProgramSection from '../components/StudentProgramSection';
 
 export default function StudentMyPage() {
-  const { students, setStudents, consultations, followUps, appointments, setFollowUps, recordDeletionRequests, setRecordDeletionRequests, persistDocument, notify } = useApp();
+  const { students, setStudents, consultationSummaries, followUps, appointments, setAppointments, setFollowUps, recordDeletionRequests, setRecordDeletionRequests, persistDocument, notify } = useApp();
   const { user, requestAccountWithdrawal, logout } = useAuth();
   const student = user ? students.find(item => item.uid === user.uid) : students[0];
   const [showProfileEdit, setShowProfileEdit] = useState(false);
@@ -23,11 +23,11 @@ export default function StudentMyPage() {
     return () => window.removeEventListener('keydown', closeModal);
   }, [showProfileEdit, savingProfile]);
   if (!student) return <main className="app-loading" role="status">연결된 학생 정보를 찾고 있어요...</main>;
-  const visibleConsultations = consultations.filter(c => c.studentId === student.id && c.studentVisible !== false).sort((a,b) => b.date.localeCompare(a.date));
+  const visibleConsultations = consultationSummaries.filter(c => c.studentId === student.id && c.published !== false).sort((a,b) => b.date.localeCompare(a.date));
   const latest = visibleConsultations[0];
   const tasks = followUps.filter(f => f.studentId === student.id);
   const studentTasks = tasks.filter(t => t.owner === '학생');
-  const nextAppointment = appointments.filter(item => item.studentId === student.id && item.status === 'scheduled' && item.date >= toDateKey()).sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`))[0];
+  const nextAppointment = appointments.filter(item => item.studentId === student.id && ['pending', 'confirmed', 'scheduled'].includes(item.status) && item.date >= toDateKey()).sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`))[0];
   const appointmentDate = nextAppointment ? getAppointmentDateParts(nextAppointment.date) : null;
   const openProfileEdit = () => {
     setProfileForm({
@@ -68,6 +68,16 @@ export default function StudentMyPage() {
       await persistDocument('followUps', updated);
       setFollowUps(items => items.map(followUp => followUp.id === id ? updated : followUp));
       notify('내 다음 행동을 완료 처리했습니다.');
+    } catch { /* 공통 저장 오류 안내를 사용합니다. */ }
+  };
+  const cancelAppointment = async appointment => {
+    if (!window.confirm('이 상담 예약을 취소할까요?')) return;
+    const now = new Date().toISOString();
+    const updated = { ...appointment, status: 'cancelled', cancelledAt: now, cancelledBy: student.uid || user?.uid || 'demo-student-s1', updatedAt: now };
+    try {
+      await persistDocument('appointments', updated);
+      setAppointments(items => items.map(item => item.id === updated.id ? updated : item));
+      notify('상담 예약을 취소했습니다.');
     } catch { /* 공통 저장 오류 안내를 사용합니다. */ }
   };
   const requestRecordDeletion = async consultation => {
@@ -111,7 +121,7 @@ export default function StudentMyPage() {
   };
   return <div className="student-portal"><header><div className="brand"><span className="brand-mark"><Icon name="target" size={22} /></span><span>커리어<span>핏</span></span></div><div><button className="icon-button" aria-label="알림"><Icon name="bell" /></button><strong>{student.name}</strong><button className="text-button" onClick={logout}>로그아웃</button></div></header><main>
     <section className="student-welcome"><div><span className="eyebrow">나의 상담 여정</span><h1>{student.name}님, 다음 걸음을<br />차근차근 준비해 볼까요?</h1><p>상담에서 정한 행동과 추천 프로그램을 한곳에서 확인하세요.</p><button className="student-profile-edit" onClick={openProfileEdit}><Icon name="settings" size={16} />내 정보 수정</button></div><div className="journey-progress"><div><strong>이번 주 진행률</strong><span>{tasks.filter(t => t.status === 'complete').length}/{tasks.length} 완료</span></div><div className="progress-track"><i style={{ width: `${tasks.length ? tasks.filter(t => t.status === 'complete').length / tasks.length * 100 : 0}%` }} /></div><p>한 걸음씩 충분히 잘하고 있어요!</p></div></section>
-    <div className="student-dashboard-grid">{nextAppointment ? <section className="next-appointment"><span className="eyebrow light">다음 상담 일정</span><div><span className="date-block"><strong>{appointmentDate.day}</strong><small>{appointmentDate.monthAndWeekday}</small></span><div><h2>{student.counselor || '담당 상담사'} 상담사와 {nextAppointment.type}</h2><p><Icon name="clock" size={16} />{getDayPeriod(nextAppointment.time)} {nextAppointment.time} · {nextAppointment.location}</p><span>{nextAppointment.preparation ? `준비할 내용 · ${nextAppointment.preparation}` : '별도 준비사항이 없습니다.'}</span></div></div><button onClick={() => notify('상담 일정 상세를 확인했습니다.')}>일정 자세히 보기 <Icon name="arrow" size={17} /></button></section> : <section className="next-appointment empty-appointment"><span className="eyebrow light">다음 상담 일정</span><h2>예정된 상담이 없습니다</h2><p>새 일정이 등록되면 이곳에서 확인할 수 있어요.</p></section>}<section className="card recent-summary"><span className="eyebrow">최근 공개 상담 요약</span>{latest ? <><h2>{latest.purpose}</h2><p>{latest.summary}</p><div><span>다음 확인</span><strong>{latest.nextCheckItems}</strong></div><small>상담일 {latest.date} · {latest.counselor || student.counselor} 상담사</small></> : <EmptyState title="공개된 상담 요약이 없습니다" description="담당 상담사가 공개한 상담 기록이 이곳에 표시됩니다." />}</section></div>
+    <div className="student-dashboard-grid">{nextAppointment ? <section className="next-appointment"><span className="eyebrow light">다음 상담 일정 · {nextAppointment.status === 'pending' ? '승인 대기' : '확정'}</span><div><span className="date-block"><strong>{appointmentDate.day}</strong><small>{appointmentDate.monthAndWeekday}</small></span><div><h2>{student.counselor || '담당 상담사'} 상담사와 {nextAppointment.type}</h2><p><Icon name="clock" size={16} />{getDayPeriod(nextAppointment.time)} {nextAppointment.time} · {nextAppointment.location}</p><span>{nextAppointment.preparation ? `준비할 내용 · ${nextAppointment.preparation}` : '별도 준비사항이 없습니다.'}</span></div></div><div className="student-appointment-actions"><button onClick={() => notify('상담 일정 상세를 확인했습니다.')}>일정 자세히 보기 <Icon name="arrow" size={17} /></button><button onClick={() => cancelAppointment(nextAppointment)}>예약 취소</button></div></section> : <section className="next-appointment empty-appointment"><span className="eyebrow light">다음 상담 일정</span><h2>예정된 상담이 없습니다</h2><p>새 일정이 등록되면 이곳에서 확인할 수 있어요.</p></section>}<section className="card recent-summary"><span className="eyebrow">최근 공개 상담 요약</span>{latest ? <><h2>{latest.purpose}</h2><div className="published-summary-fields">{latest.summary && <div><span>상담 요약</span><p>{latest.summary}</p></div>}{latest.strengths && <div><span>나의 강점</span><p>{latest.strengths}</p></div>}{latest.concern && <div><span>개선 또는 고민 사항</span><p>{latest.concern}</p></div>}{latest.programs?.length > 0 && <div><span>추천 프로그램</span><p>{latest.programs.join(', ')}</p></div>}{latest.studentActions && <div><span>후속 조치</span><p>{latest.studentActions}</p></div>}{latest.nextCheckItems && <div><span>다음 상담 계획</span><p>{latest.nextCheckItems}</p></div>}</div><small>상담일 {latest.date} · {latest.counselor || student.counselor} 상담사</small></> : <EmptyState title="공개된 상담 요약이 없습니다" description="담당 상담사가 공개한 상담 기록이 이곳에 표시됩니다." />}</section></div>
     <section className="student-section"><div className="section-header"><div><span className="eyebrow">나의 다음 행동</span><h2>이번 상담 후 해야 할 일</h2><p>완료한 항목은 흐리게 남겨 진행 이력을 확인할 수 있어요.</p></div></div><div className="student-task-grid">{studentTasks.map(t => <article className={`student-task-card ${t.status === 'complete' ? 'complete' : ''}`} key={t.id}><button aria-label={`${t.content} 완료 처리`} onClick={() => complete(t.id)} disabled={t.status === 'complete'}><span>{t.status === 'complete' ? <Icon name="check" size={16} /> : null}</span></button><div><StatusBadge status={t.status} context="followUp" /><h3>{t.content}</h3><p><Icon name="calendar" size={15} />{t.dueDate}까지</p></div></article>)}</div>{!studentTasks.length && <EmptyState title="등록된 후속 조치가 없습니다" description="새로운 다음 행동이 등록되면 이곳에서 확인할 수 있어요." />}</section>
     <section className="student-section card student-record-management"><div className="section-header"><div><span className="eyebrow">상담 기록 관리</span><h2>공개된 상담 기록과 삭제 요청</h2><p>삭제 요청은 담당 상담사가 확인한 뒤 승인하거나 반려합니다.</p></div></div>{visibleConsultations.length ? <div className="student-record-list">{visibleConsultations.map(item => { const request = recordDeletionRequests.find(candidate => candidate.consultationId === item.id); return <article key={item.id}><div><strong>{item.purpose}</strong><span>{item.date} · {item.type}</span></div>{request ? <span className={`request-status ${request.status}`}>{request.status === 'pending' ? '삭제 검토 중' : request.status === 'approved' ? '삭제 승인' : '삭제 반려'}</span> : <button className="text-button danger" onClick={() => requestRecordDeletion(item)}>삭제 요청</button>}</article>; })}</div> : <EmptyState title="공개된 상담 기록이 없습니다" />}</section>
     <StudentProgramSection student={student} notify={notify} />

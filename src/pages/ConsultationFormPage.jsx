@@ -7,8 +7,9 @@ import { generateConsultationDraft } from '../services/consultationAiService';
 import { addDays, toDateKey } from '../utils/date';
 import { useAuth } from '../auth/AuthContext';
 import { cleanText, validateConsultationInput } from '../utils/validation';
+import { buildConsultationSummary, consultationPublicFieldOptions, defaultConsultationVisibility } from '../utils/consultations';
 
-const createEmptyForm = () => { const today = toDateKey(); return { date: today, type: '진로 탐색', purpose: '관심 직무 구체화 및 경험 계획 수립', currentConcern: '', rawMemo: '', guidance: '', programs: [], studentActions: '', counselorActions: '', nextCheckItems: '', nextDate: addDays(today, 14), studentVisible: true }; };
+const createEmptyForm = () => { const today = toDateKey(); return { date: today, type: '진로 탐색', purpose: '관심 직무 구체화 및 경험 계획 수립', currentConcern: '', rawMemo: '', guidance: '', strengths: '', programs: [], studentActions: '', counselorActions: '', nextCheckItems: '', nextDate: addDays(today, 14), studentVisible: true, visibility: { ...defaultConsultationVisibility } }; };
 const appendMissingDocuments = (current, additions) => [
   ...current,
   ...additions.filter(addition => !current.some(item => item.id === addition.id)),
@@ -18,7 +19,7 @@ export default function ConsultationFormPage() {
   const { studentId } = useParams();
   const navigate = useNavigate();
   const { profile, user } = useAuth();
-  const { students, setStudents, setConsultations, setConsultationNotes, setFollowUps, appointments, setAppointments, persistDocumentGroup, notify, draftForm, setDraftForm } = useApp();
+  const { students, setStudents, setConsultations, setConsultationSummaries, setConsultationNotes, setFollowUps, appointments, setAppointments, persistDocumentGroup, notify, draftForm, setDraftForm } = useApp();
   const student = students.find(s => s.id === studentId);
   const [form, setForm] = useState(() => draftForm?.studentId === student?.id ? draftForm.form : { ...createEmptyForm(), currentConcern: student?.concern || '' });
   const [aiDraft, setAiDraft] = useState(null);
@@ -55,18 +56,22 @@ export default function ConsultationFormPage() {
       purpose: cleanText(draft.purpose, 500),
       summary: cleanText(draft.summary, 5000),
       concern: cleanText(draft.concern, 5000),
+      strengths: cleanText(form.strengths, 2000),
       guidance: cleanText(draft.guidance, 5000),
       studentActions: cleanText(draft.studentActions, 2000),
       counselorActions: cleanText(draft.counselorActions, 2000),
       nextCheckItems: cleanText(draft.nextCheckItems, 2000),
     };
     const now = new Date().toISOString();
-    const consultation = { id: `c${Date.now()}`, studentId: student.id, date: form.date, type: form.type, purpose: final.purpose, counselor: (profile?.displayName || user?.displayName || '상담 담당자').replace(/\s*상담사$/, ''), summary: final.summary, concern: final.concern, guidance: final.guidance, programs: final.programs, studentActions: final.studentActions, counselorActions: final.counselorActions, nextCheckItems: final.nextCheckItems, studentVisible: form.studentVisible, createdAt: now, updatedAt: now };
+    const counselorUid = user?.uid || profile?.id || 'demo-counselor';
+    const publication = { ...defaultConsultationVisibility, ...(form.visibility || {}) };
+    const consultation = { id: `c${Date.now()}`, studentId: student.id, studentUid: student.uid || '', counselorUid, date: form.date, type: form.type, purpose: final.purpose, counselor: (profile?.displayName || user?.displayName || '상담 담당자').replace(/\s*상담사$/, ''), summary: final.summary, strengths: final.strengths, concern: final.concern, guidance: final.guidance, programs: final.programs, studentActions: final.studentActions, counselorActions: final.counselorActions, nextCheckItems: final.nextCheckItems, publication, studentVisible: Object.values(publication).some(Boolean), createdAt: now, updatedAt: now };
+    const publishedSummary = buildConsultationSummary(consultation, publication);
     const internalNote = { id: consultation.id, consultationId: consultation.id, studentId: student.id, note: safeForm.rawMemo, createdAt: now, updatedAt: now };
     const newTasks = [];
     if (studentTask.trim()) newTasks.push({ id: `f${Date.now()}a`, studentId: student.id, content: studentTask.trim(), owner: '학생', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date, createdAt: now, updatedAt: now });
     if (counselorTask.trim()) newTasks.push({ id: `f${Date.now()}b`, studentId: student.id, content: counselorTask.trim(), owner: '교직원', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date, createdAt: now, updatedAt: now });
-    const matchingAppointment = appointments.find(item => item.studentId === student.id && item.date === form.date && item.status === 'scheduled');
+    const matchingAppointment = appointments.find(item => item.studentId === student.id && item.date === form.date && ['confirmed', 'scheduled'].includes(item.status));
     const completedAppointment = matchingAppointment ? { ...matchingAppointment, status: 'completed', completedAt: now, updatedAt: now } : null;
     const updatedStudent = {
       ...student,
@@ -81,12 +86,14 @@ export default function ConsultationFormPage() {
     try {
       await persistDocumentGroup([
         { name: 'consultations', record: consultation },
+        { name: 'consultationSummaries', record: publishedSummary },
         { name: 'consultationNotes', record: internalNote },
         ...newTasks.map(record => ({ name: 'followUps', record })),
         { name: 'students', record: updatedStudent },
         ...(completedAppointment ? [{ name: 'appointments', record: completedAppointment }] : []),
       ]);
       setConsultations(current => appendMissingDocuments(current, [consultation]));
+      setConsultationSummaries(current => appendMissingDocuments(current, [publishedSummary]));
       setConsultationNotes(current => appendMissingDocuments(current, [internalNote]));
       setFollowUps(current => appendMissingDocuments(current, newTasks));
       setStudents(current => current.map(item => item.id === student.id ? updatedStudent : item));
@@ -112,7 +119,8 @@ export default function ConsultationFormPage() {
         <div className="form-section-title"><span>2</span><div><h2>상담 메모</h2><p>완성된 문장보다 중요한 키워드와 맥락을 편하게 남겨 주세요.</p></div></div>
         <label>학생의 현재 고민<textarea rows="3" value={form.currentConcern} onChange={e => update('currentConcern', e.target.value)} /></label>
         <label>상담 담당자 내부 메모 <span className="required">필수</span><textarea id="rawMemo" className="memo-area" rows="8" value={form.rawMemo} onChange={e => update('rawMemo', e.target.value)} placeholder="예: 개발 수업은 재미있었지만, 문제를 정의하고 사람들과 조율하는 역할에 더 흥미를 느낌..." /><small className="field-hint">이 원문 메모는 상담 담당자만 볼 수 있는 별도 공간에 저장됩니다.</small>{error && <span className="field-error" role="alert">{error}</span>}</label>
-        <label className="visibility-option"><input type="checkbox" checked={form.studentVisible ?? true} onChange={e => update('studentVisible', e.target.checked)} /><span><strong>정리된 상담 요약을 학생에게 공개</strong><small>내부 메모는 공개되지 않으며, AI 초안의 요약·안내·다음 행동만 학생 화면에 표시됩니다.</small></span></label>
+        <label>학생의 강점<textarea rows="3" value={form.strengths} onChange={e => update('strengths', e.target.value)} placeholder="상담 중 확인한 학생의 강점이나 긍정적인 자원을 입력하세요." /></label>
+        <fieldset className="publication-fieldset"><legend>학생에게 공개할 내용</legend><p>체크한 항목만 학생 화면에 표시됩니다. 상담사 내부 메모는 항상 비공개입니다.</p><div>{consultationPublicFieldOptions.map(item => <label key={item.key}><input type="checkbox" checked={form.visibility?.[item.key] ?? false} onChange={e => update('visibility', { ...form.visibility, [item.key]: e.target.checked })} /><span>{item.label}</span></label>)}</div></fieldset>
         <label>담당자가 안내한 내용<textarea rows="4" value={form.guidance} onChange={e => update('guidance', e.target.value)} placeholder="상담 중 안내한 자료나 조언을 입력하세요." /></label>
         <div className="selected-programs"><div><span className="eyebrow">안내 프로그램</span><h3>비교과 프로그램</h3></div><button className="button secondary small" onClick={openPrograms}><Icon name="spark" size={16} />추천 프로그램 찾기</button>{form.programs.length ? form.programs.map(p => <span className="selected-chip" key={p}>{p}<button aria-label={`${p} 삭제`} onClick={() => update('programs', form.programs.filter(x => x !== p))}><Icon name="close" size={14} /></button></span>) : <p>아직 추가한 프로그램이 없습니다.</p>}</div>
         <div className="form-divider" />

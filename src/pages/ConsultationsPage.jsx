@@ -6,7 +6,7 @@ import { EmptyState, PageIntro } from '../components/UI';
 import { useAuth } from '../auth/AuthContext';
 
 export default function ConsultationsPage() {
-  const { consultations, setConsultations, students, recordDeletionRequests, setRecordDeletionRequests, persistDocumentGroup, notify } = useApp();
+  const { consultations, setConsultations, consultationSummaries, setConsultationSummaries, students, recordDeletionRequests, setRecordDeletionRequests, persistDocumentGroup, notify } = useApp();
   const { user, profile } = useAuth();
   const [query, setQuery] = useState('');
   const [type, setType] = useState('all');
@@ -30,10 +30,13 @@ export default function ConsultationsPage() {
     const updatedRequest = { ...request, status: decision, resolutionReason: resolutionReason?.trim() || '', resolvedAt: now, resolvedBy: reviewerUid, updatedAt: now };
     const consultation = consultations.find(item => item.id === request.consultationId);
     const updatedConsultation = decision === 'approved' && consultation ? { ...consultation, studentVisible: false, deletionStatus: 'approved', deletionApprovedAt: now, updatedAt: now } : null;
+    const summary = consultationSummaries.find(item => item.consultationId === request.consultationId);
+    const updatedSummary = decision === 'approved' && summary ? { ...summary, published: false, updatedAt: now } : null;
     try {
-      await persistDocumentGroup([{ name: 'recordDeletionRequests', record: updatedRequest }, ...(updatedConsultation ? [{ name: 'consultations', record: updatedConsultation }] : [])]);
+      await persistDocumentGroup([{ name: 'recordDeletionRequests', record: updatedRequest }, ...(updatedConsultation ? [{ name: 'consultations', record: updatedConsultation }] : []), ...(updatedSummary ? [{ name: 'consultationSummaries', record: updatedSummary }] : [])]);
       setRecordDeletionRequests(items => items.map(item => item.id === updatedRequest.id ? updatedRequest : item));
       if (updatedConsultation) setConsultations(items => items.map(item => item.id === updatedConsultation.id ? updatedConsultation : item));
+      if (updatedSummary) setConsultationSummaries(items => items.map(item => item.id === updatedSummary.id ? updatedSummary : item));
       notify(`상담 기록 삭제 요청을 ${decision === 'approved' ? '승인' : '반려'}했습니다.`);
     } catch { /* 공통 오류 안내를 사용합니다. */ }
   };

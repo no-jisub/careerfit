@@ -1012,6 +1012,8 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .appointment-status { padding:6px 10px; border-radius:999px; background:var(--blue-soft); color:var(--blue); font-size:.78rem; font-weight:800; }
 .appointment-status.cancelled { background:var(--red-soft); color:var(--red); }
 .appointment-status.completed { background:var(--green-soft); color:var(--green); }
+.appointment-status.pending { background:#fff5df; color:#966614; }
+.appointment-status.confirmed { background:var(--blue-soft); color:var(--blue); }
 .appointment-actions { display:flex; align-items:center; gap:10px; }
 .text-button.danger { color:var(--red); }
 .empty-appointment { display:grid; align-content:center; gap:12px; }
@@ -1057,6 +1059,22 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .request-status.pending { color:#966614; background:#fff5df; }
 .request-status.approved { color:#177348; background:#eaf8f1; }
 .request-status.rejected { color:var(--red); background:var(--red-soft); }
+.publication-fieldset { margin:0; padding:16px; border:1px solid var(--border); border-radius:12px; }
+.publication-fieldset legend { padding:0 7px; color:var(--navy); font-size:13px; font-weight:900; }
+.publication-fieldset > p { margin:0 0 12px; color:var(--muted); font-size:12px; }
+.publication-fieldset > div { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; }
+.publication-fieldset label { margin:0; display:flex; align-items:center; gap:8px; font-size:12px; }
+.publication-fieldset input { width:17px; height:17px; margin:0; }
+.published-summary-fields { max-height:260px; overflow-y:auto; display:grid!important; gap:10px; background:transparent!important; }
+.published-summary-fields > div { padding:10px; border-radius:9px; background:#f3f6fb; }
+.published-summary-fields span { color:var(--blue)!important; font-size:10px!important; font-weight:800; }
+.published-summary-fields p { margin:4px 0 0!important; color:#526079!important; font-size:11px!important; }
+.student-appointment-actions { display:flex; gap:15px; }
+.student-appointment-actions button { margin-top:18px!important; }
+.consultation-record-footer { display:flex; justify-content:space-between; align-items:center; gap:14px; }
+.consultation-edit-modal { width:min(720px, calc(100% - 32px)); max-height:calc(100vh - 32px); overflow-y:auto; }
+.consultation-edit-modal form { display:grid; gap:13px; }
+@media (max-width:600px) { .publication-fieldset > div { grid-template-columns:1fr; } .consultation-record-footer { align-items:flex-start; flex-direction:column; } }
 @media (max-width:600px) { .student-account-actions, .deletion-request-list article, .student-record-list article { align-items:flex-start; flex-direction:column; } }
 @media (max-width: 800px) {
   .insight-kpis, .insight-grid { grid-template-columns: 1fr; }
