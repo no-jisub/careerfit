@@ -53,13 +53,44 @@ try {
     `배정 학생 필터 결과가 올바르지 않습니다: ${assignedStudents.docs.map(item => item.id).join(', ')}`,
   );
 
-  let blockedOtherStudent = false;
-  try {
-    await getDoc(doc(db, 'students', 's2'));
-  } catch (error) {
-    blockedOtherStudent = error.code === 'permission-denied';
-  }
-  assert(blockedOtherStudent, '다른 상담 담당자의 학생 문서 읽기가 차단되지 않았습니다.');
+  const allStudentsForCounselor = await getDocs(collection(db, 'students'));
+  assert(allStudentsForCounselor.size === 2, '상담 담당자가 운영 관리를 위해 전체 학생을 조회하지 못했습니다.');
+  assert((await getDoc(doc(db, 'students', 's2'))).exists(), '상담 담당자가 다른 담당자의 학생을 조회하지 못했습니다.');
+
+  const managedStudentUid = 'verification-counselor-managed-student';
+  const managedStudentId = 'verification-counselor-managed-profile';
+  const managedAt = new Date().toISOString();
+  const managedAccountGroup = writeBatch(db);
+  managedAccountGroup.set(doc(db, 'users', managedStudentUid), {
+    email: 'counselor-created-student@careerfit.local',
+    displayName: '상담사 등록 학생',
+    role: 'student',
+    active: true,
+    createdAt: managedAt,
+    updatedAt: managedAt,
+  });
+  managedAccountGroup.set(doc(db, 'students', managedStudentId), {
+    uid: managedStudentUid,
+    counselorUid: counselorCredential.user.uid,
+    counselor: '박지현',
+    name: '상담사 등록 학생',
+    studentNo: 'VERIFY-001',
+    department: '검증학과',
+    grade: '2학년',
+    phone: '010-0000-0000',
+    interests: ['진로 탐색'],
+    goal: '상담 담당자 운영 권한 검증',
+    concern: '계정 등록과 학생 배정 흐름 확인',
+    status: 'scheduled',
+    appointmentDate: '',
+    appointment: '',
+    lastConsultation: '',
+    createdAt: managedAt,
+    updatedAt: managedAt,
+  });
+  await managedAccountGroup.commit();
+  assert((await getDoc(doc(db, 'users', managedStudentUid))).exists(), '상담 담당자의 사용자 등록 권한을 확인하지 못했습니다.');
+  assert((await getDoc(doc(db, 'students', managedStudentId))).exists(), '상담 담당자의 학생 등록 권한을 확인하지 못했습니다.');
 
   const assignedAppointments = await getDocs(query(
     collection(db, 'appointments'),
@@ -184,7 +215,8 @@ try {
   console.log('- counselor login and role claim');
   console.log('- administrator login and managed user creation');
   console.log('- assigned student query (s1 only)');
-  console.log('- unassigned student read denied');
+  console.log('- counselor global student access for combined operations role');
+  console.log('- counselor managed user and student creation');
   console.log('- student login and own profile query');
   console.log('- student profile update limited to self-managed fields');
   console.log('- atomic consultation/note/follow-up document save');

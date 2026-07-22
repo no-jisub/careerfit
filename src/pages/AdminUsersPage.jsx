@@ -100,12 +100,12 @@ export default function AdminUsersPage() {
   };
 
   return <>
-    <PageIntro eyebrow="관리자" title="사용자와 담당 학생 관리" description="상담사와 학생 계정을 등록하고 담당 상담사를 배정합니다." />
+    <PageIntro eyebrow="운영 관리" title="사용자와 담당 학생 관리" description="상담 담당자가 상담사와 학생 계정을 등록하고 담당 상담사를 배정합니다." />
     <div className="admin-grid">
       <section className="card admin-create-card">
         <h2>새 계정 등록</h2>
         <form onSubmit={submit}>
-          <label>역할<select value={account.role} onChange={event => updateAccount('role', event.target.value)}><option value="counselor">상담사</option><option value="student">학생</option><option value="admin">관리자</option></select></label>
+          <label>역할<select value={account.role} onChange={event => updateAccount('role', event.target.value)}><option value="counselor">상담사</option><option value="student">학생</option></select></label>
           <label>이름<input value={account.displayName} onChange={event => updateAccount('displayName', event.target.value)} required /></label>
           <label>이메일<input type="email" value={account.email} onChange={event => updateAccount('email', event.target.value)} required /></label>
           {firebaseAuthEnabled && <label>임시 비밀번호<input type="password" minLength="6" autoComplete="new-password" value={account.password} onChange={event => updateAccount('password', event.target.value)} required /></label>}

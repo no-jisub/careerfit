@@ -6,6 +6,7 @@ import Icon from './Icon';
 import { IconButton } from './UI';
 import { useAuth } from '../auth/AuthContext';
 import { buildOperationalNotifications } from '../utils/operations';
+import { isOperationsStaff } from '../utils/roles';
 
 const navItems = [
   { to: '/dashboard', label: '대시보드', icon: 'dashboard' },
@@ -68,7 +69,7 @@ export default function AppLayout({ logout }) {
         {navItems.map(item => <NavLink key={item.to} to={item.to} className={({ isActive }) => isActive ? 'active' : ''}><Icon name={item.icon} /><span>{item.label}</span>{item.to === '/follow-ups' && pendingCount > 0 && <em>{pendingCount}</em>}</NavLink>)}
       </nav>
       <div className="sidebar-bottom">
-        {role === 'admin' && <NavLink to="/admin/users"><Icon name="students" /><span>사용자 관리</span></NavLink>}
+        {isOperationsStaff(role) && <NavLink to="/admin/users"><Icon name="students" /><span>사용자 관리</span></NavLink>}
         <NavLink to="/settings"><Icon name="settings" /><span>설정</span></NavLink>
         <button onClick={logout}><Icon name="logout" /><span>로그아웃</span></button>
         <div className="counselor-card"><div><strong>{counselorName}</strong><small>대학일자리플러스센터</small></div></div>
