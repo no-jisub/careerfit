@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:firebase": "vite --mode emulator",
     "build": "vite build && node scripts/prepare-sites.mjs",
     "preview": "vite preview",
-    "firebase:emulators": "firebase emulators:start",
+    "firebase:emulators": "firebase emulators:start --project careerfit-local",
+    "firebase:seed": "node scripts/seed-emulator.mjs",
+    "firebase:verify": "node scripts/verify-emulator-flow.mjs",
     "firebase:deploy:hosting": "npm run build && firebase deploy --only hosting",
     "firebase:deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes"
   },
@@ -20,6 +23,7 @@
     "vite": "8.1.5"
   },
   "devDependencies": {
+    "firebase-admin": "^14.2.0",
     "firebase-tools": "15.24.0"
   }
 }

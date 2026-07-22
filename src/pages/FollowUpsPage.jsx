@@ -6,13 +6,13 @@ import { EmptyState, PageIntro, StatusBadge } from '../components/UI';
 import { addDays, resolveFollowUpStatus, toDateKey } from '../utils/date';
 
 export default function FollowUpsPage() {
-  const { students, followUps, setFollowUps, persistRecords, notify } = useApp();
+  const { students, followUps, setFollowUps, persistDocument, notify } = useApp();
   const [filter, setFilter] = useState('all');
   const [owner, setOwner] = useState('all');
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(() => ({ studentId: students[0]?.id || '', content: '', owner: '학생', dueDate: addDays(toDateKey(), 7) }));
-  const items = useMemo(() => followUps.filter(f => (filter === 'all' || f.status === filter) && (owner === 'all' || f.owner === owner)).sort((a, b) => (a.status === 'overdue' ? -1 : 1) - (b.status === 'overdue' ? -1 : 1)), [followUps, filter, owner]);
+  const items = useMemo(() => followUps.filter(f => students.some(student => student.id === f.studentId) && (filter === 'all' || f.status === filter) && (owner === 'all' || f.owner === owner)).sort((a, b) => (a.status === 'overdue' ? -1 : 1) - (b.status === 'overdue' ? -1 : 1)), [students, followUps, filter, owner]);
   useEffect(() => {
     if (!showAdd) return undefined;
     const closeModal = event => { if (event.key === 'Escape' && !saving) setShowAdd(false); };
@@ -26,7 +26,7 @@ export default function FollowUpsPage() {
     const changed = { ...current, ...changes, updatedAt: new Date().toISOString() };
     const updated = changes.dueDate ? { ...changed, status: resolveFollowUpStatus(changed) } : changed;
     try {
-      await persistRecords('followUps', [updated]);
+      await persistDocument('followUps', updated);
       setFollowUps(prev => prev.map(item => item.id === id ? updated : item));
       notify(message);
     } catch { /* 공통 저장 오류 안내를 사용합니다. */ }
@@ -52,8 +52,8 @@ export default function FollowUpsPage() {
     };
     setSaving(true);
     try {
-      await persistRecords('followUps', [nextTask]);
-      setFollowUps(prev => [...prev, nextTask]);
+      await persistDocument('followUps', nextTask);
+      setFollowUps(items => items.some(item => item.id === nextTask.id) ? items : [...items, nextTask]);
       setForm({ studentId: students[0]?.id || '', content: '', owner: '학생', dueDate: addDays(toDateKey(), 7) });
       setShowAdd(false);
       notify('후속 조치를 추가했습니다.');

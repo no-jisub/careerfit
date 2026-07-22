@@ -5,16 +5,22 @@ import { auth, db, demoModeEnabled, firebaseAuthEnabled } from '../lib/firebase'
 
 const AuthContext = createContext(null);
 
-async function resolveRole(user) {
+async function resolveProfile(user) {
   const token = await user.getIdTokenResult();
-  if (token.claims.role) return token.claims.role;
-  const profile = await getDoc(doc(db, 'users', user.uid));
-  return profile.exists() ? profile.data().role : null;
+  const snapshot = await getDoc(doc(db, 'users', user.uid));
+  const storedProfile = snapshot.exists() ? snapshot.data() : {};
+  return {
+    ...storedProfile,
+    email: storedProfile.email || user.email,
+    displayName: storedProfile.displayName || user.displayName || user.email,
+    role: token.claims.role || storedProfile.role || null,
+  };
 }
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [role, setRole] = useState(() => localStorage.getItem('careerfit_role'));
+  const [role, setRole] = useState(() => firebaseAuthEnabled ? null : localStorage.getItem('careerfit_role'));
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(firebaseAuthEnabled);
 
   useEffect(() => {
@@ -22,14 +28,17 @@ export function AuthProvider({ children }) {
     return onAuthStateChanged(auth, async nextUser => {
       setUser(nextUser);
       if (!nextUser) {
-        setRole(localStorage.getItem('careerfit_role'));
+        setRole(demoModeEnabled ? localStorage.getItem('careerfit_role') : null);
+        setProfile(null);
         setLoading(false);
         return;
       }
       try {
-        const nextRole = await resolveRole(nextUser);
-        setRole(nextRole);
+        const nextProfile = await resolveProfile(nextUser);
+        setProfile(nextProfile);
+        setRole(nextProfile.role);
       } catch {
+        setProfile(null);
         setRole(null);
       } finally {
         setLoading(false);
@@ -40,15 +49,16 @@ export function AuthProvider({ children }) {
   const loginWithEmail = async (email, password) => {
     if (!firebaseAuthEnabled) throw new Error('Firebase 로그인이 아직 활성화되지 않았습니다.');
     const credential = await signInWithEmailAndPassword(auth, email, password);
-    const nextRole = await resolveRole(credential.user);
-    if (!nextRole) {
+    const nextProfile = await resolveProfile(credential.user);
+    if (!nextProfile.role) {
       await signOut(auth);
       throw new Error('계정에 커리어핏 역할이 지정되지 않았습니다.');
     }
     localStorage.removeItem('careerfit_role');
     setUser(credential.user);
-    setRole(nextRole);
-    return nextRole;
+    setProfile(nextProfile);
+    setRole(nextProfile.role);
+    return nextProfile.role;
   };
 
   const loginDemo = async nextRole => {
@@ -58,6 +68,7 @@ export function AuthProvider({ children }) {
     if (auth?.currentUser) await signOut(auth);
     localStorage.setItem('careerfit_role', nextRole);
     setUser(null);
+    setProfile(null);
     setRole(nextRole);
     return nextRole;
   };
@@ -66,10 +77,11 @@ export function AuthProvider({ children }) {
     if (user && auth) await signOut(auth);
     localStorage.removeItem('careerfit_role');
     setUser(null);
+    setProfile(null);
     setRole(null);
   };
 
-  const value = useMemo(() => ({ user, role, loading, demoModeEnabled, firebaseAuthEnabled, loginWithEmail, loginDemo, logout }), [user, role, loading]);
+  const value = useMemo(() => ({ user, role, profile, loading, demoModeEnabled, firebaseAuthEnabled, loginWithEmail, loginDemo, logout }), [user, role, profile, loading]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

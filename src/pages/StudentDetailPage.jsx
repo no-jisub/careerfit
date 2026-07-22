@@ -7,10 +7,10 @@ import { addDays, toDateKey } from '../utils/date';
 
 export default function StudentDetailPage() {
   const { studentId } = useParams();
-  const { students, setStudents, consultations, consultationNotes, followUps, setFollowUps, persistRecords, notify } = useApp();
-  const student = students.find(s => s.id === studentId) || students[0];
-  const history = consultations.filter(c => c.studentId === student.id).sort((a, b) => b.date.localeCompare(a.date));
-  const tasks = followUps.filter(f => f.studentId === student.id && f.status !== 'complete');
+  const { students, setStudents, consultations, consultationNotes, followUps, setFollowUps, persistDocument, notify } = useApp();
+  const student = students.find(s => s.id === studentId);
+  const history = student ? consultations.filter(c => c.studentId === student.id).sort((a, b) => b.date.localeCompare(a.date)) : [];
+  const tasks = student ? followUps.filter(f => f.studentId === student.id && f.status !== 'complete') : [];
   const [expanded, setExpanded] = useState(history[0]?.id);
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -29,6 +29,7 @@ export default function StudentDetailPage() {
     window.addEventListener('keydown', closeModal);
     return () => window.removeEventListener('keydown', closeModal);
   }, [showAdd, showEdit, savingStudent]);
+  if (!student) return <section className="card"><EmptyState title="담당 학생을 찾을 수 없습니다" description="배정이 해제되었거나 현재 계정에서 조회할 수 없는 학생입니다." action={<Link className="button secondary" to="/students">담당 학생 목록으로</Link>} /></section>;
   const openEdit = () => {
     setEditForm({
       name: student.name,
@@ -60,7 +61,7 @@ export default function StudentDetailPage() {
     };
     setSavingStudent(true);
     try {
-      await persistRecords('students', [updated]);
+      await persistDocument('students', updated);
       setStudents(prev => prev.map(item => item.id === student.id ? updated : item));
       setShowEdit(false);
       notify('학생 정보를 수정했습니다.');
@@ -68,7 +69,19 @@ export default function StudentDetailPage() {
       setSavingStudent(false);
     }
   };
-  const addTask = e => { e.preventDefault(); if (!taskText.trim() || !dueDate) return; const nextTask = { id: `f${Date.now()}`, studentId: student.id, content: taskText.trim(), owner: taskOwner, dueDate, status: 'scheduled', consultationDate: toDateKey() }; setFollowUps(x => [...x, nextTask]); void persistRecords('followUps', [nextTask]); setTaskText(''); setTaskOwner('학생'); setShowAdd(false); notify('후속 조치를 추가했습니다.'); };
+  const addTask = async e => {
+    e.preventDefault();
+    if (!taskText.trim() || !dueDate) return;
+    const nextTask = { id: `f${Date.now()}`, studentId: student.id, content: taskText.trim(), owner: taskOwner, dueDate, status: 'scheduled', consultationDate: toDateKey() };
+    try {
+      await persistDocument('followUps', nextTask);
+      setFollowUps(items => items.some(item => item.id === nextTask.id) ? items : [...items, nextTask]);
+      setTaskText('');
+      setTaskOwner('학생');
+      setShowAdd(false);
+      notify('후속 조치를 추가했습니다.');
+    } catch { /* 공통 저장 오류 안내를 사용합니다. */ }
+  };
   return <>
     <nav className="breadcrumb" aria-label="현재 위치"><Link to="/students">학생 관리</Link><Icon name="chevron" size={14} /><span>{student.name}</span></nav>
     <section className="profile-hero">
