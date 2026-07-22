@@ -1,5 +1,5 @@
 import { createUserWithEmailAndPassword, getAuth, sendPasswordResetEmail, signOut, updateProfile } from 'firebase/auth';
-import { deleteApp, getApp, getApps, initializeApp } from 'firebase/app';
+import { getApps, initializeApp } from 'firebase/app';
 import { doc, writeBatch } from 'firebase/firestore';
 import { auth, db, firebaseApp, firebaseConfig } from '../lib/firebase';
 
@@ -12,6 +12,9 @@ function getProvisioningApp() {
 
 export async function createManagedUser({ account, student }) {
   if (!firebaseApp || !db) throw new Error('Firebase가 연결되지 않았습니다.');
+  if (account.role === 'student' && (!student?.id || !student?.counselorUid)) {
+    throw new Error('학생 정보와 담당 상담사를 입력해 주세요.');
+  }
   const provisioningApp = getProvisioningApp();
   const provisioningAuth = getAuth(provisioningApp);
   let credential;
@@ -32,7 +35,6 @@ export async function createManagedUser({ account, student }) {
     });
 
     if (account.role === 'student') {
-      if (!student?.id || !student?.counselorUid) throw new Error('학생 정보와 담당 상담사를 입력해 주세요.');
       batch.set(doc(db, 'students', student.id), {
         ...student,
         uid: credential.user.uid,
@@ -64,9 +66,4 @@ export async function createManagedUser({ account, student }) {
 export async function sendManagedPasswordReset(email) {
   if (!auth) throw new Error('Firebase Authentication이 연결되지 않았습니다.');
   await sendPasswordResetEmail(auth, email);
-}
-
-export async function disposeProvisioningApp() {
-  const existing = getApps().find(app => app.name === provisioningAppName);
-  if (existing && existing !== getApp()) await deleteApp(existing);
 }

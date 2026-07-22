@@ -23,7 +23,8 @@ export default function AdminUsersPage() {
     setSaving(true);
     setError('');
     const counselor = counselors.find(item => item.id === student.counselorUid);
-    const studentId = account.role === 'student' ? `student-${student.studentNo.trim()}` : null;
+    const normalizedStudentNo = student.studentNo.trim().replace(/[^0-9A-Za-z_-]/g, '-');
+    const studentId = account.role === 'student' ? `student-${normalizedStudentNo}` : null;
     try {
       await createManagedUser({
         account: {
