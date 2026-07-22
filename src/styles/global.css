@@ -1196,3 +1196,29 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
   .program-form-grid { grid-template-columns: 1fr; }
   .program-form-grid .span-2 { grid-column: 1; }
 }
+
+/* Unified counselor search fields */
+.global-search, .search-field, .quick-search label {
+  border-color:#cbd5e1;
+  background:#fff;
+  transition:border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+.global-search:hover, .search-field:hover, .quick-search label:hover { border-color:#9fb0c4; }
+.global-search:focus-within, .search-field:focus-within, .quick-search label:focus-within {
+  border-color:var(--blue);
+  box-shadow:0 0 0 3px rgba(37, 99, 235, .12);
+}
+.global-search > svg, .search-field > svg, .quick-search label > svg {
+  box-sizing:content-box;
+  flex:0 0 auto;
+  padding-right:10px;
+  border-right:1px solid #d8e0ea;
+  color:#6f7d91;
+}
+.global-search input, .search-field input, .quick-search input {
+  min-width:0;
+  border:0 !important;
+  outline:0;
+  background:transparent;
+  box-shadow:none !important;
+}
