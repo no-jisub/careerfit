@@ -998,3 +998,8 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
   .notification-list article { grid-template-columns: auto 1fr; }
   .notification-list article > div:last-child { grid-column: 2; }
 }
+.fatal-error { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--bg); }
+.fatal-error section { width: min(560px, 100%); padding: 36px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); text-align: center; }
+.fatal-error span { color: var(--red); font-weight: 800; }
+.fatal-error h1 { margin: 10px 0; }
+.fatal-error p { color: var(--muted); line-height: 1.7; }

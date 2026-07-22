@@ -6,6 +6,7 @@ import { EmptyState, StatusBadge } from '../components/UI';
 import { generateConsultationDraft } from '../services/consultationAiService';
 import { addDays, toDateKey } from '../utils/date';
 import { useAuth } from '../auth/AuthContext';
+import { validateConsultationInput } from '../utils/validation';
 
 const createEmptyForm = () => { const today = toDateKey(); return { date: today, type: '진로 탐색', purpose: '관심 직무 구체화 및 경험 계획 수립', currentConcern: '', rawMemo: '', guidance: '', programs: [], studentActions: '', counselorActions: '', nextCheckItems: '', nextDate: addDays(today, 14), studentVisible: true }; };
 const appendMissingDocuments = (current, additions) => [
@@ -45,11 +46,13 @@ export default function ConsultationFormPage() {
   };
   const save = async () => {
     if (saving) return;
-    if (!form.purpose.trim() || !form.rawMemo.trim()) { setError('필수 항목을 입력해 주세요.'); document.querySelector('#rawMemo')?.focus(); return; }
-    const final = aiDraft || generateConsultationDraft(form);
+    const validated = validateConsultationInput(form);
+    if (validated.error) { setError(validated.error); document.querySelector('#rawMemo')?.focus(); return; }
+    const safeForm = validated.value;
+    const final = aiDraft || generateConsultationDraft(safeForm);
     const now = new Date().toISOString();
     const consultation = { id: `c${Date.now()}`, studentId: student.id, date: form.date, type: form.type, purpose: final.purpose, counselor: (profile?.displayName || user?.displayName || '상담 담당자').replace(/\s*상담사$/, ''), summary: final.summary, concern: final.concern, guidance: final.guidance, programs: final.programs, studentActions: final.studentActions, counselorActions: final.counselorActions, nextCheckItems: final.nextCheckItems, studentVisible: form.studentVisible, createdAt: now, updatedAt: now };
-    const internalNote = { id: consultation.id, consultationId: consultation.id, studentId: student.id, note: form.rawMemo.trim(), createdAt: now, updatedAt: now };
+    const internalNote = { id: consultation.id, consultationId: consultation.id, studentId: student.id, note: safeForm.rawMemo, createdAt: now, updatedAt: now };
     const newTasks = [];
     if (studentTask.trim()) newTasks.push({ id: `f${Date.now()}a`, studentId: student.id, content: studentTask.trim(), owner: '학생', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date, createdAt: now, updatedAt: now });
     if (counselorTask.trim()) newTasks.push({ id: `f${Date.now()}b`, studentId: student.id, content: counselorTask.trim(), owner: '교직원', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date, createdAt: now, updatedAt: now });

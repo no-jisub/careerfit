@@ -3,6 +3,7 @@ import { useApp } from '../App';
 import { createManagedUser, sendManagedPasswordReset } from '../services/adminUserService';
 import { PageIntro } from '../components/UI';
 import { useAuth } from '../auth/AuthContext';
+import { validateAccountInput } from '../utils/validation';
 
 const emptyAccount = { role: 'counselor', displayName: '', email: '', password: '' };
 const emptyStudent = { studentNo: '', department: '', grade: '1학년', phone: '', goal: '', concern: '', interests: '', counselorUid: '' };
@@ -24,15 +25,15 @@ export default function AdminUsersPage() {
     if (saving) return;
     setSaving(true);
     setError('');
+    const validatedAccount = validateAccountInput(account, student, users);
+    if (validatedAccount.error) { setError(validatedAccount.error); setSaving(false); return; }
     const counselor = counselors.find(item => item.id === student.counselorUid);
     const normalizedStudentNo = student.studentNo.trim().replace(/[^0-9A-Za-z_-]/g, '-');
     const studentId = account.role === 'student' ? `student-${normalizedStudentNo}` : null;
     try {
       const managedPayload = {
         account: {
-          ...account,
-          displayName: account.displayName.trim(),
-          email: account.email.trim().toLowerCase(),
+          ...validatedAccount.value,
         },
         student: account.role === 'student' ? {
           id: studentId,

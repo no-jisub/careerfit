@@ -4,6 +4,7 @@ import { useApp } from '../App';
 import Icon from '../components/Icon';
 import { EmptyState, PageIntro } from '../components/UI';
 import { toDateKey } from '../utils/date';
+import { validateAppointmentInput } from '../utils/validation';
 
 const emptyForm = () => ({ studentId: '', date: toDateKey(), time: '10:00', type: '진로 상담', location: '대학일자리플러스센터 상담실 2', preparation: '' });
 
@@ -44,10 +45,9 @@ export default function AppointmentsPage() {
     if (saving) return;
     const student = students.find(item => item.id === form.studentId);
     if (!student) return;
-    if (`${form.date}T${form.time}` < `${toDateKey()}T${new Date().toTimeString().slice(0, 5)}`) {
-      setError('과거 시간으로는 상담을 예약할 수 없습니다.');
-      return;
-    }
+    const validated = validateAppointmentInput(form, toDateKey(), new Date().toTimeString().slice(0, 5));
+    if (validated.error) { setError(validated.error); return; }
+    const safeForm = validated.value;
     const conflict = appointments.some(item => {
       if (item.id === editingId || item.status !== 'scheduled' || item.date !== form.date || item.time !== form.time) return false;
       const existingStudent = students.find(candidate => candidate.id === item.studentId);
@@ -62,9 +62,7 @@ export default function AppointmentsPage() {
     const appointment = {
       ...previous,
       id: editingId || `appointment-${Date.now()}`,
-      ...form,
-      location: form.location.trim(),
-      preparation: form.preparation.trim(),
+      ...safeForm,
       counselorUid: student.counselorUid,
       studentUid: student.uid || '',
       status: 'scheduled',
