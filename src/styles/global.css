@@ -1159,6 +1159,8 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .program-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 .program-form-grid .span-2 { grid-column: 1 / -1; }
 .program-form-grid label, .recommendation-modal label { margin: 0; }
+.program-field-label { min-height:17px; display:flex; align-items:baseline; gap:5px; flex-wrap:wrap; line-height:1.5; }
+.program-field-label small { color:var(--muted); font-size:10px; font-weight:500; }
 .program-form-grid textarea, .recommendation-modal textarea { margin-top: 7px; resize: vertical; }
 .program-grade-field { margin: 0; padding: 13px 14px; border: 1px solid #dce2ec; border-radius: 11px; }
 .program-grade-field legend { padding: 0 6px; color: #435069; font-size: 11px; font-weight: 800; }

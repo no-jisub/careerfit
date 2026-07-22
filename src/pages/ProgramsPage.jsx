@@ -70,8 +70,8 @@ function ProgramFormModal({ program, onClose, onSave }) {
           <label className="span-2">추천 안내 문구<textarea rows="2" value={form.reason} onChange={event => update('reason', event.target.value)} placeholder="학생에게 이 프로그램을 추천하는 기본 이유" /></label>
           <label className="span-2">태그<small className="field-hint">쉼표로 구분해 주세요.</small><input value={form.tags} onChange={event => update('tags', event.target.value)} placeholder="UX, 서비스 기획, 포트폴리오" /></label>
           <fieldset className="span-2 program-grade-field"><legend>참여 대상 학년</legend><div>{gradeOptions.map(grade => <label key={grade}><input type="checkbox" checked={form.grades.includes(grade)} onChange={() => toggleGrade(grade)} />{grade}</label>)}</div>{errors.grades && <small className="field-error">{errors.grades}</small>}</fieldset>
-          <label>대상 설명<input value={form.target} onChange={event => update('target', event.target.value)} placeholder="전 학과 2~4학년" /></label>
-          <label>대상 학과<small className="field-hint">비워 두면 전 학과입니다.</small><input value={form.targetDepartments} onChange={event => update('targetDepartments', event.target.value)} placeholder="경영학과, 경제학과" /></label>
+          <label><span className="program-field-label">대상 설명</span><input value={form.target} onChange={event => update('target', event.target.value)} placeholder="전 학과 2~4학년" /></label>
+          <label><span className="program-field-label">대상 학과 <small>(비워 두면 전 학과입니다.)</small></span><input value={form.targetDepartments} onChange={event => update('targetDepartments', event.target.value)} placeholder="경영학과, 경제학과" /></label>
           <label>모집 시작일<input type="date" value={form.recruitmentStartDate} onChange={event => update('recruitmentStartDate', event.target.value)} /></label>
           <label>모집 종료일<input type="date" value={form.recruitmentEndDate} onChange={event => update('recruitmentEndDate', event.target.value)} />{errors.recruitmentDates && <small className="field-error">{errors.recruitmentDates}</small>}</label>
           <label>운영 시작일<input type="date" value={form.programStartDate} onChange={event => update('programStartDate', event.target.value)} /></label>
