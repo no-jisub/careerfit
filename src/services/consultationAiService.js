@@ -1,4 +1,4 @@
-import { httpsCallable } from 'firebase/functions';
+import { httpsCallable, httpsCallableFromURL } from 'firebase/functions';
 import { auth, functions } from '../lib/firebase';
 
 export function generateLocalConsultationDraft(input) {
@@ -32,7 +32,16 @@ export async function generateConsultationDraft(input) {
   if (!functions) throw new Error('AI 서비스를 사용할 수 있도록 Firebase 설정을 확인해 주세요.');
 
   try {
-    const callable = httpsCallable(functions, 'generateConsultationDraft', { timeout: 65000 });
+    const isFirebaseHosting = typeof window !== 'undefined'
+      && (window.location.hostname.endsWith('.web.app')
+        || window.location.hostname.endsWith('.firebaseapp.com'));
+    const callable = isFirebaseHosting
+      ? httpsCallableFromURL(
+        functions,
+        `${window.location.origin}/api/generateConsultationDraft`,
+        { timeout: 65000 },
+      )
+      : httpsCallable(functions, 'generateConsultationDraft', { timeout: 65000 });
     const result = await callable(input);
     if (!result.data?.draft) throw new Error('AI 초안 응답 형식이 올바르지 않습니다.');
     return result.data.draft;
