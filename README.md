@@ -216,14 +216,22 @@ Firestore 복합 쿼리를 확장하면 `firestore.indexes.json`에 인덱스가
 
 ## 상담 초안 생성 기능
 
-`src/services/consultationAiService.js`의 `generateConsultationDraft()`는 현재 외부 생성형 AI를 호출하지 않습니다. 상담사가 입력한 메모를 정해진 필드 구조로 정리하고 기본 안내 문구를 채우는 로컬 규칙 기반 함수입니다.
+실제 Firebase 로그인에서는 `asia-northeast3`의 2세대 Callable Function
+`generateConsultationDraft`가 Vertex AI의 `gemini-2.5-flash`를 호출합니다.
+브라우저 번들에는 AI API 키가 없으며 Firebase ID 토큰이 자동으로 전달됩니다.
+함수는 `users/{uid}`를 확인해 승인된 `counselor` 또는 `admin`만 허용합니다.
 
-실제 AI API로 교체할 경우:
+- 입력: 상담 유형, 목적, 현재 고민, 내부 메모, 강점, 기존 안내, 추천 프로그램과 후속 조치
+- 출력: 목적, 요약, 강점, 고민, 안내, 학생 행동, 상담사 후속 조치, 다음 확인 사항
+- 안전장치: 입력 길이 제한, JSON 스키마 응답, 서버 응답 재검증, 사용자당 하루 50회 제한
+- 개인정보: 원문 메모와 생성 결과를 함수가 별도 저장하지 않으며 오류 로그에도 원문을 남기지 않음
+- 저장 정책: AI 결과는 자동 저장되지 않고 상담사가 화면에서 검토·수정한 뒤 명시적으로 저장
+- 데모 모드: Firebase 로그인 사용자가 없으면 발표용 로컬 규칙 초안을 사용
 
-- API 비밀키를 Vite/브라우저에 넣지 마세요.
-- Firebase Functions, Cloud Run 등 서버 측 프록시를 사용하세요.
-- 기존 함수의 입력·반환 구조를 유지하면 UI 변경을 줄일 수 있습니다.
-- 개인정보 전송 동의, 데이터 최소화, 로그 마스킹과 보존 기간을 먼저 설계하세요.
+최초 배포 전 Google Cloud Console에서 `Vertex AI API`를 사용 설정하고,
+함수 실행 서비스 계정에 `Vertex AI 사용자(roles/aiplatform.user)` 역할을 부여해야 합니다.
+함수 코드는 `functions/`, 브라우저 연결 코드는
+`src/services/consultationAiService.js`에 있습니다.
 
 ## 로컬 개발
 
@@ -299,6 +307,7 @@ Emulator UI는 `http://127.0.0.1:4000`에서 확인할 수 있습니다.
 | `npm run firebase:seed` | Emulator 전용 가상 계정·담당 학생 데이터 생성 |
 | `npm run firebase:verify` | 로그인·담당 학생 권한·상담 문서 묶음 저장·학생 완료 처리 검증 |
 | `npm run firebase:deploy:hosting` | 로컬 빌드 후 Firebase Hosting 수동 배포 |
+| `npm run firebase:deploy:functions` | AI 상담 초안 Callable Function 배포 |
 | `npm run firebase:deploy:rules` | Firestore 규칙과 인덱스만 배포 |
 
 최소 기능 검증은 Emulator 실행 중 아래 명령으로 수행합니다.

@@ -79,25 +79,33 @@ export default function ConsultationFormPage() {
   if (!student) return <section className="card"><EmptyState title="상담을 작성할 학생을 찾을 수 없습니다" description="현재 계정에 배정된 학생인지 확인해 주세요." action={<Link className="button secondary" to="/students?select=consultation">담당 학생 선택</Link>} /></section>;
 
   const openPrograms = () => { setDraftForm({ studentId: student.id, form }); navigate(`/programs?student=${student.id}&return=form`); };
-  const generate = () => {
+  const generate = async () => {
     setError('');
     if (!form.rawMemo.trim()) { setError('상담 메모를 입력하면 AI 초안을 생성할 수 있습니다.'); return; }
     setLoading(true);
-    setTimeout(() => { try { setAiDraft(generateConsultationDraft(form)); notify('상담일지 초안을 생성했습니다.'); } catch (e) { setError(e.message); } finally { setLoading(false); } }, 650);
+    try {
+      setAiDraft(await generateConsultationDraft(form));
+      notify('상담일지 초안을 생성했습니다.');
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
   };
   const save = async () => {
     if (saving) return;
     const validated = validateConsultationInput(form);
     if (validated.error) { setError(validated.error); document.querySelector('#rawMemo')?.focus(); return; }
     const safeForm = validated.value;
-    const draft = aiDraft || generateConsultationDraft(safeForm);
+    const draft = aiDraft || { ...safeForm, summary: safeForm.rawMemo, concern: safeForm.currentConcern };
     const final = {
       ...draft,
       purpose: cleanText(draft.purpose, 500),
       summary: cleanText(draft.summary, 5000),
       concern: cleanText(draft.concern, 5000),
-      strengths: cleanText(form.strengths, 2000),
+      strengths: cleanText(draft.strengths || form.strengths, 2000),
       guidance: cleanText(draft.guidance, 5000),
+      programs: safeForm.programs,
       studentActions: cleanText(draft.studentActions, 2000),
       counselorActions: cleanText(draft.counselorActions, 2000),
       nextCheckItems: cleanText(draft.nextCheckItems, 2000),
@@ -180,7 +188,7 @@ export default function ConsultationFormPage() {
         <section className="card student-context"><div className="context-head"><div><strong>{student.name}</strong><p>{student.department} · {student.grade}</p></div><StatusBadge status="inProgress" /></div><dl><div><dt>진로 목표</dt><dd>{student.goal}</dd></div><div><dt>최근 상담</dt><dd>{student.lastConsultation}</dd></div></dl></section>
         <section className="card ai-card"><span className="ai-label"><Icon name="spark" size={16} /> AI 작성 도우미</span><h2>{aiDraft ? '상담일지 초안' : '메모를 상담일지로 정리해요'}</h2>{!aiDraft && <p>입력한 상담 메모를 바탕으로 구조화된 초안을 만들어요. 자동 저장되지 않습니다.</p>}{loading && <div className="ai-loading" role="status" aria-live="polite"><span className="spinner" />상담 맥락을 정리하고 있어요...</div>}
           {!aiDraft && !loading && <button className="button ai full" onClick={generate}><Icon name="spark" size={18} />AI 상담일지 초안 만들기</button>}
-          {aiDraft && !loading && <><div className="ai-warning"><Icon name="alert" size={17} />AI가 작성한 초안이므로 저장 전 내용을 확인하세요.</div><div className="ai-fields">{[['purpose','상담 목적'],['summary','상담 주요 내용'],['concern','학생의 고민과 목표'],['guidance','담당자의 안내 내용'],['studentActions','학생의 다음 행동'],['counselorActions','담당자의 후속 조치'],['nextCheckItems','다음 상담 확인 사항']].map(([key,label]) => <label key={key}>{label}<textarea rows={key === 'summary' ? 5 : 3} value={aiDraft[key]} onChange={e => setAiDraft(prev => ({ ...prev, [key]: e.target.value }))} /></label>)}</div><div className="ai-actions"><button className="button secondary" onClick={generate}>초안 다시 생성</button><button className="button ai" onClick={() => notify('AI 초안 검토를 완료했습니다.')}>검토 완료</button></div></>}
+          {aiDraft && !loading && <><div className="ai-warning"><Icon name="alert" size={17} />AI가 작성한 초안이므로 저장 전 내용을 확인하세요.</div><div className="ai-fields">{[['purpose','상담 목적'],['summary','상담 주요 내용'],['strengths','학생의 강점'],['concern','학생의 고민과 목표'],['guidance','담당자의 안내 내용'],['studentActions','학생의 다음 행동'],['counselorActions','담당자의 후속 조치'],['nextCheckItems','다음 상담 확인 사항']].map(([key,label]) => <label key={key}>{label}<textarea rows={key === 'summary' ? 5 : 3} value={aiDraft[key]} onChange={e => setAiDraft(prev => ({ ...prev, [key]: e.target.value }))} /></label>)}</div><div className="ai-actions"><button className="button secondary" onClick={generate}>초안 다시 생성</button><button className="button ai" onClick={() => notify('AI 초안 검토를 완료했습니다.')}>검토 완료</button></div></>}
         </section>
         <section className="card task-register"><span className="eyebrow">저장 시 함께 등록</span><h2>후속 조치</h2><label>학생 담당<input value={studentTask} onChange={e => setStudentTask(e.target.value)} /></label><label>교직원 담당<input value={counselorTask} onChange={e => setCounselorTask(e.target.value)} /></label><small><Icon name="calendar" size={14} />기한 {form.nextDate}</small></section>
       </aside>

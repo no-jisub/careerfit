@@ -13,8 +13,9 @@
     "firebase:seed": "node scripts/seed-emulator.mjs",
     "firebase:verify": "node scripts/verify-emulator-flow.mjs",
     "firebase:deploy:hosting": "npm run build && firebase deploy --only hosting",
+    "firebase:deploy:functions": "firebase deploy --only functions",
     "firebase:deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
-    "firebase:deploy:backend-config": "firebase deploy --only auth,firestore:rules,firestore:indexes"
+    "firebase:deploy:backend-config": "firebase deploy --only auth,firestore:rules,firestore:indexes,functions"
   },
   "dependencies": {
     "@vitejs/plugin-react": "6.0.3",
