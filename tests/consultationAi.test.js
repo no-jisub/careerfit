@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildConsultationPrompt,
+  classifyAiError,
   parseConsultationDraft,
   sanitizeConsultationInput,
 } from '../functions/consultationDraft.js';
@@ -40,4 +41,10 @@ test('AI response parser requires every draft field', () => {
   };
   assert.deepEqual(parseConsultationDraft(JSON.stringify(complete)), complete);
   assert.throws(() => parseConsultationDraft(JSON.stringify({ summary: '요약' })), /항목이 없습니다/);
+});
+
+test('AI server errors are classified without exposing prompt contents', () => {
+  assert.equal(classifyAiError(new Error('403 permission denied')), 'VERTEX_PERMISSION_DENIED');
+  assert.equal(classifyAiError(new Error('429 quota exceeded')), 'VERTEX_QUOTA_EXCEEDED');
+  assert.equal(classifyAiError(new SyntaxError('Unexpected token')), 'INVALID_MODEL_RESPONSE');
 });

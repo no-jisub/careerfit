@@ -5,6 +5,7 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { logger } from 'firebase-functions';
 import {
   buildConsultationPrompt,
+  classifyAiError,
   consultationDraftSchema,
   parseConsultationDraft,
   sanitizeConsultationInput,
@@ -54,22 +55,27 @@ export const generateConsultationDraft = onCall({
   maxInstances: 3,
   cors: true,
 }, async (request) => {
-  if (!request.auth?.uid) {
-    throw new HttpsError('unauthenticated', '로그인 후 이용해 주세요.');
-  }
-
-  await assertApprovedCounselor(request.auth.uid);
-
-  let input;
+  let stage = 'authentication';
   try {
-    input = sanitizeConsultationInput(request.data);
-  } catch (error) {
-    throw new HttpsError('invalid-argument', error.message);
-  }
+    if (!request.auth?.uid) {
+      throw new HttpsError('unauthenticated', '로그인 후 이용해 주세요.');
+    }
 
-  await consumeDailyQuota(request.auth.uid);
+    stage = 'authorization';
+    await assertApprovedCounselor(request.auth.uid);
 
-  try {
+    stage = 'input-validation';
+    let input;
+    try {
+      input = sanitizeConsultationInput(request.data);
+    } catch (error) {
+      throw new HttpsError('invalid-argument', error.message);
+    }
+
+    stage = 'quota';
+    await consumeDailyQuota(request.auth.uid);
+
+    stage = 'vertex-ai';
     const ai = new GoogleGenAI({
       vertexai: true,
       project: process.env.GCLOUD_PROJECT,
@@ -86,16 +92,29 @@ export const generateConsultationDraft = onCall({
         responseJsonSchema: consultationDraftSchema,
       },
     });
+    stage = 'response-validation';
     return {
       draft: parseConsultationDraft(response.text),
       model: MODEL,
     };
   } catch (error) {
     if (error instanceof HttpsError) throw error;
+    const reason = classifyAiError(error);
     logger.error('Consultation draft generation failed', {
       code: error?.code || 'unknown',
       name: error?.name || 'Error',
+      reason,
+      stage,
     });
-    throw new HttpsError('internal', 'AI 초안을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    if (reason === 'VERTEX_PERMISSION_DENIED') {
+      throw new HttpsError('permission-denied', 'AI 서버 권한 설정을 확인해 주세요.', { reason });
+    }
+    if (reason === 'VERTEX_QUOTA_EXCEEDED') {
+      throw new HttpsError('resource-exhausted', 'AI 사용량이 일시적으로 초과되었습니다.', { reason });
+    }
+    if (['VERTEX_TIMEOUT', 'VERTEX_MODEL_NOT_FOUND'].includes(reason)) {
+      throw new HttpsError('unavailable', 'AI 모델에 일시적으로 연결할 수 없습니다.', { reason });
+    }
+    throw new HttpsError('internal', 'AI 초안을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.', { reason });
   }
 });

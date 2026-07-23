@@ -23,6 +23,7 @@ const errorMessages = {
   'functions/invalid-argument': '상담 메모를 확인한 뒤 다시 시도해 주세요.',
   'functions/deadline-exceeded': 'AI 응답 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.',
   'functions/unavailable': 'AI 서비스에 일시적으로 연결할 수 없습니다.',
+  'functions/internal': 'AI 서버에서 초안을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.',
 };
 
 export async function generateConsultationDraft(input) {

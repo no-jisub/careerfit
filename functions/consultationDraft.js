@@ -83,3 +83,18 @@ export function parseConsultationDraft(text) {
   }
   return result;
 }
+
+export function classifyAiError(error) {
+  const message = `${error?.message || ''} ${error?.status || ''}`.toLowerCase();
+  if (message.includes('permission') || message.includes('forbidden') || message.includes('403')) {
+    return 'VERTEX_PERMISSION_DENIED';
+  }
+  if (message.includes('quota') || message.includes('resource_exhausted') || message.includes('429')) {
+    return 'VERTEX_QUOTA_EXCEEDED';
+  }
+  if (message.includes('billing')) return 'VERTEX_BILLING_REQUIRED';
+  if (message.includes('not found') || message.includes('404')) return 'VERTEX_MODEL_NOT_FOUND';
+  if (error instanceof SyntaxError || message.includes('json')) return 'INVALID_MODEL_RESPONSE';
+  if (message.includes('deadline') || message.includes('timeout')) return 'VERTEX_TIMEOUT';
+  return 'UNEXPECTED_SERVER_ERROR';
+}
