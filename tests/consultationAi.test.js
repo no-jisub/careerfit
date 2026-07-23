@@ -40,7 +40,9 @@ test('AI response parser requires every draft field', () => {
     nextCheckItems: '확인 사항',
   };
   assert.deepEqual(parseConsultationDraft(JSON.stringify(complete)), complete);
+  assert.deepEqual(parseConsultationDraft(`\`\`\`json\n${JSON.stringify(complete)}\n\`\`\``), complete);
   assert.throws(() => parseConsultationDraft(JSON.stringify({ summary: '요약' })), /항목이 없습니다/);
+  assert.throws(() => parseConsultationDraft(''), /empty/);
 });
 
 test('AI server errors are classified without exposing prompt contents', () => {

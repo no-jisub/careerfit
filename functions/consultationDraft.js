@@ -74,7 +74,22 @@ export function buildConsultationPrompt(input) {
 }
 
 export function parseConsultationDraft(text) {
-  const value = JSON.parse(text);
+  if (typeof text !== 'string' || !text.trim()) {
+    throw new SyntaxError('AI response text is empty.');
+  }
+  const normalized = text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/, '');
+  let value;
+  try {
+    value = JSON.parse(normalized);
+  } catch {
+    const start = normalized.indexOf('{');
+    const end = normalized.lastIndexOf('}');
+    if (start < 0 || end <= start) throw new SyntaxError('AI response does not contain a JSON object.');
+    value = JSON.parse(normalized.slice(start, end + 1));
+  }
   const result = {};
   for (const field of CONSULTATION_DRAFT_FIELDS) {
     const limit = field === 'summary' ? 5000 : 2000;

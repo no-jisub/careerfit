@@ -87,14 +87,24 @@ export const generateConsultationDraft = onCall({
       config: {
         systemInstruction: '당신은 대한민국 대학 진로상담 담당자의 기록 작성을 돕는 보조 도구입니다. 최종 판단을 대신하지 말고 제공된 사실만 구조화하세요.',
         temperature: 0.2,
-        maxOutputTokens: 1800,
+        maxOutputTokens: 4096,
+        thinkingConfig: {
+          thinkingBudget: 0,
+        },
         responseMimeType: 'application/json',
         responseJsonSchema: consultationDraftSchema,
       },
     });
     stage = 'response-validation';
+    const responseText = response.text;
+    if (typeof responseText !== 'string' || !responseText.trim()) {
+      logger.warn('Consultation draft response was empty', {
+        finishReason: response.candidates?.[0]?.finishReason || 'unknown',
+        modelVersion: response.modelVersion || MODEL,
+      });
+    }
     return {
-      draft: parseConsultationDraft(response.text),
+      draft: parseConsultationDraft(responseText),
       model: MODEL,
     };
   } catch (error) {
