@@ -15,6 +15,15 @@ const appendMissingDocuments = (current, additions) => [
   ...current,
   ...additions.filter(addition => !current.some(item => item.id === addition.id)),
 ];
+const aiEvidenceOptions = [
+  { key: 'summary', label: '상담 주요 내용' },
+  { key: 'strengths', label: '학생의 강점' },
+  { key: 'concern', label: '학생의 고민과 목표' },
+  { key: 'guidance', label: '담당자의 안내 내용' },
+];
+const cleanAiList = value => Array.isArray(value)
+  ? value.map(item => cleanText(item, 500)).filter(Boolean).slice(0, 10)
+  : [];
 
 export default function ConsultationFormPage() {
   const { studentId } = useParams();
@@ -110,11 +119,19 @@ export default function ConsultationFormPage() {
       counselorActions: cleanText(draft.counselorActions, 2000),
       nextCheckItems: cleanText(draft.nextCheckItems, 2000),
     };
+    const aiReview = aiDraft ? {
+      evidence: Object.fromEntries(aiEvidenceOptions.map(({ key }) => [
+        key,
+        cleanAiList(aiDraft.evidence?.[key]).slice(0, 5),
+      ])),
+      needsConfirmation: cleanAiList(aiDraft.needsConfirmation),
+      sensitiveWarning: cleanAiList(aiDraft.sensitiveWarning),
+    } : null;
     if (linkedAppointment && new Date(`${linkedAppointment.date}T${linkedAppointment.time}:00`) > new Date()) { setError('최종 상담 기록은 상담 시작 이후 저장할 수 있습니다. 지금은 임시 저장을 이용해 주세요.'); return; }
     if (linkedAppointment && consultations.some(item => item.appointmentId === linkedAppointment.id)) { setError('이 예약에는 이미 최종 상담 기록이 저장되어 있습니다.'); return; }
     const now = new Date().toISOString();
     const publication = { ...defaultConsultationVisibility, ...(form.visibility || {}) };
-    const consultation = { id: linkedAppointment ? `consultation-${linkedAppointment.id}` : `c${Date.now()}`, appointmentId: linkedAppointment?.id || '', studentId: student.id, studentUid: student.uid || '', counselorUid, date: form.date, type: form.type, purpose: final.purpose, counselor: (profile?.displayName || user?.displayName || '상담 담당자').replace(/\s*상담사$/, ''), summary: final.summary, strengths: final.strengths, concern: final.concern, guidance: final.guidance, programs: final.programs, studentActions: final.studentActions, counselorActions: final.counselorActions, nextCheckItems: final.nextCheckItems, publication, studentVisible: Object.values(publication).some(Boolean), createdAt: now, updatedAt: now };
+    const consultation = { id: linkedAppointment ? `consultation-${linkedAppointment.id}` : `c${Date.now()}`, appointmentId: linkedAppointment?.id || '', studentId: student.id, studentUid: student.uid || '', counselorUid, date: form.date, type: form.type, purpose: final.purpose, counselor: (profile?.displayName || user?.displayName || '상담 담당자').replace(/\s*상담사$/, ''), summary: final.summary, strengths: final.strengths, concern: final.concern, guidance: final.guidance, programs: final.programs, studentActions: final.studentActions, counselorActions: final.counselorActions, nextCheckItems: final.nextCheckItems, ...(aiReview ? { aiReview } : {}), publication, studentVisible: Object.values(publication).some(Boolean), createdAt: now, updatedAt: now };
     const publishedSummary = buildConsultationSummary(consultation, publication);
     const internalNote = { id: consultation.id, consultationId: consultation.id, studentId: student.id, note: safeForm.rawMemo, createdAt: now, updatedAt: now };
     const newTasks = [];
@@ -188,7 +205,7 @@ export default function ConsultationFormPage() {
         <section className="card student-context"><div className="context-head"><div><strong>{student.name}</strong><p>{student.department} · {student.grade}</p></div><StatusBadge status="inProgress" /></div><dl><div><dt>진로 목표</dt><dd>{student.goal}</dd></div><div><dt>최근 상담</dt><dd>{student.lastConsultation}</dd></div></dl></section>
         <section className="card ai-card"><span className="ai-label"><Icon name="spark" size={16} /> AI 작성 도우미</span><h2>{aiDraft ? '상담일지 초안' : '메모를 상담일지로 정리해요'}</h2>{!aiDraft && <p>입력한 상담 메모를 바탕으로 구조화된 초안을 만들어요. 자동 저장되지 않습니다.</p>}{loading && <div className="ai-loading" role="status" aria-live="polite"><span className="spinner" />상담 맥락을 정리하고 있어요...</div>}
           {!aiDraft && !loading && <button className="button ai full" onClick={generate}><Icon name="spark" size={18} />AI 상담일지 초안 만들기</button>}
-          {aiDraft && !loading && <><div className="ai-warning"><Icon name="alert" size={17} />AI가 작성한 초안이므로 저장 전 내용을 확인하세요.</div><div className="ai-fields">{[['purpose','상담 목적'],['summary','상담 주요 내용'],['strengths','학생의 강점'],['concern','학생의 고민과 목표'],['guidance','담당자의 안내 내용'],['studentActions','학생의 다음 행동'],['counselorActions','담당자의 후속 조치'],['nextCheckItems','다음 상담 확인 사항']].map(([key,label]) => <label key={key}>{label}<textarea rows={key === 'summary' ? 5 : 3} value={aiDraft[key]} onChange={e => setAiDraft(prev => ({ ...prev, [key]: e.target.value }))} /></label>)}</div><div className="ai-actions"><button className="button secondary" onClick={generate}>초안 다시 생성</button><button className="button ai" onClick={() => notify('AI 초안 검토를 완료했습니다.')}>검토 완료</button></div></>}
+          {aiDraft && !loading && <><div className="ai-warning"><Icon name="alert" size={17} />AI가 작성한 초안이므로 저장 전 내용과 근거를 확인하세요.</div><div className="ai-fields">{[['purpose','상담 목적'],['summary','상담 주요 내용'],['strengths','학생의 강점'],['concern','학생의 고민과 목표'],['guidance','담당자의 안내 내용'],['studentActions','학생의 다음 행동'],['counselorActions','담당자의 후속 조치'],['nextCheckItems','다음 상담 확인 사항']].map(([key,label]) => <label key={key}>{label}<textarea rows={key === 'summary' ? 5 : 3} value={aiDraft[key]} onChange={e => setAiDraft(prev => ({ ...prev, [key]: e.target.value }))} /></label>)}<section className="ai-review-section"><h3>작성 근거</h3><p>AI가 각 항목을 작성할 때 사용한 상담 내용입니다.</p>{aiEvidenceOptions.map(({ key, label }) => <div className="ai-evidence" key={key}><strong>{label}</strong><ul>{(aiDraft.evidence?.[key]?.length ? aiDraft.evidence[key] : ['근거 부족']).map((item, index) => <li key={`${key}-${index}`}>{item}</li>)}</ul></div>)}</section><section className="ai-review-section"><h3>추가 확인 필요</h3>{aiDraft.needsConfirmation?.length ? <ul>{aiDraft.needsConfirmation.map((item, index) => <li key={`confirmation-${index}`}>{item}</li>)}</ul> : <p>AI가 발견한 추가 확인 사항이 없습니다.</p>}</section>{Boolean(aiDraft.sensitiveWarning?.length) && <section className="ai-review-section sensitive"><h3><Icon name="alert" size={15} />공개 전 확인</h3><ul>{aiDraft.sensitiveWarning.map((item, index) => <li key={`warning-${index}`}>{item}</li>)}</ul></section>}</div><div className="ai-actions"><button className="button secondary" onClick={generate}>초안 다시 생성</button><button className="button ai" onClick={() => notify('AI 초안 검토를 완료했습니다.')}>검토 완료</button></div></>}
         </section>
         <section className="card task-register"><span className="eyebrow">저장 시 함께 등록</span><h2>후속 조치</h2><label>학생 담당<input value={studentTask} onChange={e => setStudentTask(e.target.value)} /></label><label>교직원 담당<input value={counselorTask} onChange={e => setCounselorTask(e.target.value)} /></label><small><Icon name="calendar" size={14} />기한 {form.nextDate}</small></section>
       </aside>

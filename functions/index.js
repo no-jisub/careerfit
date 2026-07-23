@@ -7,6 +7,7 @@ import {
   buildConsultationPrompt,
   classifyAiError,
   consultationDraftSchema,
+  CONSULTATION_SYSTEM_INSTRUCTION,
   parseConsultationDraft,
   sanitizeConsultationInput,
 } from './consultationDraft.js';
@@ -85,7 +86,7 @@ export const generateConsultationDraft = onCall({
       model: MODEL,
       contents: buildConsultationPrompt(input),
       config: {
-        systemInstruction: '당신은 대한민국 대학 진로상담 담당자의 기록 작성을 돕는 보조 도구입니다. 최종 판단을 대신하지 말고 제공된 사실만 구조화하세요.',
+        systemInstruction: CONSULTATION_SYSTEM_INSTRUCTION,
         temperature: 0.2,
         maxOutputTokens: 4096,
         thinkingConfig: {

@@ -13,6 +13,20 @@ export function generateLocalConsultationDraft(input) {
     studentActions: input.studentActions?.trim() || '학생의 다음 행동을 구체적으로 작성해 주세요.',
     counselorActions: input.counselorActions?.trim() || '담당자의 후속 조치를 작성해 주세요.',
     nextCheckItems: input.nextCheckItems?.trim() || '다음 상담에서 확인할 내용을 작성해 주세요.',
+    evidence: {
+      summary: ['상담 담당자가 입력한 내부 메모를 바탕으로 정리했습니다.'],
+      strengths: input.strengths?.trim()
+        ? ['상담 담당자가 입력한 학생의 강점을 바탕으로 정리했습니다.']
+        : ['근거 부족'],
+      concern: input.currentConcern?.trim()
+        ? ['학생의 현재 고민 입력 내용을 바탕으로 정리했습니다.']
+        : ['근거 부족'],
+      guidance: input.guidance?.trim()
+        ? ['상담 담당자가 입력한 안내 내용을 바탕으로 정리했습니다.']
+        : ['근거 부족'],
+    },
+    needsConfirmation: [],
+    sensitiveWarning: [],
   };
 }
 
