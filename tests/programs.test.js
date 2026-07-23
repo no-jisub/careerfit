@@ -10,6 +10,7 @@ import {
   restoreProgramStore,
   validateProgram,
 } from '../src/utils/programs.js';
+import { initialPrograms } from '../src/data/programs.js';
 
 const baseProgram = {
   id: 'program-test',
@@ -89,4 +90,29 @@ test('normalization removes duplicate tags and preserves safe derived labels', (
   assert.deepEqual(normalized.tags, ['UX', '기획']);
   assert.equal(normalized.recruit, '07.20–07.31');
   assert.equal(normalized.period, '08.05–08.20');
+});
+
+test('normalization preserves external program application metadata', () => {
+  const normalized = normalizeProgram({
+    ...baseProgram,
+    externalId: '575296',
+    source: '강남대학교 대학일자리플러스센터',
+    sourceUrl: 'https://career.kangnam.ac.kr/programs',
+    sourceStatus: '모집전',
+    currentApplicants: 7,
+    mileage: 160,
+    contactEmail: 'job@example.com',
+  });
+  assert.equal(normalized.externalId, '575296');
+  assert.equal(normalized.sourceStatus, '모집전');
+  assert.equal(normalized.currentApplicants, 7);
+  assert.equal(normalized.mileage, 160);
+  assert.equal(normalized.contactEmail, 'job@example.com');
+});
+
+test('Kangnam program snapshot contains reviewed source records with unique ids', () => {
+  assert.equal(initialPrograms.length, 17);
+  assert.equal(new Set(initialPrograms.map(program => program.id)).size, initialPrograms.length);
+  assert.equal(initialPrograms.every(program => program.source === '강남대학교 대학일자리플러스센터'), true);
+  assert.equal(initialPrograms.every(program => program.sourceUrl.startsWith('https://career.kangnam.ac.kr/')), true);
 });

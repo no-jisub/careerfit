@@ -521,7 +521,8 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(35,86,216,.35); 
 .student-program-card.recommend-card, .student-program-card.recommend-in-all { border-color: var(--green); box-shadow: 0 12px 28px rgba(38,76,151,.1), 0 0 0 1px rgba(38,160,105,.16); }
 .student-program-card.all-card h3 { min-height: 52px; font-size: 16px; }
 .student-program-card.all-card p { min-height: 92px; }
-.student-programs h3 { font-size: 16px; }.student-programs p { color: #69758c; font-size: 10px; line-height: 1.7; }.student-programs article > div:not(.student-program-card-top) { display: flex; justify-content: space-between; color: #7e899c; font-size: 9px; }.student-programs article > div span { display: flex; align-items: center; gap: 5px; }.student-programs article > button { margin-top: 15px; padding: 0; border: 0; display: flex; align-items: center; gap: 5px; color: var(--blue); background: transparent; font-size: 10px; font-weight: 700; }
+.student-programs h3 { font-size: 16px; }.student-programs p { color: #69758c; font-size: 10px; line-height: 1.7; }.student-programs article > div:not(.student-program-card-top) { display: flex; justify-content: space-between; color: #7e899c; font-size: 9px; }.student-programs article > div span { display: flex; align-items: center; gap: 5px; }.student-programs article > button, .student-program-detail-link { margin-top: 15px; padding: 0; border: 0; display: flex; align-items: center; gap: 5px; color: var(--blue); background: transparent; font-size: 10px; font-weight: 700; }
+.student-program-detail-link { min-height: 44px; text-decoration: none; }
 .student-portal footer { min-height: 70px; padding: 0 max(24px, calc((100vw - 1100px)/2)); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; color: #8e98a9; background: white; font-size: 9px; }
 
 @media (max-width: 1120px) {
@@ -841,7 +842,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .recommend-toolbar p { font-size: 12px; }
 .program-card h2 { font-size: 19px; }
 .select-program { min-height: 44px; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }
-.program-footer button, .next-appointment > button, .student-programs article > button { min-height: 44px; }
+.program-footer button, .next-appointment > button, .student-programs article > button, .student-program-detail-link { min-height: 44px; }
 .recommend-reason, .program-info dt, .program-info dd { font-size: 11px; }
 .program-tags span, .program-footer button, .program-footer small, .recommend-disclaimer { font-size: 11px; }
 
@@ -898,7 +899,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .recent-summary > p { font-size: 12px; }
 .recent-summary > div span, .recent-summary > div strong, .recent-summary > small { font-size: 11px; }
 .student-task-card h3 { font-size: 14px; }
-.student-task-card p, .student-programs p, .student-programs article > div, .student-programs article > button { font-size: 11px; }
+.student-task-card p, .student-programs p, .student-programs article > div, .student-programs article > button, .student-program-detail-link { font-size: 11px; }
 .student-task-card { align-items: flex-start; }
 .student-task-card > button { width: 44px; height: 44px; flex: 0 0 44px; border: 0; display: grid; place-items: center; background: transparent; }
 .student-task-card > button span { width: 24px; height: 24px; border: 2px solid #aebbcf; border-radius: 50%; display: block; background: white; transition: border-color .2s ease, background .2s ease; }
@@ -1590,4 +1591,52 @@ h1, h2, h3,
   }
   .student-appointment-actions button { width: 100%; }
   .student-appointment-detail-list > div { grid-template-columns:1fr; gap:5px; }
+}
+
+.student-program-detail-page > header .brand { display:flex; align-items:center; gap:9px; text-decoration:none; }
+.student-program-detail-page main { min-height:calc(100vh - 144px); }
+.student-program-back { width:max-content; margin-bottom:22px; display:inline-flex; align-items:center; gap:7px; color:var(--muted); font-size:12px; font-weight:800; text-decoration:none; }
+.student-program-back svg { transform:rotate(180deg); }
+.student-program-detail-hero { padding:32px; border-radius:22px; display:grid; grid-template-columns:minmax(0, 1fr) 310px; gap:32px; color:white; background:linear-gradient(135deg, #173a66 0%, #285aa1 100%); box-shadow:0 20px 44px rgba(30,58,95,.18); }
+.student-program-detail-heading > div { margin-bottom:22px; display:flex; gap:8px; }
+.student-program-detail-heading .tag { color:#173a66; background:white; }
+.student-program-detail-heading .program-status { border:1px solid rgba(255,255,255,.24); color:white; background:rgba(255,255,255,.12); }
+.student-program-detail-heading .eyebrow { color:#bed7ff; }
+.student-program-detail-heading h1 { max-width:760px; margin:7px 0 14px; font-size:clamp(28px, 4vw, 44px); line-height:1.2; letter-spacing:-.04em; }
+.student-program-detail-heading > p { max-width:760px; color:#e1ebfb; font-size:14px; line-height:1.8; }
+.student-program-detail-heading .program-tags { margin-top:22px; }
+.student-program-detail-heading .program-tags span { border:1px solid rgba(255,255,255,.2); color:#eef5ff; background:rgba(255,255,255,.1); }
+.student-program-application-card { align-self:stretch; padding:24px; display:flex; flex-direction:column; color:var(--navy); background:white; }
+.student-program-application-card > span { color:var(--muted); font-size:11px; font-weight:800; }
+.student-program-application-card > strong { margin:9px 0 4px; font-size:22px; }
+.student-program-application-card > p { margin:0 0 22px; color:var(--blue); font-size:12px; font-weight:800; }
+.student-program-application-card .button { width:100%; margin-top:auto; text-decoration:none; }
+.student-program-application-card small { margin-top:13px; color:var(--muted); font-size:10px; line-height:1.6; }
+.student-program-data-warning { margin-top:16px; padding:15px 18px; border:1px solid #f4d58f; border-radius:14px; display:flex; gap:12px; color:#7a5011; background:#fff8e8; }
+.student-program-data-warning svg { flex:0 0 auto; margin-top:2px; }
+.student-program-data-warning strong { font-size:12px; }
+.student-program-data-warning p { margin:3px 0 0; font-size:11px; line-height:1.6; }
+.student-program-detail-grid { margin-top:18px; display:grid; grid-template-columns:1.15fr .85fr; gap:18px; }
+.student-program-detail-section { padding:26px; }
+.student-program-detail-section h2 { margin:6px 0 20px; font-size:20px; }
+.student-program-detail-section dl { margin:0; }
+.student-program-detail-section dl > div { padding:13px 0; border-bottom:1px solid var(--border); display:grid; grid-template-columns:130px minmax(0, 1fr); gap:14px; }
+.student-program-detail-section dl > div:last-child { border-bottom:0; }
+.student-program-detail-section dt { color:var(--muted); font-size:11px; font-weight:700; }
+.student-program-detail-section dd { margin:0; color:var(--navy); font-size:12px; font-weight:700; line-height:1.65; }
+.student-program-detail-section dd a { color:var(--blue); }
+.student-program-detail-reason { margin:0 0 14px; padding:16px; border-radius:13px; display:flex; align-items:flex-start; gap:10px; color:#513a92; background:#f3efff; font-size:12px; line-height:1.7; }
+.student-program-detail-reason svg { flex:0 0 auto; margin-top:2px; }
+.student-program-source-note { margin:18px 2px 0; color:var(--muted); font-size:10px; line-height:1.6; }
+
+@media (max-width: 820px) {
+  .student-program-detail-hero, .student-program-detail-grid { grid-template-columns:1fr; }
+  .student-program-application-card { min-height:230px; }
+}
+
+@media (max-width: 600px) {
+  .student-program-detail-hero { padding:22px; border-radius:18px; gap:22px; }
+  .student-program-detail-heading h1 { font-size:28px; }
+  .student-program-detail-section { padding:20px; }
+  .student-program-detail-section dl > div { grid-template-columns:1fr; gap:5px; }
 }

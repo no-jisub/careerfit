@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useApp } from '../App';
 import { EmptyState } from './UI';
 import Icon from './Icon';
@@ -20,7 +21,11 @@ export default function StudentProgramSection({ student, notify }) {
   const [mode, setMode] = useState('전체');
   const [status, setStatus] = useState('all');
   const today = new Date().toISOString().slice(0, 10);
-  const availablePrograms = useMemo(() => programs.filter(program => ['scheduled', 'recruiting'].includes(resolveProgramStatus(program, today)) && isProgramEligibleForStudent(program, student)), [programs, student, today]);
+  const availablePrograms = useMemo(() => programs.filter(program => {
+    const effectiveStatus = resolveProgramStatus(program, today);
+    const hasNotEnded = !program.programEndDate || program.programEndDate >= today;
+    return ['scheduled', 'recruiting', 'closed'].includes(effectiveStatus) && hasNotEnded && isProgramEligibleForStudent(program, student);
+  }), [programs, student, today]);
   const allDirectRecommendations = programRecommendations.filter(item => item.studentId === student.id);
   const directRecommendations = allDirectRecommendations.filter(item => item.status !== 'dismissed');
   const directProgramIds = new Set(allDirectRecommendations.map(item => item.programId));
@@ -54,7 +59,7 @@ export default function StudentProgramSection({ student, notify }) {
         <h3>{program.name}</h3><p>{directRecommendation?.reason || program.reason}</p>
         <div><span><Icon name="calendar" size={15} />모집 {program.recruit}</span><b>{PROGRAM_STATUS_LABELS[effectiveStatus]}</b></div>
         {directRecommendation && <div className="student-program-response"><span>내 선택 · {responseLabels[directRecommendation.status] || '확인 전'}</span><div><button className={directRecommendation.status === 'interested' ? 'active' : ''} onClick={() => updateResponse(directRecommendation, 'interested')}>관심 있음</button><button className={directRecommendation.status === 'applied' ? 'active' : ''} onClick={() => updateResponse(directRecommendation, 'applied')}>신청 완료</button><button className={directRecommendation.status === 'dismissed' ? 'active' : ''} onClick={() => updateResponse(directRecommendation, 'dismissed')}>참여하지 않음</button></div></div>}
-        <button onClick={() => notify(program.applicationUrl ? `${program.name} 신청 링크는 데모 주소입니다.` : `${program.contact || program.department}에 신청 방법을 문의해 주세요.`)}>{program.applicationUrl ? '신청 정보 확인' : '담당 부서 문의'} <Icon name="arrow" size={16} /></button>
+        <Link className="student-program-detail-link" to={`/student/programs/${program.id}`}>신청정보 보기 <Icon name="arrow" size={16} /></Link>
       </article>;
     })}</div>
     {!visiblePrograms.length && <EmptyState title="조건에 맞는 프로그램이 없습니다" description="다른 검색어나 필터를 선택해 보세요." action={<button className="button secondary" onClick={() => { setQuery(''); setKeyword('all'); setMode('전체'); setStatus('all'); }}>필터 초기화</button>} />}

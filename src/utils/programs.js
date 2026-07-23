@@ -1,4 +1,4 @@
-export const PROGRAM_STORE_VERSION = 1;
+export const PROGRAM_STORE_VERSION = 2;
 export const PROGRAM_RECOMMENDATION_STORE_VERSION = 1;
 
 export const PROGRAM_TYPES = ['진로 탐색', '직무 역량', '취업 준비', '프로젝트', '창업'];
@@ -72,6 +72,14 @@ export function normalizeProgram(program, index = 0) {
     location: String(program.location || '').trim(),
     applicationUrl: String(program.applicationUrl || '').trim(),
     contact: String(program.contact || '').trim(),
+    contactEmail: String(program.contactEmail || '').trim(),
+    source: String(program.source || '').trim(),
+    sourceUrl: String(program.sourceUrl || '').trim(),
+    sourceStatus: String(program.sourceStatus || '').trim(),
+    externalId: String(program.externalId || '').trim(),
+    currentApplicants: Math.max(0, Number(program.currentApplicants) || 0),
+    mileage: Math.max(0, Number(program.mileage) || 0),
+    dataWarning: String(program.dataWarning || '').trim(),
     status: PROGRAM_STATUSES.includes(program.status) ? program.status : 'scheduled',
     featured: Boolean(program.featured),
     archived: Boolean(program.archived),
