@@ -37,6 +37,7 @@
 
 - **Heading Font:** Pretendard / Noto Sans KR / system sans-serif, 700–800
 - **Body Font:** Pretendard / Noto Sans KR / system sans-serif, 400–600
+- **Type Scale:** Caption 12px, compact body 13px, body/control 14px, card title 16px, section title 20px, page title 28–32px
 - **Mood:** trustworthy, calm, approachable, operational
 - **Loading:** system-first stack; no render-blocking remote font request
 - **Heading hierarchy:** Show the title directly. Do not place small eyebrow, kicker, or overline labels above page, section, card, or modal headings.
@@ -83,7 +84,7 @@
   background: #2563EB;
   color: white;
   padding: 12px 24px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-weight: 600;
   transition: all 200ms ease;
   cursor: pointer;
@@ -100,7 +101,7 @@
   color: #1E3A5F;
   border: 1px solid #CBD5E1;
   padding: 12px 24px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-weight: 600;
   transition: all 200ms ease;
   cursor: pointer;
@@ -112,7 +113,7 @@
 ```css
 .card {
   background: #FFFFFF;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 24px;
   box-shadow: none;
   transition: all 200ms ease;
@@ -130,7 +131,7 @@
 .input {
   padding: 12px 16px;
   border: 1px solid #E2E8F0;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 16px;
   transition: border-color 200ms ease;
 }
@@ -160,6 +161,14 @@
   width: 90%;
 }
 ```
+
+### Shape hierarchy
+
+- **Controls:** 10px — buttons, inputs, search fields, and icon buttons
+- **Nested components:** 12px — tabs, selectable rows, and compact internal cards
+- **Primary surfaces:** 16px — cards, panels, heroes, modals, and popovers
+- **Status labels:** Full pill — badges, tags, counts, and state chips
+- **Exceptions:** Avatars remain circular; the floating glass top bar keeps its slightly larger responsive radius.
 
 ---
 

@@ -65,6 +65,41 @@ export function validateStudentRegistrationInput(form) {
   };
 }
 
+export function validateNewStudentInput(form, existingStudents = []) {
+  const name = cleanText(form.name, 80);
+  const studentNo = cleanText(form.studentNo, 40);
+  const department = cleanText(form.department, 100);
+  const grade = cleanText(form.grade, 20);
+  const phone = cleanText(form.phone, 40);
+  const goal = cleanText(form.goal, 1000);
+  const concern = cleanText(form.concern, 5000);
+  const interests = cleanText(form.interests, 500)
+    .split(',')
+    .map(value => cleanText(value, 50))
+    .filter(Boolean)
+    .filter((value, index, items) => items.indexOf(value) === index)
+    .slice(0, 20);
+
+  if (!name) return { error: '학생 이름을 입력해 주세요.' };
+  if (!studentNo || !department || !grade) return { error: '학번, 학과, 학년을 모두 입력해 주세요.' };
+  if (existingStudents.some(student => cleanText(student.studentNo, 40) === studentNo)) {
+    return { error: '이미 등록된 학번입니다.' };
+  }
+
+  return {
+    value: {
+      name,
+      studentNo,
+      department,
+      grade,
+      phone,
+      goal,
+      concern,
+      interests,
+    },
+  };
+}
+
 export function validateCounselorRegistrationInput(form) {
   const displayName = cleanText(form.displayName, 80);
   const email = cleanText(form.email, 254).toLowerCase();

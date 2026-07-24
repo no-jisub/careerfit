@@ -5955,61 +5955,6 @@ body :where(a, button, input, select, textarea, [tabindex]):focus-visible {
 }
 
 /* Focused counseling work queues */
-.workflow-queue-metrics {
-  margin: 0 0 16px;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-.workflow-queue-metric {
-  min-width: 0;
-  min-height: 108px;
-  padding: 18px 20px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  align-items: center;
-  gap: 14px;
-  background: var(--surface);
-}
-.workflow-queue-metric-icon {
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--primary-border);
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  color: var(--blue);
-  background: var(--blue-soft);
-}
-.workflow-queue-metric > div {
-  min-width: 0;
-}
-.workflow-queue-metric > div > span {
-  display: block;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: var(--font-weight-semibold);
-  line-height: 1.3;
-}
-.workflow-queue-metric strong {
-  margin-top: 8px;
-  display: block;
-  color: var(--navy);
-  font-size: 28px;
-  font-variant-numeric: tabular-nums;
-  font-weight: var(--font-weight-extrabold);
-  letter-spacing: -.03em;
-  line-height: 1;
-}
-.workflow-queue-metric strong small {
-  margin-left: 4px;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: var(--font-weight-bold);
-  letter-spacing: 0;
-}
 .workflow-queue-overview {
   margin-bottom: 16px;
   padding: 22px 24px;
@@ -6274,31 +6219,6 @@ body :where(a, button, input, select, textarea, [tabindex]):focus-visible {
 }
 
 @media (max-width: 600px) {
-  .workflow-queue-metrics {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-  .workflow-queue-metric {
-    min-height: 76px;
-    padding: 12px 14px;
-    grid-template-columns: 38px minmax(0, 1fr);
-    gap: 12px;
-  }
-  .workflow-queue-metric-icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-  }
-  .workflow-queue-metric > div {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
-  .workflow-queue-metric strong {
-    margin-top: 0;
-    font-size: 24px;
-  }
   .workflow-queue-overview {
     padding: 18px;
   }
@@ -6420,4 +6340,515 @@ body :where(a, button, input, select, textarea, [tabindex]):focus-visible {
 /* Keep headings direct: decorative overline/eyebrow labels are not used. */
 .eyebrow {
   display: none !important;
+}
+
+/* Student registration */
+.badge-registered {
+  border-color: var(--primary-muted);
+  color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.student-status-tabs:not(.selection-status-tabs) {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.selection-status-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.student-add-modal {
+  width: min(700px, calc(100% - 32px));
+  max-height: calc(100vh - 40px);
+  padding: 30px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  box-shadow: none;
+}
+
+.student-add-modal h2 {
+  margin: 0 48px 7px 0;
+  font-size: 24px;
+  line-height: 1.35;
+}
+
+.student-add-description {
+  flex: 0 0 auto;
+  max-width: 570px;
+  margin: 0 48px 24px 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.student-add-modal form {
+  min-height: 0;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.student-add-form-scroll {
+  min-height: 0;
+  padding-right: 6px;
+  overflow-y: auto;
+  scrollbar-color: var(--primary-muted) transparent;
+  scrollbar-width: thin;
+}
+
+.student-add-section {
+  min-width: 0;
+  margin: 0;
+  padding: 20px 0 4px;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.student-add-section legend {
+  padding: 0 10px 0 0;
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: var(--font-weight-bold);
+}
+
+.student-add-modal label > span {
+  color: var(--red);
+}
+
+.student-add-modal label > small {
+  margin-left: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: var(--font-weight-regular);
+}
+
+.student-add-modal textarea {
+  margin-top: 7px;
+  resize: vertical;
+}
+
+.student-add-privacy-note {
+  margin: 12px 0 18px;
+  padding: 13px 14px;
+  border: 1px solid var(--primary-border);
+  border-radius: 11px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--blue);
+  background: var(--primary-soft);
+}
+
+.student-add-privacy-note > svg {
+  margin-top: 2px;
+  flex: 0 0 auto;
+}
+
+.student-add-privacy-note p,
+.student-add-privacy-note strong,
+.student-add-privacy-note span {
+  display: block;
+}
+
+.student-add-privacy-note p {
+  margin: 0;
+}
+
+.student-add-privacy-note strong {
+  color: var(--navy);
+  font-size: 12px;
+}
+
+.student-add-privacy-note span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.student-add-modal .field-error {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(197, 62, 69, .2);
+  border-radius: 9px;
+  color: var(--red);
+  background: var(--red-soft);
+  font-size: 12px;
+}
+
+.student-add-modal .modal-actions {
+  flex: 0 0 auto;
+  margin-top: 14px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.student-add-modal .button {
+  box-shadow: none;
+}
+
+@media (max-width: 1120px) and (min-width: 601px) {
+  .student-status-tabs:not(.selection-status-tabs) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .student-status-tabs:not(.selection-status-tabs),
+  .selection-status-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .student-status-tabs button:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .student-add-modal {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+    padding: 24px 18px 18px;
+  }
+
+  .student-add-description {
+    margin-right: 30px;
+  }
+
+  .student-add-modal .modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .student-add-modal .modal-actions .button {
+    width: 100%;
+  }
+}
+
+/* Floating glass workspace header */
+.app-shell .topbar {
+  width: calc(100% - 48px);
+  height: 72px;
+  top: 12px;
+  margin: 12px 24px 0;
+  padding: 0 20px;
+  border: 1px solid rgba(var(--primary-rgb), .09);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .86), rgba(255, 255, 255, .76));
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  backdrop-filter: blur(18px) saturate(135%);
+  box-shadow:
+    0 1px 2px rgba(16, 33, 61, .035),
+    0 8px 24px rgba(16, 33, 61, .055),
+    inset 0 1px 0 rgba(255, 255, 255, .82);
+}
+
+.app-shell .topbar-title {
+  min-width: 0;
+}
+
+.app-shell .topbar .global-search {
+  border-color: rgba(var(--primary-rgb), .12);
+  background: rgba(244, 247, 251, .72);
+}
+
+.app-shell .topbar .global-search:focus-within {
+  border-color: var(--primary-border);
+  background: rgba(255, 255, 255, .96);
+}
+
+.app-shell .topbar .icon-button,
+.app-shell .topbar .profile-button {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .54);
+  transition: border-color .18s ease, background-color .18s ease, color .18s ease;
+}
+
+.app-shell .topbar .icon-button:hover,
+.app-shell .topbar .profile-button:hover {
+  border-color: rgba(var(--primary-rgb), .14);
+  color: var(--blue-dark);
+  background: rgba(255, 255, 255, .92);
+}
+
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .app-shell .topbar {
+    background: rgba(255, 255, 255, .97);
+  }
+}
+
+@media (max-width: 980px) {
+  .app-shell .topbar {
+    width: calc(100% - 24px);
+    height: 66px;
+    top: 10px;
+    margin: 10px 12px 0;
+    padding-inline: 14px;
+    border-radius: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .app-shell .topbar {
+    width: calc(100% - 16px);
+    height: 60px;
+    top: 8px;
+    margin: 8px 8px 0;
+    padding-inline: 10px;
+    border-radius: 14px;
+  }
+}
+
+/* Quiet glass selection: keep state clear without a heavy underline. */
+.app-shell .workflow-status-tabs button.active {
+  border: 1px solid rgba(var(--primary-rgb), .2);
+  color: var(--blue-dark);
+  background: rgba(var(--primary-rgb), .055);
+  -webkit-backdrop-filter: blur(9px) saturate(108%);
+  backdrop-filter: blur(9px) saturate(108%);
+}
+
+.app-shell .task-status-tabs button[data-tab-value="overdue"].active,
+.app-shell .appointment-status-tabs button[data-tab-value="cancelled"].active {
+  border-color: rgba(197, 62, 69, .22);
+  color: #8d2730;
+  background: rgba(197, 62, 69, .055);
+}
+
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .app-shell .workflow-status-tabs button.active {
+    background: rgba(var(--primary-rgb), .07);
+  }
+
+  .app-shell .task-status-tabs button[data-tab-value="overdue"].active,
+  .app-shell .appointment-status-tabs button[data-tab-value="cancelled"].active {
+    background: rgba(197, 62, 69, .07);
+  }
+}
+
+/* Unified interface rhythm: shared type roles and rounded-rectangle geometry. */
+:root {
+  --type-caption: 12px;
+  --type-body-sm: 13px;
+  --type-body: 14px;
+  --type-title-sm: 16px;
+  --type-title: 20px;
+  --type-page: clamp(28px, 2.2vw, 32px);
+  --radius-control: 10px;
+  --radius-component: 12px;
+  --radius-surface: 16px;
+  --radius-overlay: 16px;
+  --radius-pill: 999px;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-sans);
+}
+
+.app-shell h1,
+.student-portal h1,
+.auth-card h1 {
+  font-size: var(--type-page);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.3;
+  letter-spacing: -.035em;
+}
+
+.app-shell h2,
+.student-portal h2,
+.auth-card h2 {
+  font-size: var(--type-title);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.4;
+  letter-spacing: -.025em;
+}
+
+.app-shell h3,
+.student-portal h3,
+.auth-card h3 {
+  font-size: var(--type-title-sm);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.45;
+  letter-spacing: -.02em;
+}
+
+.app-shell p,
+.app-shell li,
+.app-shell dd,
+.student-portal p,
+.student-portal li,
+.student-portal dd,
+.auth-card p,
+.auth-card li {
+  font-size: var(--type-body-sm);
+  line-height: 1.65;
+}
+
+.app-shell small,
+.app-shell dt,
+.student-portal small,
+.student-portal dt,
+.auth-card small,
+.workspace-label,
+.eyebrow {
+  font-size: var(--type-caption);
+  line-height: 1.5;
+}
+
+.app-shell label,
+.student-portal label,
+.auth-card label,
+.filter-card label,
+.modal label {
+  font-size: var(--type-body-sm);
+  line-height: 1.5;
+}
+
+input,
+select,
+textarea {
+  border-radius: var(--radius-control);
+  font-size: var(--type-body);
+}
+
+.button,
+.text-button,
+.text-link,
+.profile-button,
+.main-nav a,
+.sidebar-bottom > a,
+.sidebar-bottom > button {
+  font-size: var(--type-body-sm);
+}
+
+.button,
+.icon-button,
+.profile-button,
+.global-search,
+.search-field,
+.modal-close,
+.row-link {
+  border-radius: var(--radius-control);
+}
+
+.card,
+.summary-card,
+.filter-card,
+.program-card,
+.student-mobile-card,
+.student-task-card,
+.student-program-card,
+.profile-hero,
+.student-case-hero,
+.student-consultation-records,
+.dashboard-masthead,
+.preparation-hero,
+.program-intelligence-hero,
+.program-match-queue,
+.student-slot-group,
+.student-selected-slot,
+.student-welcome,
+.next-appointment,
+.recent-summary,
+.auth-card {
+  border-radius: var(--radius-surface);
+}
+
+.modal,
+.header-popover,
+.student-add-modal {
+  border-radius: var(--radius-overlay);
+}
+
+.workflow-status-tabs button,
+.segmented,
+.segmented button,
+.role-card,
+.task-owner-card,
+.schedule-item,
+.prep-grid article,
+.student-slot-group article,
+.student-appointment-history article,
+.appointment-list article,
+.pending-registration-list article,
+.availability-date-group,
+.student-add-privacy-note,
+.field-error,
+.appointment-detail-summary,
+.appointment-request-details dl {
+  border-radius: var(--radius-component);
+}
+
+.badge,
+.tag,
+.selected-chip,
+.program-status,
+.appointment-status,
+.availability-status,
+.task-ready-count,
+.task-owner-chip,
+.student-record-count,
+.availability-open-count,
+.workflow-status-tabs button em {
+  border-radius: var(--radius-pill);
+  font-size: var(--type-caption);
+}
+
+.student-table th {
+  font-size: var(--type-caption);
+}
+
+.student-table td,
+.student-cell strong,
+.list-toolbar p,
+.schedule-info span,
+.schedule-info > p,
+.compact-tasks p,
+.compact-tasks small,
+.recent-list p,
+.recent-list time {
+  font-size: var(--type-body-sm);
+}
+
+/* Bring legacy compact elements onto the same readable scale. */
+.verification-badge,
+.student-record-date {
+  font-size: var(--type-caption) !important;
+}
+
+.verification-badge {
+  border-radius: var(--radius-pill);
+}
+
+.student-record-date,
+.published-summary-fields > div,
+.ai-review-check {
+  border-radius: var(--radius-component);
+}
+
+.published-summary-fields span {
+  font-size: var(--type-caption) !important;
+}
+
+.published-summary-fields p,
+.ai-review-check {
+  font-size: var(--type-body-sm) !important;
+}
+
+.student-program-response button {
+  min-height: 44px !important;
+  border-radius: var(--radius-control) !important;
+  font-size: var(--type-body-sm) !important;
+}
+
+@media (max-width: 600px) {
+  :root {
+    --type-page: 26px;
+    --type-title: 18px;
+  }
 }

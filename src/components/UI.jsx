@@ -2,6 +2,7 @@ import Icon from './Icon';
 
 export const statusMeta = {
   consultation: {
+    registered: { label: '신규 등록', icon: 'students' },
     scheduled: { label: '상담 예정', icon: 'calendar' },
     inProgress: { label: '상담 진행 중', icon: 'clock' },
     writing: { label: '기록 작성 필요', icon: 'note' },

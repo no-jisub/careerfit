@@ -13,9 +13,10 @@ test('counselor access is scoped to assigned students and counselor-owned record
   assert.match(dataService, /where\('counselorUid', '==', session\.user\.uid\)/);
 });
 
-test('user approval and student reassignment are administrator-only', () => {
+test('user approval and student reassignment stay administrator-only while counselors can add only self-assigned manual students', () => {
   assert.match(rules, /match \/users\/\{userId\} \{[\s\S]*allow delete: if isAdmin\(\)/);
-  assert.match(rules, /match \/students\/\{studentId\} \{[\s\S]*allow create: if isAdmin\(\)/);
+  assert.match(rules, /match \/students\/\{studentId\} \{[\s\S]*allow create: if validStudent\(request\.resource\.data\)[\s\S]*isAdmin\(\)[\s\S]*request\.resource\.data\.counselorUid == request\.auth\.uid[\s\S]*request\.resource\.data\.uid\.matches\('\^manual-/);
+  assert.match(rules, /match \/students\/\{studentId\} \{[\s\S]*allow update: if validStudent\(request\.resource\.data\)[\s\S]*request\.resource\.data\.counselorUid == resource\.data\.counselorUid/);
   assert.doesNotMatch(dataService, /role === 'counselor'.*'users'/);
 });
 

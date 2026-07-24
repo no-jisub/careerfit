@@ -63,12 +63,13 @@ service cloud.firestore {
         && validOptionalText(data, 'concern', 5000)
         && data.get('interests', []) is list
         && data.get('interests', []).size() <= 20
-        && data.status in ['scheduled', 'inProgress', 'writing', 'complete'];
+        && data.status in ['registered', 'scheduled', 'inProgress', 'writing', 'complete'];
     }
 
     function validStudentSensitiveProfile(data) {
       return validText(data.studentId, 128)
         && validText(data.studentUid, 128)
+        && validText(data.counselorUid, 128)
         && validText(data.studentNo, 40)
         && validOptionalText(data, 'phone', 40);
     }
@@ -326,7 +327,10 @@ service cloud.firestore {
         || (isStudent() && resource.data.uid == request.auth.uid);
       // Student identity and assignment changes remain administrator-only.
       // Assigned counselors can update the students in their own caseload.
-      allow create: if isAdmin() && validStudent(request.resource.data);
+      allow create: if validStudent(request.resource.data) && (isAdmin()
+        || (isCounselor()
+          && request.resource.data.counselorUid == request.auth.uid
+          && request.resource.data.uid.matches('^manual-[A-Za-z0-9_-]+$')));
       allow update: if validStudent(request.resource.data) && (isAdmin()
         || (isCounselor()
           && resource.data.counselorUid == request.auth.uid
@@ -348,7 +352,14 @@ service cloud.firestore {
     // returned only by the callable function after assignment + PIN checks.
     match /studentSensitiveProfiles/{studentId} {
       allow read: if false;
-      allow create, update: if isAdmin()
+      allow create: if validStudentSensitiveProfile(request.resource.data)
+        && request.resource.data.studentId == studentId
+        && (isAdmin()
+          || (isCounselor()
+            && request.resource.data.counselorUid == request.auth.uid
+            && getAfter(/databases/$(database)/documents/students/$(studentId)).data.counselorUid == request.auth.uid
+            && request.resource.data.studentUid == getAfter(/databases/$(database)/documents/students/$(studentId)).data.uid));
+      allow update: if isAdmin()
         && validStudentSensitiveProfile(request.resource.data)
         && request.resource.data.studentId == studentId;
       allow delete: if isAdmin();

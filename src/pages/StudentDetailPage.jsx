@@ -241,7 +241,6 @@ export default function StudentDetailPage() {
     finally { setSavingConsultation(false); }
   };
   return <>
-    <nav className="breadcrumb" aria-label="현재 위치"><Link to="/students">학생 관리</Link><Icon name="chevron" size={14} /><span>{student.name}</span></nav>
     <section className="profile-hero student-case-hero">
       <div className="profile-main"><span className="profile-avatar-large" aria-hidden="true">{student.name.slice(1, 3)}</span><div><div className="profile-name"><h1>{student.name}</h1><StatusBadge status={student.status} /></div><p>{maskStudentNo(student.studentNo)} · {student.department} · {student.grade}</p><div className="tag-row">{student.interests.map(x => <span className="tag" key={x}>{x}</span>)}</div></div></div>
       <div className="profile-operational-summary" aria-label="학생 상담 현황"><div><span>누적 상담</span><strong>{history.length}<small>회</small></strong></div><div><span>최근 상담</span><strong>{getCompactDateLabel(latestConsultationDate)}</strong></div></div>

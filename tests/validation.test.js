@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanText, isDateKey, validateAppointmentInput, validateAvailabilityInput, validateConsultationInput, validateStudentAppointmentRequest, validateStudentRegistrationInput } from '../src/utils/validation.js';
+import { cleanText, isDateKey, validateAppointmentInput, validateAvailabilityInput, validateConsultationInput, validateNewStudentInput, validateStudentAppointmentRequest, validateStudentRegistrationInput } from '../src/utils/validation.js';
 
 test('cleanText removes control characters and applies a maximum length', () => {
   assert.equal(cleanText('  상\u0000담 내용  ', 4), '상담 내');
@@ -47,4 +47,22 @@ test('student registration requires verified identity fields and a strong matchi
   assert.match(validateStudentRegistrationInput({ ...base, password: 'abcdefgh', passwordConfirm: 'abcdefgh' }).error, /영문과 숫자/);
   assert.match(validateStudentRegistrationInput({ ...base, passwordConfirm: 'different' }).error, /일치/);
   assert.match(validateStudentRegistrationInput({ ...base, privacyConsent: false }).error, /동의/);
+});
+
+test('manual student registration normalizes counseling context and blocks duplicate student numbers', () => {
+  const form = {
+    name: ' 윤서아 ',
+    studentNo: ' 20269901 ',
+    department: ' 산업디자인학과 ',
+    grade: '1학년',
+    phone: ' 010-1234-5678 ',
+    interests: 'UX, 서비스 기획, UX',
+    goal: ' 프로덕트 디자이너 ',
+    concern: '',
+  };
+  const valid = validateNewStudentInput(form);
+  assert.equal(valid.value.name, '윤서아');
+  assert.equal(valid.value.studentNo, '20269901');
+  assert.deepEqual(valid.value.interests, ['UX', '서비스 기획']);
+  assert.match(validateNewStudentInput(form, [{ studentNo: '20269901' }]).error, /이미 등록/);
 });

@@ -195,6 +195,7 @@ export default function AdminUsersPage() {
       id: `student-${registration.uid}`,
       studentId: `student-${registration.uid}`,
       studentUid: registration.uid,
+      counselorUid: currentCounselorUid,
       studentNo: registration.studentNo,
       phone: registration.phone || '',
       createdAt: now,

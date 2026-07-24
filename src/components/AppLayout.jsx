@@ -92,6 +92,10 @@ export default function AppLayout({ logout }) {
   const location = useLocation();
   const navigate = useNavigate();
   const segment = location.pathname.split('/')[1] || 'dashboard';
+  const studentDetailRouteMatch = location.pathname.match(/^\/students\/([^/]+)$/);
+  const detailStudent = studentDetailRouteMatch
+    ? students.find(student => student.id === studentDetailRouteMatch[1])
+    : null;
   const preparationRouteMatch = location.pathname.match(/^\/students\/([^/]+)\/preparation$/);
   const preparationStudent = preparationRouteMatch
     ? students.find(student => student.id === preparationRouteMatch[1])
@@ -103,9 +107,16 @@ export default function AppLayout({ logout }) {
       parentTo: '/consultation-prep',
       title: preparationStudent?.name || '학생',
     }
-    : /^\/students\/[^/]+\/consultation\/new$/.test(location.pathname)
-      ? pageMeta['consultation-write']
-      : pageMeta[segment] || { title: '학생 상담', description: '커리어핏 상담 운영' };
+    : studentDetailRouteMatch
+      ? {
+        ...pageMeta.students,
+        parentTitle: pageMeta.students.title,
+        parentTo: '/students',
+        title: detailStudent?.name || '학생',
+      }
+      : /^\/students\/[^/]+\/consultation\/new$/.test(location.pathname)
+        ? pageMeta['consultation-write']
+        : pageMeta[segment] || { title: '학생 상담', description: '커리어핏 상담 운영' };
   const today = toDateKey();
   const pendingCount = followUps.filter(item => item.status !== 'complete').length;
   const notifications = useMemo(() => buildOperationalNotifications(students, followUps, appointments, today), [students, followUps, appointments, today]);

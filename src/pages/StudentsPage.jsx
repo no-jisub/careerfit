@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../auth/AuthContext';
 import Icon from '../components/Icon';
 import { EmptyState, PageIntro, StatusBadge, StatusTabs } from '../components/UI';
-import { maskStudentNo } from '../utils/sensitiveData';
+import { maskPhone, maskStudentNo } from '../utils/sensitiveData';
 import { toDateKey } from '../utils/date';
+import { validateNewStudentInput } from '../utils/validation';
 
 const studentStatusOptions = [
   { value: 'all', label: '전체', description: '모든 학생', icon: 'layers' },
+  { value: 'registered', label: '신규 등록', description: '상담 전', icon: 'students' },
   { value: 'scheduled', label: '상담 예정', description: '일정 확정', icon: 'calendar' },
   { value: 'inProgress', label: '진행 중', description: '상담 진행', icon: 'clock' },
   { value: 'writing', label: '기록 필요', description: '기록 작성 전', icon: 'note' },
@@ -56,6 +59,16 @@ const selectionModeMeta = {
 };
 
 const activeAppointmentStatuses = ['pending', 'confirmed', 'scheduled'];
+const emptyStudentForm = {
+  name: '',
+  studentNo: '',
+  department: '',
+  grade: '1학년',
+  phone: '',
+  interests: '',
+  goal: '',
+  concern: '',
+};
 
 function getUpcomingAppointment(student, appointments, today) {
   const appointment = appointments
@@ -124,7 +137,8 @@ function StudentWorkCard({ student, mode, appointments, followUps, today }) {
 }
 
 export default function StudentsPage({ selectionMode = '' }) {
-  const { students, followUps, appointments } = useApp();
+  const { students, setStudents, followUps, appointments, persistDocumentGroup, notify } = useApp();
+  const { user, profile } = useAuth();
   const [params] = useSearchParams();
   const legacySelectionMode = params.get('select') === 'consultation' ? 'consultation' : '';
   const activeSelectionMode = selectionMode || legacySelectionMode;
@@ -132,12 +146,29 @@ export default function StudentsPage({ selectionMode = '' }) {
   const [query, setQuery] = useState(params.get('q') || '');
   const [grade, setGrade] = useState('all');
   const [status, setStatus] = useState('all');
+  const [showAddStudent, setShowAddStudent] = useState(false);
+  const [studentForm, setStudentForm] = useState(emptyStudentForm);
+  const [studentFormError, setStudentFormError] = useState('');
+  const [savingStudent, setSavingStudent] = useState(false);
   const today = toDateKey();
 
   useEffect(() => {
     setStatus('all');
     setGrade('all');
   }, [activeSelectionMode]);
+
+  useEffect(() => {
+    if (!showAddStudent) return undefined;
+    const closeOnEscape = event => {
+      if (event.key === 'Escape' && !savingStudent) {
+        setShowAddStudent(false);
+        setStudentForm(emptyStudentForm);
+        setStudentFormError('');
+      }
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [showAddStudent, savingStudent]);
 
   const eligibleStudents = useMemo(() => selectionMeta
     ? students.filter(student => selectionMeta.allowedStatuses.includes(student.status))
@@ -166,12 +197,6 @@ export default function StudentsPage({ selectionMode = '' }) {
     return (b.lastConsultation || '').localeCompare(a.lastConsultation || '');
   }), [eligibleStudents, query, grade, status, activeSelectionMode, appointments, today]);
   const activeStatusLabel = visibleStatusOptions.find(option => option.value === status)?.label || '전체';
-  const todayPreparationCount = activeSelectionMode === 'preparation'
-    ? eligibleStudents.filter(student => getUpcomingAppointment(student, appointments, today)?.date === today).length
-    : 0;
-  const preparationPendingTaskCount = activeSelectionMode === 'preparation'
-    ? followUps.filter(item => eligibleStudents.some(student => student.id === item.studentId) && item.status !== 'complete').length
-    : 0;
 
   const resetFilters = () => {
     setQuery('');
@@ -179,36 +204,98 @@ export default function StudentsPage({ selectionMode = '' }) {
     setStatus('all');
   };
 
+  const updateStudentForm = (key, value) => {
+    setStudentForm(current => ({ ...current, [key]: value }));
+    if (studentFormError) setStudentFormError('');
+  };
+
+  const closeStudentForm = () => {
+    if (savingStudent) return;
+    setShowAddStudent(false);
+    setStudentForm(emptyStudentForm);
+    setStudentFormError('');
+  };
+
+  const addStudent = async event => {
+    event.preventDefault();
+    if (savingStudent) return;
+    const validated = validateNewStudentInput(studentForm, students);
+    if (validated.error) {
+      setStudentFormError(validated.error);
+      return;
+    }
+
+    const idSuffix = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const id = `student-${idSuffix}`;
+    const now = new Date().toISOString();
+    const counselorUid = user?.uid || profile?.id || 'demo-counselor';
+    const counselor = (profile?.displayName || user?.displayName || '박지현 상담사').replace(/\s*상담사$/, '');
+    const remoteStudent = Boolean(user);
+    const student = {
+      id,
+      ...validated.value,
+      studentNo: remoteStudent ? maskStudentNo(validated.value.studentNo) : validated.value.studentNo,
+      phone: remoteStudent ? maskPhone(validated.value.phone) : validated.value.phone,
+      uid: `manual-${idSuffix}`,
+      counselorUid,
+      counselor,
+      status: 'registered',
+      appointmentDate: '',
+      appointment: '',
+      lastConsultation: '',
+      initials: validated.value.name.slice(-2),
+      createdAt: now,
+      updatedAt: now,
+    };
+    const sensitiveProfile = {
+      id,
+      studentId: id,
+      studentUid: student.uid,
+      counselorUid,
+      studentNo: validated.value.studentNo,
+      phone: validated.value.phone,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    setSavingStudent(true);
+    setStudentFormError('');
+    try {
+      await persistDocumentGroup([
+        { name: 'students', record: student },
+        ...(remoteStudent ? [{ name: 'studentSensitiveProfiles', record: sensitiveProfile }] : []),
+      ]);
+      setStudents(current => [...current, student]);
+      setStudentForm(emptyStudentForm);
+      setShowAddStudent(false);
+      setQuery('');
+      setGrade('all');
+      setStatus('registered');
+      notify(`${student.name} 학생을 추가했습니다.`);
+    } catch (error) {
+      setStudentFormError(error?.message || '학생을 추가하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setSavingStudent(false);
+    }
+  };
+
   const pageAction = selectionMeta
     ? activeSelectionMode === 'preparation'
       ? <Link to="/appointments" className="button secondary"><Icon name="calendar" size={17} />상담 일정 보기</Link>
       : <Link to="/students" className="button secondary"><Icon name="students" size={17} />전체 학생 보기</Link>
-    : <Link to="/consultation-write" className="button primary"><Icon name="plus" size={18} />새 상담 기록</Link>;
+    : <button type="button" className="button primary" onClick={() => setShowAddStudent(true)}><Icon name="plus" size={18} />학생 추가</button>;
 
   return <>
-    <PageIntro icon={selectionMeta?.icon || 'students'} eyebrow={selectionMeta?.eyebrow || '학생 관리'} title={selectionMeta?.title || '학생을 한눈에 확인하세요'} description={selectionMeta?.description || `상담 중인 학생 ${students.length}명의 기록과 다음 행동을 관리합니다.`} action={pageAction} />
+    <PageIntro icon={selectionMeta?.icon || 'students'} eyebrow={selectionMeta?.eyebrow || '학생 관리'} title={selectionMeta?.title || '학생을 한눈에 확인하세요'} description={selectionMeta?.description || `담당 학생 ${students.length}명의 상담 맥락과 다음 행동을 관리합니다.`} action={pageAction} />
 
-    {selectionMeta && (activeSelectionMode === 'preparation' ? <section className="workflow-queue-metrics" aria-label="상담 전 준비 현황">
-      <div className="workflow-queue-metric">
-        <span className="workflow-queue-metric-icon" aria-hidden="true"><Icon name="students" size={20} /></span>
-        <div><span>준비 대상</span><strong>{eligibleStudents.length}<small>명</small></strong></div>
-      </div>
-      <div className="workflow-queue-metric">
-        <span className="workflow-queue-metric-icon" aria-hidden="true"><Icon name="calendar" size={20} /></span>
-        <div><span>오늘 상담</span><strong>{todayPreparationCount}<small>명</small></strong></div>
-      </div>
-      <div className="workflow-queue-metric">
-        <span className="workflow-queue-metric-icon" aria-hidden="true"><Icon name="check" size={20} /></span>
-        <div><span>확인할 할 일</span><strong>{preparationPendingTaskCount}<small>건</small></strong></div>
-      </div>
-    </section> : <section className="workflow-queue-overview" aria-label={`${selectionMeta.eyebrow} 현황`}>
+    {selectionMeta && activeSelectionMode !== 'preparation' && <section className="workflow-queue-overview" aria-label={`${selectionMeta.eyebrow} 현황`}>
       <div><span className="workflow-queue-icon"><Icon name={selectionMeta.icon} size={21} /></span><div><span className="eyebrow">{selectionMeta.queueEyebrow}</span><h2>{selectionMeta.queueTitle}</h2><p>{selectionMeta.queueDescription}</p></div></div>
       <dl>
         <div><dt>작성 대상</dt><dd>{eligibleStudents.length}<small>명</small></dd></div>
         <div><dt>상담 진행 중</dt><dd>{statusCounts.inProgress || 0}<small>명</small></dd></div>
         <div><dt>기록 필요</dt><dd>{statusCounts.writing || 0}<small>명</small></dd></div>
       </dl>
-    </section>)}
+    </section>}
 
     <section className="card student-filter-panel" aria-label="학생 검색 및 필터">
       {(!selectionMeta || activeSelectionMode === 'consultation') && <StatusTabs
@@ -229,8 +316,41 @@ export default function StudentsPage({ selectionMode = '' }) {
       {filtered.length ? <div className="student-work-grid">{filtered.map(student => <StudentWorkCard student={student} mode={activeSelectionMode} appointments={appointments} followUps={followUps} today={today} key={student.id} />)}</div> : <section className="card workflow-queue-empty"><EmptyState icon={selectionMeta.icon} title={selectionMeta.emptyTitle} description={query || grade !== 'all' || status !== 'all' ? '검색어나 필터를 바꾸어 다시 확인해 보세요.' : selectionMeta.emptyDescription} action={query || grade !== 'all' || status !== 'all' ? <button className="button secondary" type="button" onClick={resetFilters}>필터 초기화</button> : activeSelectionMode === 'preparation' ? <Link className="button secondary" to="/appointments">상담 일정 확인</Link> : <Link className="button secondary" to="/students">학생 관리 열기</Link>} /></section>}
     </section> : <section className="card student-list-card" aria-labelledby="student-list-title">
       <div className="list-toolbar"><div><h2 id="student-list-title">{status === 'all' ? '전체 학생' : `${activeStatusLabel} 학생`} <span aria-live="polite">{filtered.length}</span></h2><p>최근 상담일 순으로 표시됩니다.</p></div><button className="text-button" onClick={resetFilters}>필터 초기화</button></div>
-      {filtered.length ? <><div className="table-wrap"><table className="student-table"><thead><tr><th>학생</th><th>학번</th><th>학과 / 학년</th><th>관심 분야</th><th>최근 상담일</th><th>미완료 할 일</th><th>상태</th><th><span className="sr-only">상세</span></th></tr></thead><tbody>{filtered.map(student => { const count = followUps.filter(item => item.studentId === student.id && item.status !== 'complete').length; const destination = `/students/${student.id}`; return <tr key={student.id}><td><Link className="student-cell" to={destination}><strong>{student.name}</strong></Link></td><td className="masked-identifier">{maskStudentNo(student.studentNo)}</td><td><strong>{student.department}</strong><small>{student.grade}</small></td><td><div className="tag-row">{student.interests.slice(0, 2).map(interest => <span className="tag" key={interest}>{interest}</span>)}</div></td><td>{student.lastConsultation}</td><td>{count ? <b className="count-emphasis">{count}건</b> : <span className="muted">없음</span>}</td><td><StatusBadge status={student.status} /></td><td><Link className="row-link" aria-label={`${student.name} 상세 보기`} to={destination}><Icon name="chevron" size={18} /></Link></td></tr>; })}</tbody></table></div>
-      <div className="student-card-list">{filtered.map(student => { const count = followUps.filter(item => item.studentId === student.id && item.status !== 'complete').length; const destination = `/students/${student.id}`; return <Link to={destination} className="student-mobile-card" key={student.id}><div className="mobile-card-head"><div><strong>{student.name}</strong><span>{maskStudentNo(student.studentNo)}</span></div><StatusBadge status={student.status} /></div><p>{student.department} · {student.grade}</p><div className="tag-row">{student.interests.slice(0, 2).map(interest => <span className="tag" key={interest}>{interest}</span>)}</div><div className="mobile-card-foot"><span>최근 상담 {student.lastConsultation}</span><b>{count ? `미완료 할 일 ${count}건` : '미완료 할 일 없음'}</b></div></Link>; })}</div></> : <EmptyState title="검색 결과가 없습니다" description="검색어나 필터를 바꾸어 다시 찾아보세요." action={<button className="button secondary" onClick={resetFilters}>전체 학생 보기</button>} />}
+      {filtered.length ? <><div className="table-wrap"><table className="student-table"><thead><tr><th>학생</th><th>학번</th><th>학과 / 학년</th><th>관심 분야</th><th>최근 상담일</th><th>미완료 할 일</th><th>상태</th><th><span className="sr-only">상세</span></th></tr></thead><tbody>{filtered.map(student => { const count = followUps.filter(item => item.studentId === student.id && item.status !== 'complete').length; const destination = `/students/${student.id}`; return <tr key={student.id}><td><Link className="student-cell" to={destination}><strong>{student.name}</strong></Link></td><td className="masked-identifier">{maskStudentNo(student.studentNo)}</td><td><strong>{student.department}</strong><small>{student.grade}</small></td><td><div className="tag-row">{student.interests.slice(0, 2).map(interest => <span className="tag" key={interest}>{interest}</span>)}</div></td><td>{formatShortDate(student.lastConsultation)}</td><td>{count ? <b className="count-emphasis">{count}건</b> : <span className="muted">없음</span>}</td><td><StatusBadge status={student.status} /></td><td><Link className="row-link" aria-label={`${student.name} 상세 보기`} to={destination}><Icon name="chevron" size={18} /></Link></td></tr>; })}</tbody></table></div>
+      <div className="student-card-list">{filtered.map(student => { const count = followUps.filter(item => item.studentId === student.id && item.status !== 'complete').length; const destination = `/students/${student.id}`; return <Link to={destination} className="student-mobile-card" key={student.id}><div className="mobile-card-head"><div><strong>{student.name}</strong><span>{maskStudentNo(student.studentNo)}</span></div><StatusBadge status={student.status} /></div><p>{student.department} · {student.grade}</p><div className="tag-row">{student.interests.slice(0, 2).map(interest => <span className="tag" key={interest}>{interest}</span>)}</div><div className="mobile-card-foot"><span>최근 상담 {formatShortDate(student.lastConsultation)}</span><b>{count ? `미완료 할 일 ${count}건` : '미완료 할 일 없음'}</b></div></Link>; })}</div></> : <EmptyState title="검색 결과가 없습니다" description="검색어나 필터를 바꾸어 다시 찾아보세요." action={<button className="button secondary" onClick={resetFilters}>전체 학생 보기</button>} />}
     </section>}
+
+    {showAddStudent && <div className="modal-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && closeStudentForm()}>
+      <section className="modal student-add-modal" role="dialog" aria-modal="true" aria-labelledby="student-add-title" aria-describedby="student-add-description">
+        <button type="button" className="modal-close" aria-label="학생 추가 창 닫기" disabled={savingStudent} onClick={closeStudentForm}><Icon name="close" size={19} /></button>
+        <h2 id="student-add-title">학생 추가</h2>
+        <p id="student-add-description" className="student-add-description">상담에 필요한 최소 정보만 등록합니다. 상담 일정은 학생을 추가한 뒤 별도로 지정할 수 있습니다.</p>
+        <form onSubmit={addStudent}>
+          <div className="student-add-form-scroll">
+            <fieldset className="student-add-section">
+              <legend>기본 정보</legend>
+              <div className="form-row">
+                <label>이름 <span aria-hidden="true">*</span><input autoFocus autoComplete="name" maxLength="80" value={studentForm.name} onChange={event => updateStudentForm('name', event.target.value)} placeholder="학생 이름" required /></label>
+                <label>학번 <span aria-hidden="true">*</span><input inputMode="numeric" autoComplete="off" maxLength="40" value={studentForm.studentNo} onChange={event => updateStudentForm('studentNo', event.target.value)} placeholder="20261234" required /></label>
+              </div>
+              <div className="form-row">
+                <label>학과 <span aria-hidden="true">*</span><input maxLength="100" value={studentForm.department} onChange={event => updateStudentForm('department', event.target.value)} placeholder="예: 컴퓨터공학과" required /></label>
+                <label>학년 <span aria-hidden="true">*</span><select value={studentForm.grade} onChange={event => updateStudentForm('grade', event.target.value)}>{['1학년','2학년','3학년','4학년','졸업생'].map(item => <option key={item}>{item}</option>)}</select></label>
+              </div>
+              <label>연락처 <small>선택 · 민감정보로 분리 보관</small><input type="tel" inputMode="tel" autoComplete="tel" maxLength="40" value={studentForm.phone} onChange={event => updateStudentForm('phone', event.target.value)} placeholder="010-0000-0000" /></label>
+            </fieldset>
+            <fieldset className="student-add-section">
+              <legend>상담 시작 정보</legend>
+              <label>관심 분야 <small>선택 · 쉼표로 구분</small><input maxLength="500" value={studentForm.interests} onChange={event => updateStudentForm('interests', event.target.value)} placeholder="서비스 기획, 데이터 분석" /></label>
+              <label>진로 목표 <small>선택</small><input maxLength="1000" value={studentForm.goal} onChange={event => updateStudentForm('goal', event.target.value)} placeholder="희망 직무나 목표를 입력하세요" /></label>
+              <label>현재 고민 <small>선택</small><textarea rows="3" maxLength="5000" value={studentForm.concern} onChange={event => updateStudentForm('concern', event.target.value)} placeholder="첫 상담에서 확인할 고민이나 요청을 입력하세요" /></label>
+            </fieldset>
+            <div className="student-add-privacy-note"><Icon name="shield" size={17} /><p><strong>개인정보 보호</strong><span>학번과 연락처 원문은 일반 상담 데이터와 분리해 저장하며, 열람 시 PIN 인증과 접근 기록이 적용됩니다.</span></p></div>
+            {studentFormError && <p className="field-error" role="alert">{studentFormError}</p>}
+          </div>
+          <div className="modal-actions"><button type="button" className="button secondary" disabled={savingStudent} onClick={closeStudentForm}>취소</button><button className="button primary" disabled={savingStudent}>{savingStudent ? '추가 중...' : '학생 추가'}</button></div>
+        </form>
+      </section>
+    </div>}
   </>;
 }

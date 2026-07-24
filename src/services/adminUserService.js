@@ -54,6 +54,7 @@ export async function createManagedUser({ account, student }) {
       batch.set(doc(db, 'studentSensitiveProfiles', student.id), {
         studentId: student.id,
         studentUid: credential.user.uid,
+        counselorUid: student.counselorUid,
         phone,
         studentNo,
         createdAt: now,
