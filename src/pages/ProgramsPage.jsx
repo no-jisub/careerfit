@@ -14,6 +14,7 @@ import {
   resolveProgramStatus,
   validateProgram,
 } from '../utils/programs';
+import { buildEventNotification } from '../utils/notifications';
 
 const gradeOptions = ['1학년', '2학년', '3학년', '4학년'];
 const editableStatuses = ['draft', 'scheduled', 'recruiting', 'closed', 'completed'];
@@ -100,7 +101,7 @@ function ProgramFormModal({ program, onClose, onSave }) {
 }
 
 function ProgramManagementPage() {
-  const { students, programs, setPrograms, programRecommendations, resetProgramDemo, notify } = useApp();
+  const { students, programs, setPrograms, programRecommendations, notify } = useApp();
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('recruiting');
   const [type, setType] = useState('전체');
@@ -151,13 +152,8 @@ function ProgramManagementPage() {
     setCreating(false);
     notify(editing ? '프로그램 수정 내용을 저장했습니다.' : '새 비교과 프로그램을 등록했습니다.');
   };
-  const reset = () => {
-    if (!window.confirm('프로그램과 추천 내역을 최초 데모 데이터로 되돌릴까요?')) return;
-    resetProgramDemo();
-    notify('비교과 프로그램 데모 데이터를 초기화했습니다.');
-  };
   return <>
-    <PageIntro eyebrow="운영 관리" title="비교과 프로그램 관리" description="상담에 활용할 프로그램을 등록하고 모집 상태와 학생 추천 정보를 관리합니다." action={<div className="page-action-group"><button className="button secondary" onClick={reset}>데모 데이터 초기화</button><button className="button primary" onClick={() => setCreating(true)}><Icon name="plus" size={17} />새 프로그램 등록</button></div>} />
+    <PageIntro eyebrow="운영 관리" title="비교과 프로그램 관리" description="상담에 활용할 프로그램을 등록하고 모집 상태와 학생 추천 정보를 관리합니다." action={<button className="button primary" onClick={() => setCreating(true)}><Icon name="plus" size={17} />새 프로그램 등록</button>} />
     <section className="program-intelligence-hero">
       <div className="program-intelligence-copy">
         <span className="program-live-label"><i /> Student × Opportunity intelligence</span>
@@ -179,7 +175,7 @@ function ProgramManagementPage() {
       </div>
     </section>
     <section className="card program-management-card">
-      <div className="program-management-head"><div><span className="eyebrow">Opportunity catalog</span><h2>프로그램 운영 목록</h2><p>현재 조건에 맞는 프로그램 <strong>{visiblePrograms.length}개</strong></p></div><span className="program-data-sync"><i />데모 데이터 동기화됨</span></div>
+      <div className="program-management-head"><div><span className="eyebrow">Opportunity catalog</span><h2>프로그램 운영 목록</h2><p>현재 조건에 맞는 프로그램 <strong>{visiblePrograms.length}개</strong></p></div><span className="program-data-sync"><i />최신 데이터 동기화됨</span></div>
       <StatusTabs
         className="program-status-tabs"
         label="모집 상태"
@@ -230,7 +226,7 @@ function ProgramRecommendationModal({ program, student, onClose, onSave }) {
 function ProgramRecommendationPage({ studentId, returnToForm }) {
   const navigate = useNavigate();
   const { profile, user } = useAuth();
-  const { students, programs, programRecommendations, setProgramRecommendations, draftForm, setDraftForm, notify } = useApp();
+  const { students, programs, programRecommendations, setProgramRecommendations, setNotifications, persistDocument, draftForm, setDraftForm, notify } = useApp();
   const student = students.find(item => item.id === studentId);
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState('전체');
@@ -244,17 +240,51 @@ function ProgramRecommendationPage({ studentId, returnToForm }) {
   }, [student, programs, query, mode, today]);
   if (!student) return <section className="card"><EmptyState title="프로그램을 추천할 학생을 찾을 수 없습니다" description="먼저 담당 학생을 선택해 주세요." action={<Link className="button secondary" to="/students">담당 학생 목록으로</Link>} /></section>;
   const toggle = program => setSelected(current => current.includes(program.name) ? current.filter(item => item !== program.name) : [...current, program.name]);
-  const saveRecommendation = reason => {
+  const saveRecommendation = async reason => {
     const now = new Date().toISOString();
     const existing = programRecommendations.find(item => item.studentId === student.id && item.programId === recommending.id);
     const next = { id: existing?.id || `pr-${Date.now()}`, studentId: student.id, programId: recommending.id, counselorId: user?.uid || 'demo-counselor', counselorName: profile?.displayName || user?.displayName || '상담 담당자', reason, status: existing?.status || 'recommended', createdAt: existing?.createdAt || now, updatedAt: now };
-    setProgramRecommendations(items => existing ? items.map(item => item.id === existing.id ? next : item) : [next, ...items]);
-    setRecommending(null);
-    notify(`${student.name} 학생에게 프로그램을 추천했습니다.`);
+    const notification = buildEventNotification({
+      eventId: `${next.id}-${existing ? 'updated' : 'recommended'}-${now}`,
+      recipientUid: student.uid,
+      actorUid: next.counselorId,
+      type: 'program',
+      title: existing ? '추천 프로그램 안내가 수정되었습니다' : '새 프로그램을 추천받았습니다',
+      description: `${recommending.name} · ${reason}`,
+      to: '/student',
+      createdAt: now,
+    });
+    try {
+      await persistDocument('notifications', notification);
+      setProgramRecommendations(items => existing ? items.map(item => item.id === existing.id ? next : item) : [next, ...items]);
+      setNotifications(items => items.some(item => item.id === notification.id) ? items : [...items, notification]);
+      setRecommending(null);
+      notify(`${student.name} 학생에게 프로그램을 추천했습니다.`);
+    } catch {
+      // 공통 저장 오류 안내를 사용합니다.
+    }
   };
-  const cancelRecommendation = program => {
-    setProgramRecommendations(items => items.filter(item => !(item.studentId === student.id && item.programId === program.id)));
-    notify('학생 추천을 취소했습니다.');
+  const cancelRecommendation = async program => {
+    const existing = programRecommendations.find(item => item.studentId === student.id && item.programId === program.id);
+    const now = new Date().toISOString();
+    const notification = buildEventNotification({
+      eventId: `${existing?.id || program.id}-cancelled-${now}`,
+      recipientUid: student.uid,
+      actorUid: user?.uid || 'demo-counselor',
+      type: 'program',
+      title: '프로그램 추천이 변경되었습니다',
+      description: `${program.name} 추천이 취소되었습니다.`,
+      to: '/student',
+      createdAt: now,
+    });
+    try {
+      await persistDocument('notifications', notification);
+      setProgramRecommendations(items => items.filter(item => !(item.studentId === student.id && item.programId === program.id)));
+      setNotifications(items => items.some(item => item.id === notification.id) ? items : [...items, notification]);
+      notify('학생 추천을 취소했습니다.');
+    } catch {
+      // 공통 저장 오류 안내를 사용합니다.
+    }
   };
   const apply = () => {
     if (!selected.length) return;

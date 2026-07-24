@@ -4,7 +4,7 @@ import Icon from '../components/Icon';
 import { PageIntro } from '../components/UI';
 import { useAuth } from '../auth/AuthContext';
 import { configureSensitiveAccessPin } from '../services/sensitiveAccessService';
-import { DEMO_SENSITIVE_PIN, normalizeSensitivePin } from '../utils/sensitiveData';
+import { normalizeSensitivePin } from '../utils/sensitiveData';
 
 const accessRows = [
   { role: '학생', scope: '본인 정보', canRead: '선택 공개된 상담 요약, 본인 일정·할 일', blocked: '내부 메모, AI 근거, 다른 학생 정보' },
@@ -15,15 +15,12 @@ const accessRows = [
 const roleLabels = { student: '학생', counselor: '상담사', admin: '관리자' };
 
 export default function SettingsPage() {
-  const { notify, resetDemoData } = useApp();
+  const { notify } = useApp();
   const { user, role, demoModeEnabled } = useAuth();
   const demoMode = demoModeEnabled && !user;
   const [pinForm, setPinForm] = useState({ password: '', pin: '', confirm: '' });
   const [pinSaving, setPinSaving] = useState(false);
   const [pinError, setPinError] = useState('');
-  const reset = () => {
-    if (window.confirm('학생, 상담, 일정, 상담 후 할 일과 프로그램 데모 데이터를 처음 상태로 되돌릴까요?')) resetDemoData();
-  };
   const savePin = async event => {
     event.preventDefault();
     setPinError('');
@@ -62,15 +59,13 @@ export default function SettingsPage() {
     </section>
     {['counselor', 'admin'].includes(role) && <section className="card sensitive-pin-settings">
       <div className="sensitive-pin-settings-copy"><span className="privacy-shield"><Icon name="lock" size={22} /></span><div><span className="eyebrow">추가 본인 확인</span><h2>민감정보 열람 PIN</h2><p>로그인 비밀번호와 분리된 4자리 PIN입니다. 연락처·학번 전체값을 볼 때마다 다시 확인하며, 5회 실패하면 10분간 잠깁니다.</p></div></div>
-      {demoMode
-        ? <div className="demo-pin-card"><span>발표용 데모 PIN</span><strong>{DEMO_SENSITIVE_PIN}</strong><small>실서비스에서는 상담사가 현재 계정 비밀번호로 재인증한 뒤 각자 설정합니다.</small></div>
-        : <form className="sensitive-pin-form" onSubmit={savePin}>
+      <form className="sensitive-pin-form" onSubmit={savePin}>
           <label>현재 계정 비밀번호<input type="password" autoComplete="current-password" value={pinForm.password} onChange={event => setPinForm(current => ({ ...current, password: event.target.value }))} required /></label>
           <label>새 4자리 PIN<input type="password" inputMode="numeric" pattern="[0-9]{4}" maxLength="4" autoComplete="new-password" value={pinForm.pin} onChange={event => setPinForm(current => ({ ...current, pin: normalizeSensitivePin(event.target.value) }))} required /></label>
           <label>새 PIN 확인<input type="password" inputMode="numeric" pattern="[0-9]{4}" maxLength="4" autoComplete="new-password" value={pinForm.confirm} onChange={event => setPinForm(current => ({ ...current, confirm: normalizeSensitivePin(event.target.value) }))} required /></label>
           {pinError && <p className="sensitive-pin-error" role="alert"><Icon name="alert" size={15} />{pinError}</p>}
           <button className="button primary" disabled={pinSaving || pinForm.pin.length !== 4 || pinForm.confirm.length !== 4}>{pinSaving ? '보안 확인 중...' : 'PIN 설정·변경'}</button>
-        </form>}
+        </form>
     </section>}
-    <section className="card settings-card"><h2>알림 설정</h2><label><span><strong>상담 일정 알림</strong><small>상담 시작 30분 전에 알려드려요.</small></span><input type="checkbox" defaultChecked /></label><label><span><strong>할 일 기한 알림</strong><small>기한 전날과 당일에 알려드려요.</small></span><input type="checkbox" defaultChecked /></label><button className="button primary" onClick={() => notify('설정을 저장했습니다.')}>설정 저장</button></section>{demoModeEnabled && !user && <section className="card settings-card demo-reset-card"><h2>발표용 데이터</h2><p>발표 중 변경된 학생 배정, 상담 기록, 예약과 할 일을 초기 상태로 되돌립니다.</p><button className="button secondary danger" onClick={reset}>전체 데모 데이터 초기화</button></section>}</>;
+    <section className="card settings-card"><h2>알림 설정</h2><label><span><strong>상담 일정 알림</strong><small>상담 시작 30분 전에 알려드려요.</small></span><input type="checkbox" defaultChecked /></label><label><span><strong>할 일 기한 알림</strong><small>기한 전날과 당일에 알려드려요.</small></span><input type="checkbox" defaultChecked /></label><button className="button primary" onClick={() => notify('설정을 저장했습니다.')}>설정 저장</button></section></>;
 }

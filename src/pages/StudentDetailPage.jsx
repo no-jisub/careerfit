@@ -10,6 +10,7 @@ import { useAuth } from '../auth/AuthContext';
 import { buildConsultationSummary, consultationEvidenceFieldOptions, consultationPublicFieldOptions, defaultConsultationVisibility } from '../utils/consultations';
 import { openAttachment } from '../services/attachmentService';
 import { maskStudentNo } from '../utils/sensitiveData';
+import { buildEventNotification } from '../utils/notifications';
 
 const studentTagOptions = ['면접 준비', '포트폴리오', '진로 미정', '공공기관 희망'];
 const fullDateFormatter = new Intl.DateTimeFormat('ko-KR', {
@@ -37,8 +38,9 @@ function getConsultationDateLabel(date) {
 export default function StudentDetailPage() {
   const { studentId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { students, setStudents, consultations, setConsultations, consultationSummaries, setConsultationSummaries, consultationNotes, followUps, setFollowUps, appointments, persistDocument, persistDocumentGroup, notify } = useApp();
+  const { students, setStudents, consultations, setConsultations, consultationSummaries, setConsultationSummaries, consultationNotes, followUps, setFollowUps, appointments, setNotifications, persistDocumentGroup, notify } = useApp();
   const { user, profile } = useAuth();
+  const counselorUid = user?.uid || profile?.id || 'demo-counselor';
   const student = students.find(s => s.id === studentId);
   const history = student ? consultations.filter(c => c.studentId === student.id).sort((a, b) => b.date.localeCompare(a.date)) : [];
   const tasks = student ? followUps.filter(f => f.studentId === student.id && f.status !== 'complete') : [];
@@ -141,10 +143,24 @@ export default function StudentDetailPage() {
       interests: editForm.interests.split(',').map(item => item.trim()).filter(Boolean),
       updatedAt: new Date().toISOString(),
     };
+    const notification = student.uid ? buildEventNotification({
+      eventId: `${student.id}-context-${updated.updatedAt}`,
+      recipientUid: student.uid,
+      actorUid: counselorUid,
+      type: 'profile',
+      title: '상담 정보가 업데이트되었습니다',
+      description: '담당 상담사가 진로 목표 또는 현재 고민 정보를 업데이트했습니다.',
+      to: '/student',
+      createdAt: updated.updatedAt,
+    }) : null;
     setSavingStudent(true);
     try {
-      await persistDocument('students', updated);
+      await persistDocumentGroup([
+        { name: 'students', record: updated },
+        ...(notification ? [{ name: 'notifications', record: notification }] : []),
+      ]);
       setStudents(prev => prev.map(item => item.id === student.id ? updated : item));
+      if (notification) setNotifications(items => items.some(item => item.id === notification.id) ? items : [...items, notification]);
       setShowEdit(false);
       notify('학생 정보를 수정했습니다.');
     } finally {
@@ -155,9 +171,22 @@ export default function StudentDetailPage() {
     e.preventDefault();
     if (!taskText.trim() || !dueDate) return;
     const nextTask = { id: `f${Date.now()}`, studentId: student.id, content: taskText.trim(), owner: taskOwner, dueDate, status: 'scheduled', consultationDate: toDateKey() };
+    const notification = nextTask.owner === '학생' && student.uid ? buildEventNotification({
+      eventId: `${nextTask.id}-assigned`,
+      recipientUid: student.uid,
+      actorUid: counselorUid,
+      type: 'followup',
+      title: '새로운 할 일이 등록되었습니다',
+      description: `${nextTask.content} · ${nextTask.dueDate}까지`,
+      to: '/student',
+    }) : null;
     try {
-      await persistDocument('followUps', nextTask);
+      await persistDocumentGroup([
+        { name: 'followUps', record: nextTask },
+        ...(notification ? [{ name: 'notifications', record: notification }] : []),
+      ]);
       setFollowUps(items => items.some(item => item.id === nextTask.id) ? items : [...items, nextTask]);
+      if (notification) setNotifications(items => items.some(item => item.id === notification.id) ? items : [...items, notification]);
       setTaskText('');
       setTaskOwner('학생');
       setShowAdd(false);
@@ -186,11 +215,26 @@ export default function StudentDetailPage() {
     };
     delete updated.programsText;
     const summary = buildConsultationSummary(updated, updated.publication);
+    const notification = summary.published && student.uid ? buildEventNotification({
+      eventId: `${updated.id}-summary-updated-${now}`,
+      recipientUid: student.uid,
+      actorUid: counselorUid,
+      type: 'summary',
+      title: '공개 상담 요약이 수정되었습니다',
+      description: `${updated.date} 상담에서 공개된 내용을 다시 확인하세요.`,
+      to: '/student',
+      createdAt: now,
+    }) : null;
     setSavingConsultation(true);
     try {
-      await persistDocumentGroup([{ name: 'consultations', record: updated }, { name: 'consultationSummaries', record: summary }]);
+      await persistDocumentGroup([
+        { name: 'consultations', record: updated },
+        { name: 'consultationSummaries', record: summary },
+        ...(notification ? [{ name: 'notifications', record: notification }] : []),
+      ]);
       setConsultations(items => items.map(item => item.id === updated.id ? updated : item));
       setConsultationSummaries(items => items.some(item => item.id === summary.id) ? items.map(item => item.id === summary.id ? summary : item) : [...items, summary]);
+      if (notification) setNotifications(items => items.some(item => item.id === notification.id) ? items : [...items, notification]);
       setEditingConsultation(null);
       notify('상담 기록을 수정했습니다.');
     } catch { /* 공통 오류 메시지를 사용합니다. */ }

@@ -10,16 +10,17 @@ import { closeAvailabilityAfterCancellation } from '../utils/appointments';
 import { buildEventNotification } from '../utils/notifications';
 import { getStudentAssignedFollowUps } from '../utils/followUps';
 import { updateOwnSensitivePhone } from '../services/sensitiveAccessService';
+import { DEMO_STUDENT_ID } from '../utils/demoInteraction';
 
 const getSummaryProvenanceLabel = summary => summary?.provenance?.type === 'ai-assisted'
   ? 'AI 보조 초안을 상담사가 근거 확인한 요약'
   : '상담사가 직접 작성하고 확인한 요약';
 
 export default function StudentMyPage() {
-  const { students, setStudents, consultationSummaries, followUps, appointments, setAppointments, setFollowUps, counselorAvailability, setCounselorAvailability, setNotifications, persistDocument, persistDocumentGroup, notify } = useApp();
+  const { students, setStudents, consultationSummaries, followUps, appointments, setAppointments, setFollowUps, counselorAvailability, setCounselorAvailability, setNotifications, persistDocumentGroup, notify } = useApp();
   const { user, logout, demoModeEnabled } = useAuth();
   const demoMode = demoModeEnabled && !user;
-  const student = user ? students.find(item => item.uid === user.uid) : students[0];
+  const student = user ? students.find(item => item.uid === user.uid) : students.find(item => item.id === DEMO_STUDENT_ID);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({});
@@ -77,8 +78,22 @@ export default function StudentMyPage() {
         concern: profileForm.concern.trim(),
         updatedAt: new Date().toISOString(),
       };
-      await persistDocument('students', updated);
+      const notification = buildEventNotification({
+        eventId: `${student.id}-profile-${updated.updatedAt}`,
+        recipientUid: student.counselorUid,
+        actorUid: student.uid || user?.uid || 'demo-student-s1',
+        type: 'profile',
+        title: '학생이 상담 정보를 업데이트했습니다',
+        description: `${student.name} 학생 · 관심 분야, 진로 목표 또는 현재 고민을 확인하세요.`,
+        to: `/students/${student.id}`,
+        createdAt: updated.updatedAt,
+      });
+      await persistDocumentGroup([
+        { name: 'students', record: updated },
+        { name: 'notifications', record: notification },
+      ]);
       setStudents(items => items.map(item => item.id === student.id ? updated : item));
+      setNotifications(items => items.some(item => item.id === notification.id) ? items : [...items, notification]);
       setShowProfileEdit(false);
       notify('내 정보를 업데이트했습니다.');
     } catch (error) {
@@ -91,9 +106,23 @@ export default function StudentMyPage() {
     const current = followUps.find(f => f.id === id);
     if (!current || current.status === 'complete') return;
     const updated = { ...current, status: 'complete', completedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const notification = buildEventNotification({
+      eventId: `${updated.id}-completed-${updated.updatedAt}`,
+      recipientUid: current.ownerUid || student.counselorUid,
+      actorUid: student.uid || user?.uid || 'demo-student-s1',
+      type: 'followup',
+      title: '학생이 할 일을 완료했습니다',
+      description: `${student.name} 학생 · ${updated.content}`,
+      to: `/students/${student.id}`,
+      createdAt: updated.updatedAt,
+    });
     try {
-      await persistDocument('followUps', updated);
+      await persistDocumentGroup([
+        { name: 'followUps', record: updated },
+        { name: 'notifications', record: notification },
+      ]);
       setFollowUps(items => items.map(followUp => followUp.id === id ? updated : followUp));
+      setNotifications(items => items.some(item => item.id === notification.id) ? items : [...items, notification]);
       notify('내 다음 행동을 완료 처리했습니다.');
     } catch { /* 공통 저장 오류 안내를 사용합니다. */ }
   };

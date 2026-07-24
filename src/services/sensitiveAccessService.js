@@ -14,6 +14,7 @@ const messages = {
   'functions/unauthenticated': '로그인 세션이 만료되었습니다. 다시 로그인해 주세요.',
   'functions/invalid-argument': '4자리 숫자 PIN을 정확히 입력해 주세요.',
 };
+const DEMO_SENSITIVE_PIN_KEY = 'careerfit_sensitive_access_pin';
 
 function toAccessError(error, fallback) {
   const nextError = new Error(messages[error?.code] || error?.message || fallback);
@@ -29,7 +30,8 @@ export async function revealStudentSensitiveData({ student, pin, demoMode }) {
 
   if (demoMode) {
     await new Promise(resolve => window.setTimeout(resolve, 450));
-    if (pin !== DEMO_SENSITIVE_PIN) {
+    const configuredPin = localStorage.getItem(DEMO_SENSITIVE_PIN_KEY) || DEMO_SENSITIVE_PIN;
+    if (pin !== configuredPin) {
       const error = new Error('PIN이 일치하지 않습니다. 다시 확인해 주세요.');
       error.code = 'sensitive-access/invalid-pin';
       throw error;
@@ -58,7 +60,10 @@ export async function revealStudentSensitiveData({ student, pin, demoMode }) {
 
 export async function configureSensitiveAccessPin({ currentPassword, pin, demoMode }) {
   if (!isValidSensitivePin(pin)) throw new Error('새 PIN은 4자리 숫자로 입력해 주세요.');
-  if (demoMode) return { configured: true, demoPin: DEMO_SENSITIVE_PIN };
+  if (demoMode) {
+    localStorage.setItem(DEMO_SENSITIVE_PIN_KEY, pin);
+    return { configured: true };
+  }
   if (!auth?.currentUser?.email || !functions) throw new Error('로그인 세션을 확인해 주세요.');
 
   try {

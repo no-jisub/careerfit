@@ -7,6 +7,7 @@ import { createRescheduleRequest, holdAvailabilityForReschedule, isAvailabilityB
 import { getTimeRangeEnd, toDateKey } from '../utils/date';
 import { validateStudentAppointmentRequest } from '../utils/validation';
 import { buildEventNotification } from '../utils/notifications';
+import { DEMO_STUDENT_ID } from '../utils/demoInteraction';
 import { validateAttachments } from '../utils/attachments';
 import { uploadAppointmentAttachment } from '../services/attachmentService';
 
@@ -19,7 +20,7 @@ export default function StudentAppointmentRequestPage() {
   const { students, counselorAvailability, setCounselorAvailability, appointments, setAppointments, notifications, setNotifications, persistDocument, persistDocumentGroup, notify } = useApp();
   const { user, logout } = useAuth();
   const student = useMemo(() => {
-    const matched = user ? students.find(item => item.uid === user.uid) : students[0];
+    const matched = user ? students.find(item => item.uid === user.uid) : students.find(item => item.id === DEMO_STUDENT_ID);
     return !user && matched ? { ...matched, counselorUid: 'demo-counselor' } : matched;
   }, [students, user]);
   const slot = counselorAvailability.find(item => item.id === availabilityId);

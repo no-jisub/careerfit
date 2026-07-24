@@ -118,11 +118,26 @@ export default function AppointmentsPage() {
       ...(!editingId ? { createdAt: now } : {}),
     };
     const updatedStudent = { ...student, appointmentDate: form.date, appointment: form.time, status: 'scheduled', updatedAt: now };
+    const eventNotification = appointment.studentUid ? buildEventNotification({
+      eventId: `${appointment.id}-${editingId ? 'updated' : 'created-by-counselor'}-${now}`,
+      recipientUid: appointment.studentUid,
+      actorUid: counselorUid,
+      type: 'appointment',
+      title: editingId ? '상담 일정이 변경되었습니다' : '새 상담 일정이 등록되었습니다',
+      description: `${appointment.date} ${appointment.time} · ${appointment.location}`,
+      to: '/student/appointments',
+      createdAt: now,
+    }) : null;
     setSaving(true);
     try {
-      await persistDocumentGroup([{ name: 'appointments', record: appointment }, { name: 'students', record: updatedStudent }]);
+      await persistDocumentGroup([
+        { name: 'appointments', record: appointment },
+        { name: 'students', record: updatedStudent },
+        ...(eventNotification ? [{ name: 'notifications', record: eventNotification }] : []),
+      ]);
       setAppointments(items => upsertAppointmentById(items, appointment));
       setStudents(items => items.map(item => item.id === student.id ? updatedStudent : item));
+      if (eventNotification) setNotifications(items => items.some(item => item.id === eventNotification.id) ? items : [...items, eventNotification]);
       setShowForm(false);
       notify(editingId ? '상담 일정을 변경했습니다.' : '상담 일정을 등록했습니다.');
     } catch { /* 공통 오류 메시지를 사용합니다. */ }

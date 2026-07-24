@@ -255,7 +255,6 @@ export default function AdminUsersPage() {
           <label>이름<input value={account.displayName} onChange={event => updateAccount('displayName', event.target.value)} required /></label>
           <label>이메일<input type="email" value={account.email} onChange={event => updateAccount('email', event.target.value)} required /></label>
           {useRemoteAdmin && <label>임시 비밀번호<input type="password" minLength="6" autoComplete="new-password" value={account.password} onChange={event => updateAccount('password', event.target.value)} required /></label>}
-          {!useRemoteAdmin && <p className="demo-admin-hint">데모 모드에서는 계정이 현재 브라우저에만 생성되며 비밀번호가 필요하지 않습니다.</p>}
           {account.role === 'student' && <div className="student-account-fields">
             <div className="form-row"><label>학번<input value={student.studentNo} onChange={event => updateStudent('studentNo', event.target.value)} required /></label><label>학년<select value={student.grade} onChange={event => updateStudent('grade', event.target.value)}>{['1학년','2학년','3학년','4학년','졸업생'].map(grade => <option key={grade}>{grade}</option>)}</select></label></div>
             <label>학과<input value={student.department} onChange={event => updateStudent('department', event.target.value)} required /></label>

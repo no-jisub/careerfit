@@ -399,10 +399,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(35,86,216,.35); 
 .student-context dt { color: #929bad; font-size: 9px; }
 .student-context dd { margin: 4px 0 0; font-size: 10px; font-weight: 700; }
 .ai-card { border-color: #ded6fb; background: linear-gradient(180deg, #fff 0%, #fdfcff 100%); }
-.ai-card-label-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .ai-label { display: inline-flex; align-items: center; gap: 5px; color: var(--purple); font-size: 10px; font-weight: 800; }
-.ai-runtime-badge { padding: 4px 8px; border: 1px solid #d7ccfb; border-radius: 999px; color: #6546bd; background: #f7f3ff; font-size: 9px; font-weight: 800; white-space: nowrap; }
-.ai-runtime-badge.fallback { border-color: #dce3ec; color: #66748a; background: #f7f9fc; }
 .ai-card h2 { margin: 10px 0 8px; font-size: 18px; }
 .ai-card > p { color: #707b90; font-size: 10px; line-height: 1.7; }
 .ai-loading { min-height: 100px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; color: var(--purple); font-size: 11px; }
@@ -1219,7 +1216,6 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .admin-create-card .section-header, .admin-user-list .section-header { padding-bottom:18px; border-bottom:1px solid var(--border); }
 .admin-create-card label { display:grid; gap:8px; color:var(--navy); font-size:13px; font-weight:750; }
 .student-account-fields { margin-top:4px; padding:22px; border:1px solid var(--border); border-radius:14px; background:var(--bg); }
-.demo-admin-hint { margin:0; padding:13px 15px; border-radius:11px; color:var(--muted); background:var(--bg); font-size:12px; line-height:1.65; }
 .admin-create-card > form > .button { margin-top:3px; }
 .admin-user-list article, .assignment-list article { display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:center; gap:18px; min-height:72px; padding:16px 4px; border-top:1px solid var(--border); }
 .admin-user-list article:first-of-type, .assignment-list article:first-child { border-top:0; }
@@ -3756,20 +3752,6 @@ label { letter-spacing: -.01em; }
   line-height: 1.5;
 }
 .sensitive-pin-error svg { flex: 0 0 auto; margin-top: 1px; }
-.sensitive-demo-hint {
-  min-height: 38px;
-  margin: 10px 0 0;
-  padding: 8px 11px;
-  border: 1px solid #ded7f5;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #65528e;
-  background: #faf8ff;
-  font-size: 10px;
-}
-.sensitive-demo-hint strong { margin-left: auto; font-size: 14px; letter-spacing: .12em; }
 .sensitive-security-note {
   margin-top: 12px;
   padding: 10px 11px;
@@ -3809,20 +3791,6 @@ label { letter-spacing: -.01em; }
 .sensitive-pin-form input { width: 100%; height: 42px; margin-top: 6px; }
 .sensitive-pin-form .sensitive-pin-error { grid-column: 1 / -1; }
 .sensitive-pin-form .button { grid-column: 1 / -1; justify-self: end; }
-.demo-pin-card {
-  min-height: 130px;
-  padding: 18px 20px;
-  border: 1px solid #d5def0;
-  border-radius: 15px;
-  display: grid;
-  align-content: center;
-  justify-items: start;
-  background: linear-gradient(135deg, #f8fbff, #f7f5ff);
-}
-.demo-pin-card span { color: #6b7890; font-size: 10px; font-weight: 800; }
-.demo-pin-card strong { margin: 7px 0; color: #285fae; font-size: 27px; letter-spacing: .18em; }
-.demo-pin-card small { color: #7b8799; font-size: 9px; line-height: 1.55; }
-
 @media (max-width: 760px) {
   .sensitive-pin-settings { grid-template-columns: 1fr; gap: 18px; }
   .sensitive-pin-form { grid-template-columns: 1fr; }

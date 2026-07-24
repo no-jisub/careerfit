@@ -5,6 +5,8 @@ import { EmptyState } from './UI';
 import Icon from './Icon';
 import { recommendPrograms } from '../utils/programRecommendations';
 import { isProgramEligibleForStudent, PROGRAM_MODES, PROGRAM_STATUS_LABELS, resolveProgramStatus } from '../utils/programs';
+import { buildEventNotification } from '../utils/notifications';
+import { useAuth } from '../auth/AuthContext';
 
 const responseLabels = {
   recommended: '확인 전',
@@ -14,7 +16,8 @@ const responseLabels = {
 };
 
 export default function StudentProgramSection({ student, notify }) {
-  const { programs, programRecommendations, setProgramRecommendations } = useApp();
+  const { user } = useAuth();
+  const { programs, programRecommendations, setProgramRecommendations, setNotifications, persistDocument } = useApp();
   const [showAll, setShowAll] = useState(false);
   const [keyword, setKeyword] = useState('all');
   const [query, setQuery] = useState('');
@@ -43,9 +46,28 @@ export default function StudentProgramSection({ student, notify }) {
       && (status === 'all' || effectiveStatus === status)
       && (!normalizedQuery || [program.name, program.department, program.description, ...program.tags].some(value => value?.toLowerCase().includes(normalizedQuery)));
   }) : recommendedPrograms;
-  const updateResponse = (recommendation, nextStatus) => {
-    setProgramRecommendations(items => items.map(item => item.id === recommendation.id ? { ...item, status: nextStatus, updatedAt: new Date().toISOString() } : item));
-    notify(`프로그램 상태를 '${responseLabels[nextStatus]}'으로 변경했습니다.`);
+  const updateResponse = async (recommendation, nextStatus) => {
+    const now = new Date().toISOString();
+    const updated = { ...recommendation, status: nextStatus, updatedAt: now };
+    const program = programs.find(item => item.id === recommendation.programId);
+    const notification = buildEventNotification({
+      eventId: `${recommendation.id}-${nextStatus}-${now}`,
+      recipientUid: recommendation.counselorId,
+      actorUid: student.uid || user?.uid || 'demo-student-s1',
+      type: 'program',
+      title: '학생이 추천 프로그램에 응답했습니다',
+      description: `${student.name} 학생 · ${program?.name || '추천 프로그램'} · ${responseLabels[nextStatus]}`,
+      to: `/programs?student=${student.id}`,
+      createdAt: now,
+    });
+    try {
+      await persistDocument('notifications', notification);
+      setProgramRecommendations(items => items.map(item => item.id === recommendation.id ? updated : item));
+      setNotifications(items => items.some(item => item.id === notification.id) ? items : [...items, notification]);
+      notify(`프로그램 상태를 '${responseLabels[nextStatus]}'으로 변경했습니다.`);
+    } catch {
+      // 공통 저장 오류 안내를 사용합니다.
+    }
   };
   return <section className={`student-section student-program-section ${showAll ? 'all' : 'recommended'}`}>
     <div className="section-header"><div><span className="eyebrow">비교과 프로그램</span><h2>{showAll ? '전체 비교과 프로그램' : '나에게 추천된 프로그램'}</h2><p>{showAll ? '관심 분야와 모집 상태를 기준으로 프로그램을 찾아보세요.' : '상담사 추천과 내 관심 분야에 맞는 프로그램을 먼저 보여드려요.'}</p></div><button className="button secondary student-program-toggle" onClick={() => { setShowAll(value => !value); setKeyword('all'); setQuery(''); setMode('전체'); setStatus('all'); }}>{showAll ? '맞춤 추천만 보기' : '전체 비교과 프로그램 보기'} <Icon name="arrow" size={16} /></button></div>

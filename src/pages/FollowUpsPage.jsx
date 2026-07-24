@@ -6,6 +6,8 @@ import TaskOwnerCards from '../components/TaskOwnerCards';
 import { EmptyState, PageIntro, StatusBadge, StatusTabs } from '../components/UI';
 import { addDays, resolveFollowUpStatus, toDateKey } from '../utils/date';
 import { validateFollowUpInput } from '../utils/validation';
+import { buildEventNotification } from '../utils/notifications';
+import { useAuth } from '../auth/AuthContext';
 
 const followUpStatusOptions = [
   { value: 'all', label: '전체', description: '모든 할 일', icon: 'layers' },
@@ -29,7 +31,9 @@ const taskOwnerFormOptions = taskOwnerOptions.slice(1).map(option => ({
 }));
 
 export default function FollowUpsPage() {
-  const { students, followUps, setFollowUps, persistDocument, notify } = useApp();
+  const { user, profile } = useAuth();
+  const { students, followUps, setFollowUps, setNotifications, persistDocumentGroup, notify } = useApp();
+  const counselorUid = user?.uid || profile?.id || 'demo-counselor';
   const [filter, setFilter] = useState('all');
   const [owner, setOwner] = useState('all');
   const [query, setQuery] = useState('');
@@ -66,9 +70,26 @@ export default function FollowUpsPage() {
     if (!current) return;
     const changed = { ...current, ...changes, updatedAt: new Date().toISOString() };
     const updated = changes.dueDate ? { ...changed, status: resolveFollowUpStatus(changed) } : changed;
+    const student = students.find(item => item.id === updated.studentId);
+    const notification = updated.owner === '학생' && student?.uid
+      ? buildEventNotification({
+        eventId: `${updated.id}-updated-${updated.updatedAt}`,
+        recipientUid: student.uid,
+        actorUid: counselorUid,
+        type: 'followup',
+        title: '할 일 정보가 변경되었습니다',
+        description: `${updated.content} · ${updated.dueDate}까지`,
+        to: '/student',
+        createdAt: updated.updatedAt,
+      })
+      : null;
     try {
-      await persistDocument('followUps', updated);
+      await persistDocumentGroup([
+        { name: 'followUps', record: updated },
+        ...(notification ? [{ name: 'notifications', record: notification }] : []),
+      ]);
       setFollowUps(prev => prev.map(item => item.id === id ? updated : item));
+      if (notification) setNotifications(items => items.some(item => item.id === notification.id) ? items : [...items, notification]);
       notify(message);
     } catch { /* 공통 저장 오류 안내를 사용합니다. */ }
   };
@@ -94,10 +115,26 @@ export default function FollowUpsPage() {
       status: resolveFollowUpStatus({ dueDate: safeForm.dueDate, status: 'scheduled' }),
       consultationDate: toDateKey(),
     };
+    const student = students.find(item => item.id === nextTask.studentId);
+    const notification = nextTask.owner === '학생' && student?.uid
+      ? buildEventNotification({
+        eventId: `${nextTask.id}-assigned`,
+        recipientUid: student.uid,
+        actorUid: counselorUid,
+        type: 'followup',
+        title: '새로운 할 일이 등록되었습니다',
+        description: `${nextTask.content} · ${nextTask.dueDate}까지`,
+        to: '/student',
+      })
+      : null;
     setSaving(true);
     try {
-      await persistDocument('followUps', nextTask);
+      await persistDocumentGroup([
+        { name: 'followUps', record: nextTask },
+        ...(notification ? [{ name: 'notifications', record: notification }] : []),
+      ]);
       setFollowUps(items => items.some(item => item.id === nextTask.id) ? items : [...items, nextTask]);
+      if (notification) setNotifications(items => items.some(item => item.id === notification.id) ? items : [...items, notification]);
       setForm({ studentId: students[0]?.id || '', content: '', owner: '학생', dueDate: addDays(toDateKey(), 7) });
       setFormError('');
       setShowAdd(false);

@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../App';
 import { useAuth } from '../auth/AuthContext';
+import { DEMO_STUDENT_ID } from '../utils/demoInteraction';
 import Icon from '../components/Icon';
 
 export default function StudentWithdrawalPage() {
   const { students, setStudents, notify } = useApp();
   const { user, requestAccountWithdrawal, logout } = useAuth();
-  const student = user ? students.find(item => item.uid === user.uid) : students[0];
+  const student = user ? students.find(item => item.uid === user.uid) : students.find(item => item.id === DEMO_STUDENT_ID);
   const [confirmed, setConfirmed] = useState(false);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState('');
@@ -38,7 +39,7 @@ export default function StudentWithdrawalPage() {
         };
         setStudents(items => items.map(item => item.id === student.id ? updated : item));
         setDemoDeletionDate(scheduled.toISOString().slice(0, 10));
-        notify('데모 탈퇴 요청을 저장했습니다.');
+        notify('탈퇴 요청을 저장했습니다.');
       }
     } catch {
       setError('탈퇴 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');

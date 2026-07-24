@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '../auth/AuthContext';
 import { revealStudentSensitiveData } from '../services/sensitiveAccessService';
 import {
-  DEMO_SENSITIVE_PIN,
   formatRevealTime,
   maskPhone,
   maskStudentNo,
@@ -121,11 +120,10 @@ export default function SensitiveStudentInfo({ student }) {
               if (error) setError('');
             }}
             aria-invalid={Boolean(error)}
-            aria-describedby={error ? 'sensitive-pin-error' : demoMode ? 'sensitive-pin-demo' : undefined}
+            aria-describedby={error ? 'sensitive-pin-error' : undefined}
             placeholder="••••"
           />
           {error && <p className="sensitive-pin-error" id="sensitive-pin-error" role="alert"><Icon name="alert" size={15} />{error}</p>}
-          {demoMode && <p className="sensitive-demo-hint" id="sensitive-pin-demo"><Icon name="spark" size={14} />발표용 데모 PIN <strong>{DEMO_SENSITIVE_PIN}</strong></p>}
           <div className="sensitive-security-note"><Icon name="shield" size={16} /><span>로그인 비밀번호와 분리된 열람 전용 PIN입니다. 5회 실패하면 10분간 잠깁니다.</span></div>
           <div className="modal-actions">
             <button className="button secondary" type="button" disabled={loading} onClick={close}>취소</button>

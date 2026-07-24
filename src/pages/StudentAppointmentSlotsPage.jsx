@@ -6,6 +6,7 @@ import Icon from '../components/Icon';
 import { buildMonthCalendar, canRescheduleAppointment, getAppointmentCancellationLabel, isAvailabilityBookable, resolveRescheduleRequest } from '../utils/appointments';
 import { addMinutesToTime, getTimeRangeEnd, parseDateKey, toDateKey } from '../utils/date';
 import { buildEventNotification } from '../utils/notifications';
+import { DEMO_STUDENT_ID } from '../utils/demoInteraction';
 
 const formatDate = value => new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(`${value}T00:00:00`));
 const formatMonthTitle = monthKey => new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long' }).format(parseDateKey(monthKey));
@@ -23,7 +24,7 @@ export default function StudentAppointmentSlotsPage() {
   const { students, counselorAvailability, setCounselorAvailability, appointments, setAppointments, setNotifications, persistDocumentGroup, notify } = useApp();
   const { user, logout } = useAuth();
   const student = useMemo(() => {
-    const matched = user ? students.find(item => item.uid === user.uid) : students[0];
+    const matched = user ? students.find(item => item.uid === user.uid) : students.find(item => item.id === DEMO_STUDENT_ID);
     return !user && matched ? { ...matched, counselorUid: 'demo-counselor' } : matched;
   }, [students, user]);
   const now = new Date();

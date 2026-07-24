@@ -18,6 +18,7 @@ import { firestoreSyncEnabled } from './lib/firebase';
 import { isAdministrator, isOperationsStaff } from './utils/roles';
 import { createProgramRecommendationStore, createProgramStore, restoreProgramRecommendationStore, restoreProgramStore } from './utils/programs';
 import { restoreCounselorAvailabilityStore } from './utils/appointments';
+import { DEMO_STORAGE_KEYS } from './utils/demoInteraction';
 
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const SignupPage = lazy(() => import('./pages/SignupPage'));
@@ -105,6 +106,44 @@ function AppProvider({ children }) {
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_student_registrations', JSON.stringify(studentRegistrations)); }, [studentRegistrations, syncingRemoteData]);
   useEffect(() => { localStorage.setItem('careerfit_program_store', JSON.stringify(createProgramStore(programs))); }, [programs]);
   useEffect(() => { localStorage.setItem('careerfit_program_recommendation_store', JSON.stringify(createProgramRecommendationStore(programRecommendations))); }, [programRecommendations]);
+  useEffect(() => {
+    if (syncingRemoteData) return undefined;
+    const applySharedDemoStore = event => {
+      if (!event.key || !event.newValue) return;
+      let value;
+      try {
+        value = JSON.parse(event.newValue);
+      } catch {
+        return;
+      }
+      switch (event.key) {
+        case DEMO_STORAGE_KEYS.users: setUsers(value); break;
+        case DEMO_STORAGE_KEYS.studentRegistrations: setStudentRegistrations(value); break;
+        case DEMO_STORAGE_KEYS.students: setStudents(value); break;
+        case DEMO_STORAGE_KEYS.consultations: setConsultations(value); break;
+        case DEMO_STORAGE_KEYS.consultationSummaries: setConsultationSummaries(value); break;
+        case DEMO_STORAGE_KEYS.consultationNotes: setConsultationNotes(value); break;
+        case DEMO_STORAGE_KEYS.consultationDrafts: setConsultationDrafts(value); break;
+        case DEMO_STORAGE_KEYS.followUps:
+          setFollowUps(value.map(followUp => ({ ...followUp, status: resolveFollowUpStatus(followUp) })));
+          break;
+        case DEMO_STORAGE_KEYS.appointments: setAppointments(value); break;
+        case DEMO_STORAGE_KEYS.counselorAvailability:
+          setCounselorAvailability(restoreCounselorAvailabilityStore(value, initialCounselorAvailability));
+          break;
+        case DEMO_STORAGE_KEYS.notifications: setNotifications(value); break;
+        case DEMO_STORAGE_KEYS.programs:
+          setPrograms(restoreProgramStore(value, initialPrograms));
+          break;
+        case DEMO_STORAGE_KEYS.programRecommendations:
+          setProgramRecommendations(restoreProgramRecommendationStore(value, initialProgramRecommendations));
+          break;
+        default:
+      }
+    };
+    window.addEventListener('storage', applySharedDemoStore);
+    return () => window.removeEventListener('storage', applySharedDemoStore);
+  }, [syncingRemoteData]);
   useEffect(() => { if (!toast) return undefined; const timer = setTimeout(() => setToast(''), 3200); return () => clearTimeout(timer); }, [toast]);
   useEffect(() => { if (!role) setDraftForm(null); }, [role]);
 
@@ -181,31 +220,7 @@ function AppProvider({ children }) {
     if (user) await deleteCareerDocument(name, id);
   };
 
-  const resetProgramDemo = () => {
-    setPrograms(initialPrograms);
-    setProgramRecommendations(initialProgramRecommendations);
-  };
-
-  const resetDemoData = () => {
-    localStorage.setItem(DEMO_DATA_VERSION_KEY, DEMO_DATA_VERSION);
-    setUsers(initialUsers);
-    setStudentRegistrations(initialStudentRegistrations);
-    setStudents(initialStudents.map(student => student.appointment && !student.appointmentDate ? { ...student, appointmentDate: toDateKey() } : student));
-    setConsultations(initialConsultations);
-    setConsultationSummaries(initialConsultationSummaries);
-    setConsultationNotes([]);
-    setConsultationDrafts([]);
-    setFollowUps(initialFollowUps.map(followUp => ({ ...followUp, status: resolveFollowUpStatus(followUp) })));
-    setAppointments(initialAppointments);
-    setCounselorAvailability(initialCounselorAvailability);
-    setNotifications([]);
-    setPrograms(initialPrograms);
-    setProgramRecommendations(initialProgramRecommendations);
-    setDraftForm(null);
-    setToast('발표용 데모 데이터를 처음 상태로 되돌렸습니다.');
-  };
-
-  const value = useMemo(() => ({ users, setUsers, studentRegistrations, setStudentRegistrations, students, setStudents, consultations, setConsultations, consultationSummaries, setConsultationSummaries, consultationNotes, setConsultationNotes, consultationDrafts, setConsultationDrafts, followUps, setFollowUps, appointments, setAppointments, counselorAvailability, setCounselorAvailability, notifications, setNotifications, programs, setPrograms, programRecommendations, setProgramRecommendations, resetProgramDemo, resetDemoData, persistDocument, persistDocumentGroup, removeDocument, toast, notify: setToast, draftForm, setDraftForm }), [users, studentRegistrations, students, consultations, consultationSummaries, consultationNotes, consultationDrafts, followUps, appointments, counselorAvailability, notifications, programs, programRecommendations, toast, draftForm, user]);
+  const value = useMemo(() => ({ users, setUsers, studentRegistrations, setStudentRegistrations, students, setStudents, consultations, setConsultations, consultationSummaries, setConsultationSummaries, consultationNotes, setConsultationNotes, consultationDrafts, setConsultationDrafts, followUps, setFollowUps, appointments, setAppointments, counselorAvailability, setCounselorAvailability, notifications, setNotifications, programs, setPrograms, programRecommendations, setProgramRecommendations, persistDocument, persistDocumentGroup, removeDocument, toast, notify: setToast, draftForm, setDraftForm }), [users, studentRegistrations, students, consultations, consultationSummaries, consultationNotes, consultationDrafts, followUps, appointments, counselorAvailability, notifications, programs, programRecommendations, toast, draftForm, user]);
   if (dataLoading) return <main className="app-loading" role="status">상담 데이터를 불러오고 있어요...</main>;
   return <AppContext.Provider value={value}>{children}{toast && <div className="toast" role="status" aria-live="polite"><span>✓</span>{toast}</div>}</AppContext.Provider>;
 }

@@ -8,6 +8,8 @@ import { useAuth } from '../auth/AuthContext';
 import { buildOperationalNotifications } from '../utils/operations';
 import { isAdministrator } from '../utils/roles';
 import { maskStudentNo } from '../utils/sensitiveData';
+import { filterNotificationsForRecipient, getSessionActorUid } from '../utils/demoInteraction';
+import { mergeNotifications } from '../utils/notifications';
 
 const navGroups = [
   {
@@ -55,6 +57,7 @@ export default function AppLayout({ logout }) {
   const deferredSearch = useDeferredValue(search);
   const { students, consultations, followUps, appointments, notifications: eventNotifications } = useApp();
   const { profile, user, role } = useAuth();
+  const recipientUid = getSessionActorUid({ userUid: user?.uid, profileId: profile?.id, role });
   const counselorName = profile?.displayName || user?.displayName || '상담 담당자';
   const shortCounselorName = counselorName.replace(/\s*상담사$/, '');
   const location = useLocation();
@@ -64,7 +67,15 @@ export default function AppLayout({ logout }) {
   const today = toDateKey();
   const pendingCount = followUps.filter(item => item.status !== 'complete').length;
   const notifications = useMemo(() => buildOperationalNotifications(students, followUps, appointments, today), [students, followUps, appointments, today]);
-  const noticeCount = notifications.length + eventNotifications.filter(item => !item.readAt).length;
+  const visibleEventNotifications = useMemo(
+    () => filterNotificationsForRecipient(eventNotifications, recipientUid),
+    [eventNotifications, recipientUid],
+  );
+  const headerNotifications = useMemo(
+    () => mergeNotifications(visibleEventNotifications.filter(item => !item.readAt), notifications),
+    [visibleEventNotifications, notifications],
+  );
+  const noticeCount = headerNotifications.length;
   const searchResults = useMemo(() => {
     const query = deferredSearch.trim().toLowerCase();
     if (!query) return [];
@@ -122,7 +133,7 @@ export default function AppLayout({ logout }) {
         <div className="topbar-title"><IconButton label="메뉴 열기" icon="menu" onClick={() => setOpen(true)} /><div><strong>{currentPage.title}</strong><span>{currentPage.description}</span></div></div>
         <div className="header-actions">
           <div className="global-search-wrap"><label className="global-search"><Icon name="search" size={18} /><span className="sr-only">학생 또는 상담 검색</span><input ref={searchInputRef} value={search} placeholder="학생 또는 상담 검색" onFocus={() => setPanel('search')} onChange={e => { setSearch(e.target.value); setPanel('search'); }} onKeyDown={e => { if (e.key === 'Enter' && searchResults[0]) navigate(searchResults[0].to); }} /><kbd>⌘ K</kbd></label>{panel === 'search' && search.trim() && <div className="header-popover search-popover"><strong>통합 검색 결과 {searchResults.length}건</strong>{searchResults.length ? searchResults.map(result => <NavLink key={result.id} to={result.to}><span>{result.type}</span><div><b>{result.title}</b><small>{result.description}</small></div></NavLink>) : <p>일치하는 학생 또는 상담 기록이 없습니다.</p>}<button onClick={() => navigate(`/students?q=${encodeURIComponent(search.trim())}`)}>학생 목록에서 자세히 찾기</button></div>}</div>
-          <div className="header-popover-wrap"><IconButton label={`알림 ${noticeCount}개`} icon="bell" aria-expanded={panel === 'notice'} aria-controls="notice-popover" onClick={() => setPanel(panel === 'notice' ? '' : 'notice')} />{noticeCount > 0 && <span className="notice-dot" aria-hidden="true">{noticeCount > 9 ? '9+' : noticeCount}</span>}{panel === 'notice' && <div className="header-popover notice-popover" id="notice-popover"><strong>확인할 알림 {noticeCount}개</strong>{notifications.slice(0, 5).map(item => <p key={item.id}><b>{item.title}</b>{item.description}</p>)}{noticeCount === 0 && <p>새로 확인할 일정이나 기한 초과 업무가 없습니다.</p>}<NavLink to="/notifications" onClick={() => setPanel('')}>알림 센터 열기</NavLink></div>}</div>
+          <div className="header-popover-wrap"><IconButton label={`알림 ${noticeCount}개`} icon="bell" aria-expanded={panel === 'notice'} aria-controls="notice-popover" onClick={() => setPanel(panel === 'notice' ? '' : 'notice')} />{noticeCount > 0 && <span className="notice-dot" aria-hidden="true">{noticeCount > 9 ? '9+' : noticeCount}</span>}{panel === 'notice' && <div className="header-popover notice-popover" id="notice-popover"><strong>확인할 알림 {noticeCount}개</strong>{headerNotifications.slice(0, 5).map(item => <p key={item.id}><b>{item.title}</b>{item.description}</p>)}{noticeCount === 0 && <p>새로 확인할 일정이나 기한 초과 업무가 없습니다.</p>}<NavLink to="/notifications" onClick={() => setPanel('')}>알림 센터 열기</NavLink></div>}</div>
           <div className="header-popover-wrap"><button className="profile-button" aria-expanded={panel === 'profile'} onClick={() => setPanel(panel === 'profile' ? '' : 'profile')}><span className="profile-avatar" aria-hidden="true">{shortCounselorName.slice(0, 1)}</span><span>{shortCounselorName}</span><Icon name="chevron" size={16} /></button>{panel === 'profile' && <div className="header-popover profile-popover"><strong>{counselorName}</strong><small>대학일자리플러스센터</small><NavLink to="/settings" onClick={() => setPanel('')}>내 설정</NavLink><button onClick={logout}>로그아웃</button></div>}</div>
         </div>
       </header>
