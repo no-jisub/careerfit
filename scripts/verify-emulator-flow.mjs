@@ -328,7 +328,6 @@ try {
   assert(ownStudents.size === 1 && ownStudents.docs[0].id === 's1', '학생 본인 문서를 찾지 못했습니다.');
   const profileUpdatedAt = new Date().toISOString();
   await updateDoc(doc(db, 'students', 's1'), {
-    phone: '010-0000-0000',
     interests: ['UX', '서비스 기획'],
     goal: '서비스 기획자',
     concern: '프로필 수정 권한 검증',
