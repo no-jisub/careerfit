@@ -1,29 +1,30 @@
 import { httpsCallable, httpsCallableFromURL } from 'firebase/functions';
 import { auth, functions } from '../lib/firebase';
+import { recommendProgramNamesFromMemo } from '../utils/aiDraftRecommendations';
 
 export function generateLocalConsultationDraft(input) {
   if (!input.rawMemo?.trim()) throw new Error('상담 메모를 입력해 주세요.');
+  const recommendedPrograms = recommendProgramNamesFromMemo(input.rawMemo, input.programCatalog, 1);
+  const followUpTasks = [
+    { owner: '학생', content: '상담에서 정한 준비 항목을 1차 초안으로 정리하기', dueInDays: 7 },
+    { owner: '상담사', content: '학생의 준비 결과 검토에 필요한 참고자료 전달하기', dueInDays: 3 },
+  ];
   return {
-    purpose: input.purpose || '학생의 진로 목표와 다음 행동 구체화',
+    purpose: '학생의 진로 목표와 다음 행동 구체화',
     summary: input.rawMemo.trim(),
-    strengths: input.strengths?.trim() || '상담 중 확인한 학생의 강점을 추가해 주세요.',
-    concern: input.currentConcern?.trim() || '상담 중 확인한 학생의 고민을 추가해 주세요.',
-    guidance: input.guidance?.trim() || '상담 중 안내한 내용을 추가해 주세요.',
-    programs: input.programs || [],
-    studentActions: input.studentActions?.trim() || '학생의 다음 행동을 구체적으로 작성해 주세요.',
-    counselorActions: input.counselorActions?.trim() || '상담사가 해야 할 일을 작성해 주세요.',
-    nextCheckItems: input.nextCheckItems?.trim() || '다음 상담에서 확인할 내용을 작성해 주세요.',
+    concern: '내부 메모에 나타난 학생의 고민과 우선순위를 상담사가 확인해 주세요.',
+    programs: recommendedPrograms,
+    followUpTasks,
+    studentActions: followUpTasks.filter(task => task.owner === '학생').map(task => task.content).join('\n'),
+    counselorActions: followUpTasks.filter(task => task.owner === '상담사').map(task => task.content).join('\n'),
+    nextCheckItems: '제안한 실행 항목의 진행 상황과 추가 지원 필요 여부',
     evidence: {
       summary: ['상담 담당자가 입력한 내부 메모를 바탕으로 정리했습니다.'],
-      strengths: input.strengths?.trim()
-        ? ['상담 담당자가 입력한 학생의 강점을 바탕으로 정리했습니다.']
-        : ['근거 부족'],
-      concern: input.currentConcern?.trim()
-        ? ['학생의 현재 고민 입력 내용을 바탕으로 정리했습니다.']
-        : ['근거 부족'],
-      guidance: input.guidance?.trim()
-        ? ['상담 담당자가 입력한 안내 내용을 바탕으로 정리했습니다.']
-        : ['근거 부족'],
+      concern: ['내부 메모에서 상담이 필요한 고민과 우선순위를 확인했습니다.'],
+      programs: recommendedPrograms.length
+        ? ['내부 메모의 상담 맥락과 제공된 프로그램 후보를 비교했습니다.']
+        : ['적합한 프로그램 후보가 제공되지 않았습니다.'],
+      followUpTasks: ['내부 메모의 합의 사항을 학생과 상담사의 실행 항목으로 구분했습니다.'],
     },
     needsConfirmation: [],
     sensitiveWarning: [],
@@ -45,6 +46,37 @@ const errorMessages = {
   'functions/internal': 'AI 서버에서 초안을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.',
 };
 
+function splitLegacyActions(value, owner, dueInDays) {
+  return String(value || '')
+    .split(/\n+/)
+    .map(content => content.trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .map(content => ({ owner, content, dueInDays }));
+}
+
+function normalizeDraftForPreview(draft, input) {
+  const followUpTasks = Array.isArray(draft.followUpTasks) && draft.followUpTasks.length
+    ? draft.followUpTasks
+    : [
+      ...splitLegacyActions(draft.studentActions, '학생', 7),
+      ...splitLegacyActions(draft.counselorActions, '상담사', 3),
+    ];
+  const programs = Array.isArray(draft.programs)
+    ? draft.programs
+    : recommendProgramNamesFromMemo(input.rawMemo, input.programCatalog, 1);
+  return {
+    ...draft,
+    programs,
+    followUpTasks,
+    evidence: {
+      ...draft.evidence,
+      programs: draft.evidence?.programs || ['상담 맥락과 제공된 프로그램 후보를 비교해 확인해야 합니다.'],
+      followUpTasks: draft.evidence?.followUpTasks || ['AI가 정리한 학생 및 상담사의 다음 행동을 확인해야 합니다.'],
+    },
+  };
+}
+
 export async function generateConsultationDraft(input) {
   if (!input.rawMemo?.trim()) throw new Error('상담 메모를 입력해 주세요.');
   if (!auth?.currentUser) return generateLocalConsultationDraft(input);
@@ -64,7 +96,7 @@ export async function generateConsultationDraft(input) {
     const result = await callable(input);
     if (!result.data?.draft) throw new Error('AI 초안 응답 형식이 올바르지 않습니다.');
     return {
-      ...result.data.draft,
+      ...normalizeDraftForPreview(result.data.draft, input),
       reviewMeta: {
         model: result.data.model || 'unknown',
         generatedAt: result.data.generatedAt || new Date().toISOString(),

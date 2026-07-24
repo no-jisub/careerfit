@@ -11,6 +11,7 @@ import { buildConsultationSummary, consultationEvidenceFieldOptions, consultatio
 import { buildEventNotification } from '../utils/notifications';
 import { detectDirectIdentifiers } from '../utils/privacy';
 import { getEvidenceCoverage } from '../utils/trust';
+import { recommendPrograms } from '../utils/programRecommendations';
 
 const createEmptyForm = () => { const today = toDateKey(); return { date: today, type: '진로 탐색', purpose: '관심 직무 구체화 및 경험 계획 수립', currentConcern: '', rawMemo: '', programs: [], nextDate: addDays(today, 14), studentVisible: true, visibility: { ...defaultConsultationVisibility } }; };
 const appendMissingDocuments = (current, additions) => [
@@ -50,7 +51,7 @@ export default function ConsultationFormPage() {
   const appointmentId = searchParams.get('appointment') || '';
   const navigate = useNavigate();
   const { profile, user } = useAuth();
-  const { students, setStudents, consultations, setConsultations, setConsultationSummaries, setConsultationNotes, consultationDrafts, setConsultationDrafts, setFollowUps, appointments, setAppointments, setNotifications, persistDocument, persistDocumentGroup, removeDocument, notify, draftForm, setDraftForm } = useApp();
+  const { students, setStudents, consultations, setConsultations, setConsultationSummaries, setConsultationNotes, consultationDrafts, setConsultationDrafts, setFollowUps, appointments, setAppointments, setNotifications, programs, persistDocument, persistDocumentGroup, removeDocument, notify, draftForm, setDraftForm } = useApp();
   const student = students.find(s => s.id === studentId);
   const linkedAppointment = appointmentId ? appointments.find(item => item.id === appointmentId && item.studentId === studentId) : null;
   const counselorUid = user?.uid || profile?.id || 'demo-counselor';
@@ -72,6 +73,14 @@ export default function ConsultationFormPage() {
   const [draftRestored, setDraftRestored] = useState(false);
   const lastDraftPayload = useRef('');
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
+  const aiProgramCatalog = useMemo(() => student
+    ? recommendPrograms(programs, student, 12).map(program => ({
+      name: program.name,
+      type: program.type,
+      description: program.description,
+      tags: program.tags || [],
+    }))
+    : [], [programs, student]);
   const privacyPreflight = useMemo(() => detectDirectIdentifiers([form.rawMemo, form.currentConcern].join('\n')), [form.currentConcern, form.rawMemo]);
   const pendingTaskRows = taskRows.filter(row => row.content.trim());
   const pendingTaskCount = pendingTaskRows.length;
@@ -91,6 +100,61 @@ export default function ConsultationFormPage() {
     setEvidenceReviews(Object.fromEntries(consultationEvidenceFieldOptions.map(({ key }) => [key, false])));
     setConfirmationAcknowledged(false);
     setSensitiveAcknowledged(false);
+  };
+  const invalidateAiReview = evidenceKey => {
+    setAiReviewedAt('');
+    if (evidenceKey) setEvidenceReviews(current => ({ ...current, [evidenceKey]: false }));
+  };
+  const updateAiText = (key, value) => {
+    setAiDraft(current => ({ ...current, [key]: value }));
+    invalidateAiReview(consultationEvidenceFieldOptions.some(item => item.key === key) ? key : '');
+  };
+  const removeAiProgram = programName => {
+    setAiDraft(current => ({ ...current, programs: current.programs.filter(name => name !== programName) }));
+    invalidateAiReview('programs');
+  };
+  const updateAiTask = (index, key, value) => {
+    setAiDraft(current => ({
+      ...current,
+      followUpTasks: current.followUpTasks.map((task, taskIndex) => taskIndex === index
+        ? { ...task, [key]: key === 'dueInDays' ? Math.min(60, Math.max(1, Number(value) || 1)) : value }
+        : task),
+    }));
+    invalidateAiReview('followUpTasks');
+  };
+  const removeAiTask = index => {
+    setAiDraft(current => ({ ...current, followUpTasks: current.followUpTasks.filter((_, taskIndex) => taskIndex !== index) }));
+    invalidateAiReview('followUpTasks');
+  };
+  const applyReviewedAiDraft = () => {
+    if (!aiDraft || !reviewReady) return;
+    const availableProgramNames = new Set(programs.map(program => program.name));
+    const reviewedPrograms = [...new Set((aiDraft.programs || []).filter(name => availableProgramNames.has(name)))];
+    const reviewedTasks = (aiDraft.followUpTasks || [])
+      .filter(task => task.content?.trim())
+      .map(task => createTaskRow(
+        task.owner === '상담사' ? '교직원' : '학생',
+        addDays(form.date, Math.min(60, Math.max(1, Number(task.dueInDays) || 7))),
+        task.content.trim(),
+      ));
+    setForm(current => ({
+      ...current,
+      purpose: aiDraft.purpose?.trim() || current.purpose,
+      currentConcern: aiDraft.concern?.trim() || current.currentConcern,
+      programs: reviewedPrograms,
+    }));
+    setTaskRows([
+      ...(reviewedTasks.filter(task => task.owner === '학생').length
+        ? reviewedTasks.filter(task => task.owner === '학생')
+        : [createTaskRow('학생', form.nextDate)]),
+      ...(reviewedTasks.filter(task => task.owner === '교직원').length
+        ? reviewedTasks.filter(task => task.owner === '교직원')
+        : [createTaskRow('교직원', form.nextDate)]),
+    ]);
+    const reviewedAt = new Date().toISOString();
+    setAiReviewedAt(reviewedAt);
+    setError('');
+    notify(`AI 초안을 검토 완료하고 추천 프로그램 ${reviewedPrograms.length}개와 할 일 ${reviewedTasks.length}개를 입력했습니다.`);
   };
   useEffect(() => {
     if (!student) return undefined;
@@ -148,7 +212,11 @@ export default function ConsultationFormPage() {
     if (!form.rawMemo.trim()) { setError('상담 메모를 입력하면 AI 초안을 생성할 수 있습니다.'); return; }
     setLoading(true);
     try {
-      setAiDraft(await generateConsultationDraft({ ...form, studentId: student.id, studentActions: studentTask, counselorActions: counselorTask }));
+      setAiDraft(await generateConsultationDraft({
+        studentId: student.id,
+        rawMemo: form.rawMemo,
+        programCatalog: aiProgramCatalog,
+      }));
       resetAiReview();
       notify('상담일지 초안을 생성했습니다.');
     } catch (e) {
@@ -328,24 +396,35 @@ export default function ConsultationFormPage() {
           <span className="ai-label"><Icon name="spark" size={16} /> AI 작성 도우미</span>
           <h2>{aiDraft ? '상담일지 초안' : '메모를 상담일지로 정리해요'}</h2>
           {!aiDraft && <>
-            <p>입력한 상담 메모를 바탕으로 구조화된 초안을 만들어요. 자동 저장되지 않습니다.</p>
+            <p>내부 메모 한 번으로 상담 요약, 추천 프로그램, 상담 후 할 일을 함께 만들어요. 검토 전에는 입력란에 반영되지 않습니다.</p>
             <div className="ai-privacy-notice"><Icon name="lock" size={16} /><span><strong>최소 정보만 전송</strong>학생 이름·학번·연락처는 요청 데이터에 포함하지 않고, 메모 속 직접 식별정보 형식은 서버에서 마스킹합니다.</span></div>
           </>}
           {loading && <div className="ai-loading" role="status" aria-live="polite"><span className="spinner" />상담 맥락을 정리하고 있어요...</div>}
-          {!aiDraft && !loading && <button className="button ai full" onClick={generate}><Icon name="spark" size={18} />AI 상담일지 초안 만들기</button>}
+          {!aiDraft && !loading && <button className="button ai full" onClick={generate}><Icon name="spark" size={18} />AI 통합 초안 만들기</button>}
           {aiDraft && !loading && <>
-            <div className="ai-warning"><Icon name="alert" size={17} />AI가 작성한 초안입니다. 저장하려면 각 항목의 근거를 직접 확인해야 합니다.</div>
+            <div className="ai-warning"><Icon name="alert" size={17} />AI가 작성한 미리보기입니다. 근거와 반영될 내용을 확인한 뒤 승인해 주세요.</div>
             <div className="ai-review-progress" aria-live="polite">
               <div><span>근거 검토 진행률</span><strong>{reviewedEvidenceCount} / {consultationEvidenceFieldOptions.length}</strong></div>
               <i><b style={{ width: `${reviewedEvidenceCount / consultationEvidenceFieldOptions.length * 100}%` }} /></i>
               <small>현재 근거 충족률 {getEvidenceCoverage(aiDraft)}%</small>
             </div>
             <div className="ai-fields">
-              {[['purpose', '상담 목적'], ['summary', '상담 주요 내용'], ['concern', '학생의 고민과 목표']].map(([key, label]) => <label key={key}>{label}<textarea rows={key === 'summary' ? 5 : 3} value={aiDraft[key] || ''} onChange={e => {
-                setAiDraft(prev => ({ ...prev, [key]: e.target.value }));
-                setAiReviewedAt('');
-                if (consultationEvidenceFieldOptions.some(item => item.key === key)) setEvidenceReviews(prev => ({ ...prev, [key]: false }));
-              }} /></label>)}
+              {[['purpose', '상담 목적'], ['summary', '상담 주요 내용'], ['concern', '학생의 고민과 목표']].map(([key, label]) => <label key={key}>{label}<textarea rows={key === 'summary' ? 5 : 3} value={aiDraft[key] || ''} onChange={e => updateAiText(key, e.target.value)} /></label>)}
+              <section className="ai-application-preview" aria-labelledby="ai-application-preview-title">
+                <div className="ai-preview-head"><div><span><Icon name="spark" size={15} />일괄 반영 미리보기</span><h3 id="ai-application-preview-title">승인하면 아래 내용이 입력됩니다</h3></div><strong>{(aiDraft.programs?.length || 0) + (aiDraft.followUpTasks?.length || 0)}개 항목</strong></div>
+                <div className="ai-preview-block">
+                  <div className="ai-preview-block-title"><span className="preview-kind program"><Icon name="target" size={14} /></span><div><strong>추천 프로그램</strong><small>실제 등록된 프로그램 후보에서만 선택</small></div></div>
+                  {aiDraft.programs?.length ? <div className="ai-preview-programs">{aiDraft.programs.map(program => <span key={program}>{program}<button type="button" aria-label={`${program} AI 추천에서 제외`} onClick={() => removeAiProgram(program)}><Icon name="close" size={13} /></button></span>)}</div> : <p className="ai-preview-empty">상담 내용과 직접 맞는 프로그램을 찾지 못했습니다.</p>}
+                </div>
+                <div className="ai-preview-block">
+                  <div className="ai-preview-block-title"><span className="preview-kind task"><Icon name="check" size={14} /></span><div><strong>상담 후 할 일</strong><small>담당자와 권장 기한까지 함께 반영</small></div></div>
+                  <div className="ai-preview-tasks">{(aiDraft.followUpTasks || []).map((task, index) => <article key={`${task.owner}-${index}`}>
+                    <div><span className={`task-owner-chip ${task.owner === '상담사' ? 'counselor' : 'student'}`}>{task.owner}</span><button type="button" aria-label={`AI 할 일 ${index + 1} 삭제`} onClick={() => removeAiTask(index)}><Icon name="close" size={14} /></button></div>
+                    <label>할 일 내용<textarea rows="2" maxLength="500" value={task.content} onChange={event => updateAiTask(index, 'content', event.target.value)} /></label>
+                    <label className="ai-task-due">권장 완료일 <span>상담일로부터</span><input type="number" min="1" max="60" value={task.dueInDays} onChange={event => updateAiTask(index, 'dueInDays', event.target.value)} />일 후 · {addDays(form.date, task.dueInDays)}</label>
+                  </article>)}</div>
+                </div>
+              </section>
               <section className="ai-review-section">
                 <h3>항목별 작성 근거</h3>
                 <p>AI가 사용한 상담 내용을 읽고 각 항목을 직접 확인해 주세요. ‘근거 부족’이면 초안 내용을 보완하거나 삭제합니다.</p>
@@ -373,16 +452,11 @@ export default function ConsultationFormPage() {
             </div>
             <div className={`ai-review-confirmation ${aiReviewedAt ? 'confirmed' : ''}`}>
               <Icon name={aiReviewedAt ? 'check' : 'shield'} size={18} />
-              <span><strong>{aiReviewedAt ? '근거 검토 완료' : reviewReady ? '최종 승인 준비 완료' : '상담사 확인이 필요합니다'}</strong>{aiReviewedAt ? '확인 시각과 검토자가 상담 기록에 함께 저장됩니다.' : reviewReady ? '모든 필수 확인이 끝났습니다. 검토 완료를 승인해 주세요.' : '항목별 근거와 표시된 경고를 모두 확인해야 최종 저장할 수 있습니다.'}</span>
+              <span><strong>{aiReviewedAt ? '검토 완료 · 입력 적용됨' : reviewReady ? '일괄 반영 준비 완료' : '상담사 확인이 필요합니다'}</strong>{aiReviewedAt ? '추천 프로그램과 할 일이 실제 입력란에 반영됐습니다.' : reviewReady ? '모든 필수 확인이 끝났습니다. 승인하면 미리보기 내용이 한 번에 입력됩니다.' : '항목별 근거와 표시된 경고를 모두 확인해야 입력할 수 있습니다.'}</span>
             </div>
             <div className="ai-actions">
               <button className="button secondary" onClick={generate}>초안 다시 생성</button>
-              <button id="ai-review-confirm" className={`button ${aiReviewedAt ? 'secondary' : 'ai'}`} disabled={!reviewReady && !aiReviewedAt} onClick={() => {
-                const reviewedAt = new Date().toISOString();
-                setAiReviewedAt(reviewedAt);
-                setError('');
-                notify('AI 초안의 내용과 근거를 검토 완료했습니다.');
-              }}>{aiReviewedAt ? '검토 완료됨' : '근거 검토 완료'}</button>
+              <button id="ai-review-confirm" className={`button ${aiReviewedAt ? 'secondary' : 'ai'}`} disabled={!reviewReady && !aiReviewedAt} onClick={applyReviewedAiDraft}>{aiReviewedAt ? '입력 적용 완료' : '검토 완료 및 일괄 반영'}</button>
             </div>
           </>}
         </section>

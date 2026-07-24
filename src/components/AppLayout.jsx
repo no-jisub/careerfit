@@ -46,17 +46,10 @@ const pageMeta = {
   admin: { title: '사용자 관리', description: '가입 승인과 학생 배정' },
 };
 
-const demoTourSteps = [
-  { number: '01', time: '30초', icon: 'dashboard', title: '오늘의 운영 우선순위', description: '상담 일정과 기한 초과 업무를 한 화면에서 판단합니다.', to: '/dashboard', action: '대시보드 보기' },
-  { number: '02', time: '45초', icon: 'students', title: '학생 360° 상담 맥락', description: '한 학생의 여러 상담을 날짜별로 비교하며 맥락을 이어갑니다.', to: '/students/s2', action: '이서준 학생 보기' },
-  { number: '03', time: '60초', icon: 'spark', title: '근거 기반 AI 상담일지', description: '개인정보를 마스킹하고 항목별 근거를 사람이 승인합니다.', to: '/students/s1/consultation/new', action: 'AI 상담 흐름 보기' },
-];
-
 export default function AppLayout({ logout }) {
   const [open, setOpen] = useState(false);
   const [panel, setPanel] = useState('');
   const [search, setSearch] = useState('');
-  const [tourOpen, setTourOpen] = useState(false);
   const searchInputRef = useRef(null);
   const deferredSearch = useDeferredValue(search);
   const { students, consultations, followUps, appointments, notifications: eventNotifications } = useApp();
@@ -89,7 +82,6 @@ export default function AppLayout({ logout }) {
       if (event.key !== 'Escape') return;
       setOpen(false);
       setPanel('');
-      setTourOpen(false);
     };
     window.addEventListener('keydown', closeOverlays);
     return () => window.removeEventListener('keydown', closeOverlays);
@@ -128,7 +120,6 @@ export default function AppLayout({ logout }) {
       <header className="topbar">
         <div className="topbar-title"><IconButton label="메뉴 열기" icon="menu" onClick={() => setOpen(true)} /><div><strong>{currentPage.title}</strong><span>{currentPage.description}</span></div></div>
         <div className="header-actions">
-          <button className="demo-tour-trigger" aria-label="3분 데모 열기" aria-haspopup="dialog" onClick={() => setTourOpen(true)}><Icon name="play" size={17} /><span>3분 데모</span></button>
           <div className="global-search-wrap"><label className="global-search"><Icon name="search" size={18} /><span className="sr-only">학생 또는 상담 검색</span><input ref={searchInputRef} value={search} placeholder="학생 또는 상담 검색" onFocus={() => setPanel('search')} onChange={e => { setSearch(e.target.value); setPanel('search'); }} onKeyDown={e => { if (e.key === 'Enter' && searchResults[0]) navigate(searchResults[0].to); }} /><kbd>⌘ K</kbd></label>{panel === 'search' && search.trim() && <div className="header-popover search-popover"><strong>통합 검색 결과 {searchResults.length}건</strong>{searchResults.length ? searchResults.map(result => <NavLink key={result.id} to={result.to}><span>{result.type}</span><div><b>{result.title}</b><small>{result.description}</small></div></NavLink>) : <p>일치하는 학생 또는 상담 기록이 없습니다.</p>}<button onClick={() => navigate(`/students?q=${encodeURIComponent(search.trim())}`)}>학생 목록에서 자세히 찾기</button></div>}</div>
           <div className="header-popover-wrap"><IconButton label={`알림 ${noticeCount}개`} icon="bell" aria-expanded={panel === 'notice'} aria-controls="notice-popover" onClick={() => setPanel(panel === 'notice' ? '' : 'notice')} />{noticeCount > 0 && <span className="notice-dot" aria-hidden="true">{noticeCount > 9 ? '9+' : noticeCount}</span>}{panel === 'notice' && <div className="header-popover notice-popover" id="notice-popover"><strong>확인할 알림 {noticeCount}개</strong>{notifications.slice(0, 5).map(item => <p key={item.id}><b>{item.title}</b>{item.description}</p>)}{noticeCount === 0 && <p>새로 확인할 일정이나 기한 초과 업무가 없습니다.</p>}<NavLink to="/notifications" onClick={() => setPanel('')}>알림 센터 열기</NavLink></div>}</div>
           <div className="header-popover-wrap"><button className="profile-button" aria-expanded={panel === 'profile'} onClick={() => setPanel(panel === 'profile' ? '' : 'profile')}><span className="profile-avatar" aria-hidden="true">{shortCounselorName.slice(0, 1)}</span><span>{shortCounselorName}</span><Icon name="chevron" size={16} /></button>{panel === 'profile' && <div className="header-popover profile-popover"><strong>{counselorName}</strong><small>대학일자리플러스센터</small><NavLink to="/settings" onClick={() => setPanel('')}>내 설정</NavLink><button onClick={logout}>로그아웃</button></div>}</div>
@@ -139,18 +130,5 @@ export default function AppLayout({ logout }) {
         {mobileNavItems.map(item => <NavLink key={item.to} to={item.to} className={({ isActive }) => isActive ? 'active' : ''}><span className="mobile-nav-icon"><Icon name={item.icon} size={20} />{item.to === '/follow-ups' && pendingCount > 0 && <em>{pendingCount > 9 ? '9+' : pendingCount}</em>}</span><span>{item.shortLabel}</span></NavLink>)}
       </nav>
     </div>
-    {tourOpen && <div className="demo-tour-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && setTourOpen(false)}>
-      <section className="demo-tour-modal" role="dialog" aria-modal="true" aria-labelledby="demo-tour-title">
-        <button className="modal-close" aria-label="데모 안내 닫기" onClick={() => setTourOpen(false)}><Icon name="close" size={19} /></button>
-        <div className="demo-tour-heading"><span className="demo-tour-mark"><Icon name="play" size={22} /></span><div><span className="eyebrow">Presentation mode</span><h2 id="demo-tour-title">커리어핏 3분 데모</h2><p>상담의 시작부터 안전한 AI 활용까지, 세 장면으로 보여주세요.</p></div></div>
-        <div className="demo-tour-steps">{demoTourSteps.map(step => <button key={step.number} onClick={() => { navigate(step.to); setTourOpen(false); }}>
-          <span className="demo-tour-number">{step.number}</span>
-          <span className="demo-tour-step-icon"><Icon name={step.icon} size={19} /></span>
-          <span><small>{step.time}</small><strong>{step.title}</strong><em>{step.description}</em></span>
-          <span className="demo-tour-action">{step.action}<Icon name="arrow" size={15} /></span>
-        </button>)}</div>
-        <footer><span><Icon name="spark" size={15} />추천 발표 순서</span><p>문제 → 상담 맥락 → 근거 기반 AI 상담일지</p></footer>
-      </section>
-    </div>}
   </div>;
 }

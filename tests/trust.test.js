@@ -4,14 +4,14 @@ import { getEvidenceCoverage } from '../src/utils/trust.js';
 
 const fullEvidence = {
   summary: ['상담에서 직접 확인함'],
-  strengths: ['과제를 완료한 경험'],
   concern: ['학생이 고민을 표현함'],
-  guidance: ['상담사가 자료를 안내함'],
+  programs: ['상담 내용과 프로그램 정보를 비교함'],
+  followUpTasks: ['학생과 상담사의 다음 행동을 합의함'],
 };
 
 test('evidence coverage counts only fields with usable source evidence', () => {
   assert.equal(getEvidenceCoverage({ evidence: fullEvidence }), 100);
-  assert.equal(getEvidenceCoverage({ evidence: { ...fullEvidence, summary: ['근거 부족'] } }), 50);
-  assert.equal(getEvidenceCoverage({ evidence: { ...fullEvidence, concern: [] } }), 50);
+  assert.equal(getEvidenceCoverage({ evidence: { ...fullEvidence, summary: ['근거 부족'] } }), 75);
+  assert.equal(getEvidenceCoverage({ evidence: { ...fullEvidence, concern: [] } }), 75);
   assert.equal(getEvidenceCoverage({ evidence: {} }), 0);
 });

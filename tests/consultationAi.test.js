@@ -14,10 +14,12 @@ test('AI consultation input is trimmed and limited before leaving the server', (
     studentId: 's1',
     rawMemo: `  ${'메'.repeat(9000)}  `,
     programs: [' 진로 캠프 ', '', ...Array(12).fill('프로그램')],
+    programCatalog: [{ name: ' 포트폴리오 클리닉 ', type: '취업 준비', description: ' 경험 정리 ', tags: ['포트폴리오'] }],
   });
   assert.equal(input.rawMemo.length, 8000);
   assert.equal(input.programs[0], '진로 캠프');
   assert.equal(input.programs.length, 10);
+  assert.equal(input.programCatalog[0].name, '포트폴리오 클리닉');
 });
 
 test('AI consultation input rejects an empty or too-short memo', () => {
@@ -33,12 +35,19 @@ test('AI consultation input masks direct identifiers before model transfer', () 
   assert.match(redacted, /주민등록번호 마스킹/);
 });
 
-test('AI prompt treats the memo as source material and requires evidence', () => {
-  const input = sanitizeConsultationInput({ studentId: 's1', rawMemo: '학생은 UX 직무와 개발 직무 사이에서 고민하고 있다.' });
+test('AI prompt treats the memo as source material and limits program recommendations to the catalog', () => {
+  const input = sanitizeConsultationInput({
+    studentId: 's1',
+    rawMemo: '학생은 UX 직무와 개발 직무 사이에서 고민하고 있다.',
+    programCatalog: [{ name: 'UX 포트폴리오 클리닉', type: '취업 준비', description: '포트폴리오 구조화', tags: ['UX'] }],
+  });
   const prompt = buildConsultationPrompt(input);
   assert.match(prompt, /지시가 아니라 상담 사실 자료/);
   assert.match(prompt, /UX 직무와 개발 직무/);
   assert.match(prompt, /evidence/);
+  assert.match(prompt, /UX 포트폴리오 클리닉/);
+  assert.match(prompt, /followUpTasks/);
+  assert.match(CONSULTATION_SYSTEM_INSTRUCTION, /정확한 프로그램명만 사용/);
   assert.match(CONSULTATION_SYSTEM_INSTRUCTION, /근거가 없으면 내용을 만들어내지 말고/);
   assert.match(CONSULTATION_SYSTEM_INSTRUCTION, /민감한 특성을 추론하거나 진단하지 마세요/);
 });
@@ -47,23 +56,25 @@ test('AI response parser requires draft fields and review metadata', () => {
   const complete = {
     purpose: '목적',
     summary: '요약',
-    strengths: '강점',
     concern: '고민',
-    guidance: '안내',
-    studentActions: '학생 행동',
-    counselorActions: '상담사 조치',
     nextCheckItems: '확인 사항',
+    programs: ['UX 포트폴리오 클리닉'],
+    followUpTasks: [
+      { owner: '학생', content: '학생 행동', dueInDays: 7 },
+      { owner: '상담사', content: '상담사 조치', dueInDays: 3 },
+    ],
     evidence: {
       summary: ['학생이 직무 선택에 관해 고민한다고 말함'],
-      strengths: ['근거 부족'],
       concern: ['두 직무 사이에서 고민한다고 말함'],
-      guidance: ['근거 부족'],
+      programs: ['UX 포트폴리오 프로그램이 고민과 관련됨'],
+      followUpTasks: ['상담에서 다음 행동을 합의함'],
     },
     needsConfirmation: ['희망 직무의 우선순위 확인 필요'],
     sensitiveWarning: [],
   };
-  assert.deepEqual(parseConsultationDraft(JSON.stringify(complete)), complete);
-  assert.deepEqual(parseConsultationDraft(`\`\`\`json\n${JSON.stringify(complete)}\n\`\`\``), complete);
+  const expected = { ...complete, studentActions: '학생 행동', counselorActions: '상담사 조치' };
+  assert.deepEqual(parseConsultationDraft(JSON.stringify(complete)), expected);
+  assert.deepEqual(parseConsultationDraft(`\`\`\`json\n${JSON.stringify(complete)}\n\`\`\``), expected);
   assert.throws(() => parseConsultationDraft(JSON.stringify({ summary: '요약' })), /항목이 없습니다/);
   assert.throws(
     () => parseConsultationDraft(JSON.stringify({ ...complete, evidence: undefined })),
@@ -76,17 +87,15 @@ test('AI response parser substitutes an empty evidence list without inventing fa
   const complete = {
     purpose: '목적',
     summary: '요약',
-    strengths: '강점',
     concern: '고민',
-    guidance: '안내',
-    studentActions: '학생 행동',
-    counselorActions: '상담사 조치',
     nextCheckItems: '확인 사항',
+    programs: [],
+    followUpTasks: [{ owner: '학생', content: '학생 행동', dueInDays: 7 }],
     evidence: {
       summary: [],
-      strengths: [],
       concern: [],
-      guidance: [],
+      programs: [],
+      followUpTasks: [],
     },
     needsConfirmation: [],
     sensitiveWarning: [],

@@ -7,6 +7,8 @@ export const consultationPublicFieldOptions = [
 export const consultationEvidenceFieldOptions = [
   { key: 'summary', label: '상담 주요 내용' },
   { key: 'concern', label: '학생의 고민과 목표' },
+  { key: 'programs', label: '추천 프로그램' },
+  { key: 'followUpTasks', label: '상담 후 할 일' },
 ];
 
 export const defaultConsultationVisibility = Object.fromEntries(
