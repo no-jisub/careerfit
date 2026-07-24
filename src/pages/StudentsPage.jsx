@@ -188,14 +188,27 @@ export default function StudentsPage({ selectionMode = '' }) {
   return <>
     <PageIntro icon={selectionMeta?.icon || 'students'} eyebrow={selectionMeta?.eyebrow || '학생 관리'} title={selectionMeta?.title || '학생을 한눈에 확인하세요'} description={selectionMeta?.description || `상담 중인 학생 ${students.length}명의 기록과 다음 행동을 관리합니다.`} action={pageAction} />
 
-    {selectionMeta && <section className="workflow-queue-overview" aria-label={`${selectionMeta.eyebrow} 현황`}>
+    {selectionMeta && (activeSelectionMode === 'preparation' ? <section className="workflow-queue-metrics" aria-label="상담 전 준비 현황">
+      <div className="workflow-queue-metric">
+        <span className="workflow-queue-metric-icon" aria-hidden="true"><Icon name="students" size={20} /></span>
+        <div><span>준비 대상</span><strong>{eligibleStudents.length}<small>명</small></strong></div>
+      </div>
+      <div className="workflow-queue-metric">
+        <span className="workflow-queue-metric-icon" aria-hidden="true"><Icon name="calendar" size={20} /></span>
+        <div><span>오늘 상담</span><strong>{todayPreparationCount}<small>명</small></strong></div>
+      </div>
+      <div className="workflow-queue-metric">
+        <span className="workflow-queue-metric-icon" aria-hidden="true"><Icon name="check" size={20} /></span>
+        <div><span>확인할 할 일</span><strong>{preparationPendingTaskCount}<small>건</small></strong></div>
+      </div>
+    </section> : <section className="workflow-queue-overview" aria-label={`${selectionMeta.eyebrow} 현황`}>
       <div><span className="workflow-queue-icon"><Icon name={selectionMeta.icon} size={21} /></span><div><span className="eyebrow">{selectionMeta.queueEyebrow}</span><h2>{selectionMeta.queueTitle}</h2><p>{selectionMeta.queueDescription}</p></div></div>
       <dl>
-        <div><dt>{activeSelectionMode === 'preparation' ? '준비 대상' : '작성 대상'}</dt><dd>{eligibleStudents.length}<small>명</small></dd></div>
-        <div><dt>{activeSelectionMode === 'preparation' ? '오늘 상담' : '상담 진행 중'}</dt><dd>{activeSelectionMode === 'preparation' ? todayPreparationCount : statusCounts.inProgress || 0}<small>명</small></dd></div>
-        <div><dt>{activeSelectionMode === 'preparation' ? '확인할 할 일' : '기록 필요'}</dt><dd>{activeSelectionMode === 'preparation' ? preparationPendingTaskCount : statusCounts.writing || 0}<small>{activeSelectionMode === 'preparation' ? '건' : '명'}</small></dd></div>
+        <div><dt>작성 대상</dt><dd>{eligibleStudents.length}<small>명</small></dd></div>
+        <div><dt>상담 진행 중</dt><dd>{statusCounts.inProgress || 0}<small>명</small></dd></div>
+        <div><dt>기록 필요</dt><dd>{statusCounts.writing || 0}<small>명</small></dd></div>
       </dl>
-    </section>}
+    </section>)}
 
     <section className="card student-filter-panel" aria-label="학생 검색 및 필터">
       {(!selectionMeta || activeSelectionMode === 'consultation') && <StatusTabs

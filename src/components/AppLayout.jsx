@@ -92,8 +92,17 @@ export default function AppLayout({ logout }) {
   const location = useLocation();
   const navigate = useNavigate();
   const segment = location.pathname.split('/')[1] || 'dashboard';
-  const currentPage = /^\/students\/[^/]+\/preparation$/.test(location.pathname)
-    ? pageMeta['consultation-prep']
+  const preparationRouteMatch = location.pathname.match(/^\/students\/([^/]+)\/preparation$/);
+  const preparationStudent = preparationRouteMatch
+    ? students.find(student => student.id === preparationRouteMatch[1])
+    : null;
+  const currentPage = preparationRouteMatch
+    ? {
+      ...pageMeta['consultation-prep'],
+      parentTitle: pageMeta['consultation-prep'].title,
+      parentTo: '/consultation-prep',
+      title: preparationStudent?.name || '학생',
+    }
     : /^\/students\/[^/]+\/consultation\/new$/.test(location.pathname)
       ? pageMeta['consultation-write']
       : pageMeta[segment] || { title: '학생 상담', description: '커리어핏 상담 운영' };
@@ -240,10 +249,18 @@ export default function AppLayout({ logout }) {
         <button onClick={logout} title={sidebarCollapsed ? '로그아웃' : undefined} aria-label={sidebarCollapsed ? '로그아웃' : undefined}><span className="sidebar-nav-icon"><Icon name="logout" /></span><span className="sidebar-nav-label">로그아웃</span></button>
         <div className="counselor-card"><span className="counselor-avatar" aria-hidden="true">{shortCounselorName.slice(0, 1)}</span><div><strong>{counselorName}</strong><small>대학일자리플러스센터</small></div></div>
       </div>
-    </aside>
+      </aside>
     <div className="app-main">
       <header className="topbar">
-        <div className="topbar-title"><IconButton label="메뉴 열기" icon="menu" onClick={() => setOpen(true)} /><div><strong>{currentPage.title}</strong><span>{currentPage.description}</span></div></div>
+        <div className={`topbar-title ${currentPage.parentTitle ? 'has-breadcrumb' : ''}`}>
+          <IconButton label="메뉴 열기" icon="menu" onClick={() => setOpen(true)} />
+          <div>
+            {currentPage.parentTitle
+              ? <nav className="topbar-breadcrumb" aria-label="현재 위치"><NavLink to={currentPage.parentTo}>{currentPage.parentTitle}</NavLink><Icon name="chevron" size={14} /><strong aria-current="page">{currentPage.title}</strong></nav>
+              : <strong>{currentPage.title}</strong>}
+            <span>{currentPage.description}</span>
+          </div>
+        </div>
         <div className="header-actions">
           <div className="global-search-wrap"><label className="global-search"><Icon name="search" size={18} /><span className="sr-only">학생 또는 상담 검색</span><input ref={searchInputRef} value={search} placeholder="학생 또는 상담 검색" onFocus={() => setPanel('search')} onChange={e => { setSearch(e.target.value); setPanel('search'); }} onKeyDown={e => { if (e.key === 'Enter' && searchResults[0]) navigate(searchResults[0].to); }} /><kbd>⌘ K</kbd></label>{panel === 'search' && search.trim() && <div className="header-popover search-popover"><strong>통합 검색 결과 {searchResults.length}건</strong>{searchResults.length ? searchResults.map(result => <NavLink key={result.id} to={result.to}><span>{result.type}</span><div><b>{result.title}</b><small>{result.description}</small></div></NavLink>) : <p>일치하는 학생 또는 상담 기록이 없습니다.</p>}<button onClick={() => navigate(`/students?q=${encodeURIComponent(search.trim())}`)}>학생 목록에서 자세히 찾기</button></div>}</div>
           <div className="header-popover-wrap"><IconButton label={`알림 ${noticeCount}개`} icon="bell" aria-expanded={panel === 'notice'} aria-controls="notice-popover" onClick={() => setPanel(panel === 'notice' ? '' : 'notice')} />{noticeCount > 0 && <span className="notice-dot" aria-hidden="true">{noticeCount > 9 ? '9+' : noticeCount}</span>}{panel === 'notice' && <div className="header-popover notice-popover" id="notice-popover"><strong>확인할 알림 {noticeCount}개</strong>{headerNotifications.slice(0, 5).map(item => <p key={item.id}><b>{item.title}</b>{item.description}</p>)}{noticeCount === 0 && <p>새로 확인할 일정이나 기한 초과 업무가 없습니다.</p>}<NavLink to="/notifications" onClick={() => setPanel('')}>알림 센터 열기</NavLink></div>}</div>

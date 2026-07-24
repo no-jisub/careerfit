@@ -36,10 +36,7 @@ export default function ConsultationPreparationPage() {
   const upcomingAppointment = appointments
     .filter(item => item.studentId === student.id && activeAppointmentStatuses.includes(item.status) && item.date >= toDateKey())
     .sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`))[0];
-  const relevantAppointment = upcomingAppointment || appointments
-    .filter(item => item.studentId === student.id && item.status !== 'cancelled')
-    .sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`))[0];
-  const attachments = (relevantAppointment?.attachments || []);
+  const attachments = upcomingAppointment?.attachments || [];
   const briefingHistory = history.slice(0, 3).reverse();
   const latestConsultation = history[0];
   const overdueTaskCount = tasks.filter(task => task.status === 'overdue').length;
@@ -52,24 +49,45 @@ export default function ConsultationPreparationPage() {
   const briefingNextStep = latestConsultation?.nextCheckItems || '첫 상담에서 현재 상황과 기대하는 지원을 확인해 주세요.';
 
   return <>
-    <nav className="breadcrumb" aria-label="현재 위치"><Link to="/consultation-prep">상담 전 준비</Link><Icon name="chevron" size={14} /><span>{student.name}</span></nav>
     <section className="profile-hero preparation-hero" aria-labelledby="preparation-student-name">
-      <div className="profile-main">
-        <span className="profile-avatar-large" aria-hidden="true">{student.initials || student.name.slice(1, 3)}</span>
-        <div><span className="eyebrow">상담 대상 학생</span><div className="profile-name"><h1 id="preparation-student-name">{student.name}</h1><StatusBadge status={student.status} /></div><p>{maskStudentNo(student.studentNo)} · {student.department} · {student.grade}</p></div>
+      <div className="preparation-student-summary">
+        <div className="profile-main">
+          <div><div className="profile-name"><h1 id="preparation-student-name">{student.name}</h1><StatusBadge status={student.status} /></div><p>{maskStudentNo(student.studentNo)} · {student.department} · {student.grade}</p></div>
+        </div>
+        <div className="preparation-goal">
+          <span><Icon name="target" size={15} />현재 진로 목표</span>
+          <strong>{student.goal}</strong>
+        </div>
       </div>
-      <div className="preparation-hero-overview">
-        <span className="preparation-overview-label"><Icon name="target" size={14} />현재 진로 목표</span>
-        <strong>{student.goal}</strong>
+
+      <section className="preparation-appointment-summary" aria-labelledby="preparation-next-appointment-title">
+        <div className="preparation-appointment-heading">
+          <span aria-hidden="true"><Icon name="calendar" size={19} /></span>
+          <div>
+            <h2 id="preparation-next-appointment-title">다음 상담 일정</h2>
+            <strong>{upcomingAppointment ? <time dateTime={`${upcomingAppointment.date}T${upcomingAppointment.time}`}>{formatPreparationDate(upcomingAppointment.date)} · {upcomingAppointment.time}</time> : '예정된 상담이 없습니다'}</strong>
+          </div>
+        </div>
+        {upcomingAppointment ? <>
+          <dl className="preparation-appointment-details">
+            <div><dt>상담 유형</dt><dd>{upcomingAppointment.type}</dd></div>
+            <div><dt>장소</dt><dd>{upcomingAppointment.location}</dd></div>
+            <div><dt>준비 사항</dt><dd>{upcomingAppointment.preparation || '별도 준비 사항 없음'}</dd></div>
+          </dl>
+          {attachments.length > 0 && <div className="preparation-attachments"><strong>학생 첨부 자료</strong><div>{attachments.map(file => <button type="button" className="text-button" key={file.id} onClick={() => openAttachment(file)}><Icon name="note" size={14} />{file.fileName}</button>)}</div></div>}
+        </> : <p className="preparation-appointment-empty">상담 일정에서 다음 예약을 확인하거나 새 일정을 등록해 주세요.</p>}
+      </section>
+
+      <div className="preparation-hero-operations">
         <dl className="preparation-hero-stats" aria-label="학생 상담 현황">
           <div><dt>누적 상담</dt><dd>{history.length}<small>회</small></dd></div>
           <div><dt>남은 할 일</dt><dd>{tasks.length}<small>건</small></dd></div>
           <div className={overdueTaskCount > 0 ? 'attention' : ''}><dt>기한 초과</dt><dd>{overdueTaskCount}<small>건</small></dd></div>
         </dl>
-      </div>
-      <div className="preparation-hero-actions" aria-label="상담 준비 작업">
-        <Link className="button primary" to={`/students/${student.id}/consultation/new${upcomingAppointment ? `?appointment=${upcomingAppointment.id}` : ''}`}><Icon name="note" size={17} />상담 기록 작성</Link>
-        <Link className="button secondary" to="/consultation-prep"><Icon name="students" size={17} />학생 변경</Link>
+        <div className="preparation-hero-actions" aria-label="상담 준비 작업">
+          <Link className="button primary" to={`/students/${student.id}/consultation/new${upcomingAppointment ? `?appointment=${upcomingAppointment.id}` : ''}`}><Icon name="note" size={17} />상담 기록 작성</Link>
+          <Link className="button secondary" to="/consultation-prep"><Icon name="students" size={17} />학생 변경</Link>
+        </div>
       </div>
     </section>
 
@@ -91,25 +109,31 @@ export default function ConsultationPreparationPage() {
         </div>
       </section>
 
-      <aside className="preparation-checklist" aria-label="상담 전 확인 사항">
-        <section className="card preparation-check-card">
-          <div className="preparation-check-heading"><span><Icon name="calendar" size={18} /></span><div><small>다음 상담 일정</small><h2>{upcomingAppointment ? <time dateTime={`${upcomingAppointment.date}T${upcomingAppointment.time}`}>{formatPreparationDate(upcomingAppointment.date)} · {upcomingAppointment.time}</time> : '예정된 상담 없음'}</h2></div></div>
-          {upcomingAppointment ? <dl><div><dt>상담 유형</dt><dd>{upcomingAppointment.type}</dd></div><div><dt>장소</dt><dd>{upcomingAppointment.location}</dd></div><div><dt>준비 사항</dt><dd>{upcomingAppointment.preparation || '별도 준비 사항 없음'}</dd></div></dl> : <p>상담 일정에서 새 예약을 확인하거나 등록해 주세요.</p>}
-          {attachments.length > 0 && <div className="preparation-attachments"><strong>학생 첨부 자료</strong>{attachments.map(file => <button type="button" className="text-button" key={file.id} onClick={() => openAttachment(file)}><Icon name="note" size={14} />{file.fileName}</button>)}</div>}
-        </section>
-
-        <section className="card preparation-check-card">
-          <div className="preparation-check-heading"><span><Icon name="check" size={18} /></span><div><small>이전 상담 후 할 일</small><h2>확인할 항목 {tasks.length}건</h2></div></div>
+      <div className="preparation-support-grid">
+        <section className="card preparation-support-card" id="preparation-followups">
+          <div className="preparation-support-heading">
+            <span aria-hidden="true"><Icon name="check" size={19} /></span>
+            <div><h2>이전 상담 후 할 일</h2><p>이번 상담 전에 완료 여부를 확인하세요.</p></div>
+            <strong>{tasks.length}건</strong>
+          </div>
           {tasks.length ? <div className="preparation-task-list">{tasks.slice(0, 4).map(task => <article className={task.status === 'overdue' ? 'overdue' : ''} key={task.id}><div><StatusBadge status={task.status} context="followUp" /><span>{task.owner === '교직원' ? '상담사' : task.owner} 담당</span></div><strong>{task.content}</strong><small><time dateTime={task.dueDate}>{formatPreparationDate(task.dueDate)}</time>까지</small></article>)}</div> : <p>이전 상담에서 남은 할 일이 없습니다.</p>}
           {tasks.length > 4 && <Link className="text-link" to="/follow-ups">나머지 {tasks.length - 4}건 보기 <Icon name="chevron" size={14} /></Link>}
         </section>
 
-        <Link className="preparation-record-link" to={`/students/${student.id}`}>
-          <span><Icon name="list" size={18} /></span>
-          <div><strong>날짜별 상담 기록 보기</strong><small>총 {history.length}회의 상세 상담일지</small></div>
-          <Icon name="chevron" size={17} />
-        </Link>
-      </aside>
+        <section className="card preparation-support-card">
+          <div className="preparation-support-heading">
+            <span aria-hidden="true"><Icon name="list" size={19} /></span>
+            <div><h2>날짜별 상담 기록</h2><p>날짜를 선택하면 상세 상담일지로 이동합니다.</p></div>
+            <strong>{history.length}회</strong>
+          </div>
+          {history.length ? <div className="preparation-history-list">{history.slice(0, 4).map(record => <Link to={`/students/${student.id}?consultation=${record.id}`} aria-label={`${formatPreparationDate(record.date)} ${record.purpose} 상세 상담일지 보기`} key={record.id}>
+            <time dateTime={record.date}><strong>{formatPreparationDate(record.date)}</strong><span>{record.type}</span></time>
+            <div><strong>{record.purpose}</strong><span>{record.summary || '상세 상담일지에서 기록을 확인하세요.'}</span></div>
+            <Icon name="chevron" size={16} />
+          </Link>)}</div> : <p>아직 작성된 상담 기록이 없습니다.</p>}
+          <Link className="preparation-all-records-link" to={`/students/${student.id}`}>전체 상담 기록 보기 <Icon name="arrow" size={15} /></Link>
+        </section>
+      </div>
     </div>
   </>;
 }
