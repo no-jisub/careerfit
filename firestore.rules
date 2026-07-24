@@ -222,8 +222,8 @@ service cloud.firestore {
       return hasRole('student');
     }
 
-    // In the current small-team operating model, counselors also perform
-    // account management, student assignment, and global operational review.
+    // Staff can manage operational resources such as programs. Identity,
+    // approval, and student assignment changes remain administrator-only.
     function isStaff() {
       return isAdmin() || isCounselor();
     }
@@ -336,8 +336,7 @@ service cloud.firestore {
 
     match /consultations/{consultationId} {
       allow read: if isAdmin()
-        || (isDocumentCounselor(resource.data.counselorUid)
-          && isAssignedStudent(resource.data.studentId));
+        || isDocumentCounselor(resource.data.counselorUid);
       allow create: if validConsultation(request.resource.data) && (isAdmin()
         || (isCounselor()
           && request.resource.data.counselorUid == request.auth.uid
@@ -359,8 +358,7 @@ service cloud.firestore {
 
     match /consultationSummaries/{summaryId} {
       allow read: if isAdmin()
-        || (isDocumentCounselor(resource.data.counselorUid)
-          && isAssignedStudent(resource.data.studentId))
+        || isDocumentCounselor(resource.data.counselorUid)
         || (isStudent()
           && resource.data.studentUid == request.auth.uid
           && resource.data.published == true);
@@ -382,8 +380,7 @@ service cloud.firestore {
 
     match /consultationNotes/{noteId} {
       allow read: if isAdmin()
-        || (isDocumentCounselor(resource.data.counselorUid)
-          && isAssignedStudent(resource.data.studentId));
+        || isDocumentCounselor(resource.data.counselorUid);
       allow create: if validConsultationNote(request.resource.data) && (isAdmin()
         || (isCounselor()
           && request.resource.data.counselorUid == request.auth.uid
@@ -421,8 +418,7 @@ service cloud.firestore {
     match /followUps/{followUpId} {
       allow read: if isAdmin()
         || (isCounselor()
-          && resource.data.ownerUid == request.auth.uid
-          && isAssignedStudent(resource.data.studentId))
+          && resource.data.ownerUid == request.auth.uid)
         || (isStudent() && resource.data.assigneeUid == request.auth.uid);
       allow create: if validFollowUp(request.resource.data) && (isAdmin()
         || (isCounselor()
@@ -487,8 +483,7 @@ service cloud.firestore {
 
     match /appointments/{appointmentId} {
       allow read: if isAdmin()
-        || (isDocumentCounselor(resource.data.counselorUid)
-          && isAssignedStudent(resource.data.studentId))
+        || isDocumentCounselor(resource.data.counselorUid)
         || (isStudent() && resource.data.studentUid == request.auth.uid);
       allow create: if validAppointment(request.resource.data) && (isAdmin()
         || (isCounselor()

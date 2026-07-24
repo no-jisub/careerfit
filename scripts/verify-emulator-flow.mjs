@@ -96,42 +96,25 @@ try {
     active: true,
   });
   assert((await getDoc(doc(db, 'users', 'verification-managed-user'))).exists(), '관리자 사용자 등록 권한을 확인하지 못했습니다.');
-  await signOut(auth);
-
-  const counselorCredential = await signInWithEmailAndPassword(
-    auth,
-    'counselor@careerfit.local',
-    'CareerFit123!',
-  );
-  const counselorToken = await counselorCredential.user.getIdTokenResult(true);
-  assert(counselorToken.claims.role === 'counselor', '상담 담당자 역할 claim을 확인하지 못했습니다.');
-
-  const assignedStudents = await getDocs(query(
-    collection(db, 'students'),
-    where('counselorUid', '==', counselorCredential.user.uid),
-  ));
-  assert(
-    assignedStudents.size === 1 && assignedStudents.docs[0].id === 's1',
-    `배정 학생 필터 결과가 올바르지 않습니다: ${assignedStudents.docs.map(item => item.id).join(', ')}`,
-  );
-
-  const allStudentsForCounselor = await getDocs(collection(db, 'students'));
-  assert(allStudentsForCounselor.size === 2, '상담 담당자가 운영 관리를 위해 전체 학생을 조회하지 못했습니다.');
-  assert((await getDoc(doc(db, 'students', 's2'))).exists(), '상담 담당자가 다른 담당자의 학생을 조회하지 못했습니다.');
 
   const pendingRegistrationSnapshot = await getDocs(query(
     collection(db, 'studentRegistrations'),
     where('email', '==', 'pending-student@careerfit.local'),
   ));
-  assert(pendingRegistrationSnapshot.size === 1, '배정 대기 학생을 조회하지 못했습니다.');
+  assert(pendingRegistrationSnapshot.size === 1, '관리자가 배정 대기 학생을 조회하지 못했습니다.');
   const pendingRegistrationDocument = pendingRegistrationSnapshot.docs[0];
   const pendingRegistration = pendingRegistrationDocument.data();
+  const otherCounselorSnapshot = await getDocs(query(
+    collection(db, 'users'),
+    where('email', '==', 'other-counselor@careerfit.local'),
+  ));
+  assert(otherCounselorSnapshot.size === 1, '배정 대상 상담사를 찾지 못했습니다.');
   const assignmentAt = new Date().toISOString();
   const assignmentBatch = writeBatch(db);
   assignmentBatch.set(doc(db, 'students', `student-${pendingRegistration.uid}`), {
     uid: pendingRegistration.uid,
-    counselorUid: counselorCredential.user.uid,
-    counselor: '박지현',
+    counselorUid: otherCounselorSnapshot.docs[0].id,
+    counselor: '이민수',
     name: pendingRegistration.displayName,
     studentNo: pendingRegistration.studentNo,
     department: pendingRegistration.department,
@@ -154,13 +137,55 @@ try {
   }, { merge: true });
   assignmentBatch.set(pendingRegistrationDocument.ref, {
     status: 'approved',
-    counselorUid: counselorCredential.user.uid,
+    counselorUid: otherCounselorSnapshot.docs[0].id,
     assignedAt: assignmentAt,
     updatedAt: assignmentAt,
   }, { merge: true });
   await assignmentBatch.commit();
-  assert((await getDoc(doc(db, 'students', `student-${pendingRegistration.uid}`))).data().counselorUid === counselorCredential.user.uid, '상담사의 학생 본인 배정이 저장되지 않았습니다.');
-  assert((await getDoc(pendingRegistrationDocument.ref)).data().status === 'approved', '학생 가입 승인 상태가 변경되지 않았습니다.');
+  assert((await getDoc(doc(db, 'students', `student-${pendingRegistration.uid}`))).data().counselorUid === otherCounselorSnapshot.docs[0].id, '관리자의 학생 배정이 저장되지 않았습니다.');
+  assert((await getDoc(pendingRegistrationDocument.ref)).data().status === 'approved', '관리자의 학생 가입 승인이 저장되지 않았습니다.');
+  await signOut(auth);
+
+  const counselorCredential = await signInWithEmailAndPassword(
+    auth,
+    'counselor@careerfit.local',
+    'CareerFit123!',
+  );
+  const counselorToken = await counselorCredential.user.getIdTokenResult(true);
+  assert(counselorToken.claims.role === 'counselor', '상담 담당자 역할 claim을 확인하지 못했습니다.');
+
+  const assignedStudents = await getDocs(query(
+    collection(db, 'students'),
+    where('counselorUid', '==', counselorCredential.user.uid),
+  ));
+  assert(
+    assignedStudents.size === 1 && assignedStudents.docs[0].id === 's1',
+    `배정 학생 필터 결과가 올바르지 않습니다: ${assignedStudents.docs.map(item => item.id).join(', ')}`,
+  );
+
+  let blockedGlobalStudentList = false;
+  try {
+    await getDocs(collection(db, 'students'));
+  } catch (error) {
+    blockedGlobalStudentList = error.code === 'permission-denied';
+  }
+  assert(blockedGlobalStudentList, '상담 담당자가 전체 학생 목록을 조회할 수 있습니다.');
+
+  let blockedOtherStudentRead = false;
+  try {
+    await getDoc(doc(db, 'students', 's2'));
+  } catch (error) {
+    blockedOtherStudentRead = error.code === 'permission-denied';
+  }
+  assert(blockedOtherStudentRead, '상담 담당자가 다른 담당자의 학생을 조회할 수 있습니다.');
+
+  let blockedPendingRegistrationList = false;
+  try {
+    await getDocs(collection(db, 'studentRegistrations'));
+  } catch (error) {
+    blockedPendingRegistrationList = error.code === 'permission-denied';
+  }
+  assert(blockedPendingRegistrationList, '상담 담당자가 가입 대기 학생 목록을 조회할 수 있습니다.');
 
   const managedStudentUid = 'verification-counselor-managed-student';
   const managedStudentId = 'verification-counselor-managed-profile';
@@ -193,9 +218,13 @@ try {
     createdAt: managedAt,
     updatedAt: managedAt,
   });
-  await managedAccountGroup.commit();
-  assert((await getDoc(doc(db, 'users', managedStudentUid))).exists(), '상담 담당자의 사용자 등록 권한을 확인하지 못했습니다.');
-  assert((await getDoc(doc(db, 'students', managedStudentId))).exists(), '상담 담당자의 학생 등록 권한을 확인하지 못했습니다.');
+  let blockedCounselorAccountCreation = false;
+  try {
+    await managedAccountGroup.commit();
+  } catch (error) {
+    blockedCounselorAccountCreation = error.code === 'permission-denied';
+  }
+  assert(blockedCounselorAccountCreation, '상담 담당자가 사용자 계정 또는 학생 배정을 생성할 수 있습니다.');
 
   const assignedAppointments = await getDocs(query(
     collection(db, 'appointments'),
@@ -435,12 +464,13 @@ try {
   console.log('CareerFit emulator flow verification passed.');
   console.log('- counselor login and role claim');
   console.log('- administrator login and managed user creation');
+  console.log('- administrator-only pending registration approval and assignment');
   console.log('- assigned student query (s1 only)');
-  console.log('- counselor global student access for combined operations role');
-  console.log('- counselor managed user and student creation');
+  console.log('- counselor global and other-caseload student access denied');
+  console.log('- counselor pending registration access denied');
+  console.log('- counselor user and student creation denied');
   console.log('- student self-signup and protected email verification status');
   console.log('- verified student token refresh and registration status sync');
-  console.log('- counselor self-assignment for verified pending students');
   console.log('- student login and own profile query');
   console.log('- student profile update limited to self-managed fields');
   console.log('- atomic consultation/note/follow-up document save');

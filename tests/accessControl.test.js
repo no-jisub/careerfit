@@ -5,9 +5,11 @@ import { readFileSync } from 'node:fs';
 const rules = readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8');
 const dataService = readFileSync(new URL('../src/services/firebaseDataService.js', import.meta.url), 'utf8');
 
-test('counselor access to students and consultations is assignment-scoped', () => {
+test('counselor access is scoped to assigned students and counselor-owned records', () => {
   assert.match(rules, /isCounselor\(\) && resource\.data\.counselorUid == request\.auth\.uid/);
-  assert.match(rules, /isDocumentCounselor\(resource\.data\.counselorUid\)[\s\S]*isAssignedStudent\(resource\.data\.studentId\)/);
+  assert.match(rules, /match \/consultations\/\{consultationId\} \{[\s\S]*allow read: if isAdmin\(\)[\s\S]*isDocumentCounselor\(resource\.data\.counselorUid\)/);
+  assert.match(rules, /match \/appointments\/\{appointmentId\} \{[\s\S]*allow read: if isAdmin\(\)[\s\S]*isDocumentCounselor\(resource\.data\.counselorUid\)/);
+  assert.match(rules, /allow create: if validConsultation\(request\.resource\.data\)[\s\S]*isAssignedStudent\(request\.resource\.data\.studentId\)/);
   assert.match(dataService, /where\('counselorUid', '==', session\.user\.uid\)/);
 });
 
