@@ -1949,7 +1949,7 @@ h1, h2, h3,
 .student-program-detail-heading .tag { color:#173a66; background:white; }
 .student-program-detail-heading .program-status { border:1px solid rgba(255,255,255,.24); color:white; background:rgba(255,255,255,.12); }
 .student-program-detail-heading .eyebrow { color:#bed7ff; }
-.student-program-detail-heading h1 { max-width:760px; margin:7px 0 14px; font-size:clamp(28px, 4vw, 44px); line-height:1.2; letter-spacing:-.04em; }
+.student-program-detail-heading h1 { max-width:760px; margin:7px 0 14px; color:#fff; font-size:clamp(28px, 4vw, 44px); line-height:1.2; letter-spacing:-.04em; }
 .student-program-detail-heading > p { max-width:760px; color:#e1ebfb; font-size:14px; line-height:1.8; }
 .student-program-detail-heading .program-tags { margin-top:22px; }
 .student-program-detail-heading .program-tags span { border:1px solid rgba(255,255,255,.2); color:#eef5ff; background:rgba(255,255,255,.1); }
