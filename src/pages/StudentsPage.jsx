@@ -31,7 +31,6 @@ const selectionModeMeta = {
     allowedStatuses: ['scheduled'],
     queueEyebrow: '예정 상담 큐',
     queueTitle: '준비할 학생',
-    queueDescription: '상담 시간 순으로 확인하고, 브리핑에서 이전 기록과 주의사항을 점검하세요.',
     actionLabel: '준비 브리핑 열기',
     actionIcon: 'list',
     emptyTitle: '준비할 예정 상담이 없습니다',
@@ -47,7 +46,6 @@ const selectionModeMeta = {
     allowedStatuses: ['inProgress', 'writing'],
     queueEyebrow: '기록 업무 큐',
     queueTitle: '작성할 상담 기록',
-    queueDescription: '진행 중 상담을 먼저 기록하고, 메모가 남은 상담일지를 이어서 마무리하세요.',
     actionLabel: '상담 기록 작성',
     actionIcon: 'note',
     emptyTitle: '작성할 상담 기록이 없습니다',
@@ -285,15 +283,6 @@ export default function StudentsPage({ selectionMode = '' }) {
 
   return <>
     <PageIntro icon={selectionMeta?.icon || 'students'} eyebrow={selectionMeta?.eyebrow || '학생 관리'} title={selectionMeta?.title || '학생을 한눈에 확인하세요'} description={selectionMeta?.description || `담당 학생 ${students.length}명의 상담 맥락과 다음 행동을 관리합니다.`} action={pageAction} />
-
-    {selectionMeta && activeSelectionMode !== 'preparation' && <section className="workflow-queue-overview" aria-label={`${selectionMeta.eyebrow} 현황`}>
-      <div><span className="workflow-queue-icon"><Icon name={selectionMeta.icon} size={21} /></span><div><span className="eyebrow">{selectionMeta.queueEyebrow}</span><h2>{selectionMeta.queueTitle}</h2><p>{selectionMeta.queueDescription}</p></div></div>
-      <dl>
-        <div><dt>작성 대상</dt><dd>{eligibleStudents.length}<small>명</small></dd></div>
-        <div><dt>상담 진행 중</dt><dd>{statusCounts.inProgress || 0}<small>명</small></dd></div>
-        <div><dt>기록 필요</dt><dd>{statusCounts.writing || 0}<small>명</small></dd></div>
-      </dl>
-    </section>}
 
     <section className="card student-filter-panel" aria-label="학생 검색 및 필터">
       {(!selectionMeta || activeSelectionMode === 'consultation') && <StatusTabs

@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { initialAppointments } from '../src/data/appointments.js';
 import { initialConsultations } from '../src/data/consultations.js';
+import { initialFollowUps } from '../src/data/followUps.js';
+import { initialStudents } from '../src/data/students.js';
 import { buildConsultationSummary, defaultConsultationVisibility } from '../src/utils/consultations.js';
 import { hasCounselorAppointmentConflict, isAvailabilityBookable } from '../src/utils/appointments.js';
 import { validateCounselorRegistrationInput } from '../src/utils/validation.js';
@@ -21,6 +24,27 @@ test('demo data includes a multi-session consultation journey for one student', 
     ['2026-06-12', '2026-07-03', '2026-07-17'],
   );
   assert.equal(studentHistory.some(item => item.studentVisible === false), true);
+});
+
+test('demo data covers completed records, first counseling, and repeat counseling scenarios', () => {
+  const completedStudent = initialStudents.find(item => item.id === 's5');
+  assert.equal(completedStudent.status, 'complete');
+  assert.ok(initialConsultations.some(item => item.studentId === completedStudent.id && item.studentVisible === true));
+  assert.ok(initialAppointments.some(item => item.studentId === completedStudent.id && item.status === 'completed'));
+  assert.ok(initialFollowUps.filter(item => item.studentId === completedStudent.id).every(item => item.status === 'complete'));
+
+  const firstCounselingStudent = initialStudents.find(item => item.id === 's7');
+  assert.equal(firstCounselingStudent.status, 'scheduled');
+  assert.equal(initialConsultations.some(item => item.studentId === firstCounselingStudent.id), false);
+  assert.ok(initialAppointments.some(item => item.studentId === firstCounselingStudent.id && item.type === '첫 진로 상담'));
+
+  const repeatCounselingStudent = initialStudents.find(item => item.id === 's8');
+  assert.equal(repeatCounselingStudent.status, 'scheduled');
+  assert.ok(initialConsultations.some(item => item.studentId === repeatCounselingStudent.id && item.studentVisible === false));
+  assert.deepEqual(
+    new Set(initialFollowUps.filter(item => item.studentId === repeatCounselingStudent.id).map(item => item.status)),
+    new Set(['complete', 'inProgress', 'scheduled']),
+  );
 });
 
 test('student summary contains only counselor-selected public fields', () => {

@@ -1,4 +1,4 @@
-import { toDateKey } from '../utils/date';
+import { addDays, toDateKey } from '../utils/date.js';
 
 const today = toDateKey();
 
@@ -14,4 +14,14 @@ export const initialStudents = [
   { id: 's4', name: '정민재', studentNo: '2025198', department: '산업디자인학과', grade: '2학년', phone: '010-8021-4387', interests: ['UX', '제품 디자인'], goal: 'UX 디자이너', concern: 'UX 분야 진입에 필요한 경험 설계', counselor: '박지현', status: 'scheduled', appointmentDate: today, appointment: '15:30', lastConsultation: '2026-06-28', initials: '민재' },
   { id: 's5', name: '최유진', studentNo: '2022931', department: '경제학과', grade: '4학년', phone: '010-1904-6521', interests: ['금융', '공공기관'], goal: '금융 공기업 취업', concern: '자기소개서 직무 역량 문항 작성', counselor: '박지현', status: 'complete', appointmentDate: '', appointment: '', lastConsultation: '2026-07-19', initials: '유진' },
   { id: 's6', name: '한도윤', studentNo: '2024552', department: '사회학과', grade: '3학년', phone: '010-7312-9064', interests: ['사회혁신', '창업'], goal: '소셜벤처 창업', concern: '아이디어를 실제 프로젝트로 검증하는 방법', counselor: '박지현', status: 'scheduled', appointmentDate: today, appointment: '16:30', lastConsultation: '2026-07-02', initials: '도윤' },
+  {
+    id: 's7', name: '윤서아', studentNo: '2026126', department: '심리학과', grade: '1학년', phone: '010-4265-1180',
+    interests: ['HR', '조직문화'], goal: 'HRD 기획자', concern: '첫 진로 상담에서 강점과 직무 방향을 정리하고 싶어요.',
+    counselor: '박지현', counselorUid: 'demo-counselor', status: 'scheduled', appointmentDate: addDays(today, 2), appointment: '13:00', lastConsultation: '', initials: '서아',
+  },
+  {
+    id: 's8', name: '임채원', studentNo: '2023476', department: '국제통상학과', grade: '4학년', phone: '010-6842-9031',
+    interests: ['해외영업', '무역'], goal: 'B2B 해외영업 담당자', concern: '영어 면접 답변과 직무 사례를 더 구체적으로 보완하고 싶어요.',
+    counselor: '박지현', counselorUid: 'demo-counselor', status: 'scheduled', appointmentDate: addDays(today, 3), appointment: '15:00', lastConsultation: '2026-07-21', initials: '채원',
+  },
 ];

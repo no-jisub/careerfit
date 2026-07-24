@@ -99,22 +99,31 @@ export default function AppLayout({ logout }) {
   const preparationStudent = preparationRouteMatch
     ? students.find(student => student.id === preparationRouteMatch[1])
     : null;
-  const currentPage = preparationRouteMatch
+  const consultationRouteMatch = location.pathname.match(/^\/students\/([^/]+)\/consultation\/new$/);
+  const consultationStudent = consultationRouteMatch
+    ? students.find(student => student.id === consultationRouteMatch[1])
+    : null;
+  const currentPage = consultationRouteMatch
     ? {
-      ...pageMeta['consultation-prep'],
-      parentTitle: pageMeta['consultation-prep'].title,
-      parentTo: '/consultation-prep',
-      title: preparationStudent?.name || '학생',
+      ...pageMeta['consultation-write'],
+      parentTitle: pageMeta['consultation-write'].title,
+      parentTo: '/consultation-write',
+      title: consultationStudent?.name || '학생',
     }
-    : studentDetailRouteMatch
+    : preparationRouteMatch
       ? {
-        ...pageMeta.students,
-        parentTitle: pageMeta.students.title,
-        parentTo: '/students',
-        title: detailStudent?.name || '학생',
+        ...pageMeta['consultation-prep'],
+        parentTitle: pageMeta['consultation-prep'].title,
+        parentTo: '/consultation-prep',
+        title: preparationStudent?.name || '학생',
       }
-      : /^\/students\/[^/]+\/consultation\/new$/.test(location.pathname)
-        ? pageMeta['consultation-write']
+      : studentDetailRouteMatch
+        ? {
+          ...pageMeta.students,
+          parentTitle: pageMeta.students.title,
+          parentTo: '/students',
+          title: detailStudent?.name || '학생',
+        }
         : pageMeta[segment] || { title: '학생 상담', description: '커리어핏 상담 운영' };
   const today = toDateKey();
   const pendingCount = followUps.filter(item => item.status !== 'complete').length;
@@ -268,7 +277,7 @@ export default function AppLayout({ logout }) {
             {currentPage.parentTitle
               ? <nav className="topbar-breadcrumb" aria-label="현재 위치"><NavLink to={currentPage.parentTo}>{currentPage.parentTitle}</NavLink><Icon name="chevron" size={14} /><strong aria-current="page">{currentPage.title}</strong></nav>
               : <strong>{currentPage.title}</strong>}
-            <span>{currentPage.description}</span>
+            {!currentPage.parentTitle && <span>{currentPage.description}</span>}
           </div>
         </div>
         <div className="header-actions">

@@ -332,7 +332,6 @@ export default function ConsultationFormPage() {
   };
 
   return <>
-    <nav className="breadcrumb" aria-label="현재 위치"><Link to={`/students/${student.id}`}>{student.name}</Link><Icon name="chevron" size={14} /><span>상담 기록 작성</span></nav>
     <div className="form-page-header"><div><span className="eyebrow">상담 진행 중 · {form.date}</span><h1>상담 기록 작성</h1><p>{linkedAppointment ? `${linkedAppointment.time}–${linkedAppointment.endTime} 예약과 연결됨` : '핵심 메모를 남기면 상담 목적, 추천 프로그램과 할 일 순서로 정리할 수 있습니다.'}</p>{draftSavedAt && <small>마지막 임시 저장 {new Date(draftSavedAt).toLocaleString('ko-KR')}</small>}</div><div><button className="button secondary" disabled={saving} onClick={async () => { await removeDocument('consultationDrafts', draftId); setConsultationDrafts(items => items.filter(item => item.id !== draftId)); setDraftForm(null); setDraftSavedAt(''); notify('임시 저장 내용을 삭제했습니다.'); }}>임시 기록 삭제</button><button className="button primary" disabled={saving} onClick={save}><Icon name="check" size={17} />{saving ? '저장 중...' : '상담 기록 저장'}</button></div></div>
     <nav className="consultation-step-nav" aria-label="상담 기록 작성 단계">
       {[
@@ -400,14 +399,14 @@ export default function ConsultationFormPage() {
       <aside className="consultation-aside">
         <section className="card student-context"><div className="context-head"><div><strong>{student.name}</strong><p>{student.department} · {student.grade}</p></div><StatusBadge status="inProgress" /></div><dl><div><dt>진로 목표</dt><dd>{student.goal}</dd></div><div><dt>최근 상담</dt><dd>{student.lastConsultation}</dd></div></dl></section>
         <section className="card ai-card">
-          <span className="ai-label"><Icon name="note" size={16} /> 상담 기록 정리 도우미</span>
-          <h2>{aiDraft ? '상담일지 초안' : '메모를 상담일지로 정리해요'}</h2>
+          <span className="ai-label"><Icon name="spark" size={16} /> AI 상담 기록 도우미</span>
+          <h2>{aiDraft ? '상담일지 초안' : 'AI로 상담일지 초안을 만들어요'}</h2>
           {!aiDraft && <>
             <p>내부 메모 한 번으로 상담 요약, 추천 프로그램, 상담 후 할 일을 함께 만들어요. 검토 전에는 입력란에 반영되지 않습니다.</p>
             <div className="ai-privacy-notice"><Icon name="lock" size={16} /><span><strong>최소 정보만 전송</strong>학생 이름·학번·연락처는 요청 데이터에 포함하지 않고 메모 속 직접 식별정보 형식은 서버에서 마스킹합니다.</span></div>
           </>}
           {loading && <div className="ai-loading" role="status" aria-live="polite"><span className="spinner" />상담 맥락을 정리하고 있어요...</div>}
-          {!aiDraft && !loading && <button className="button ai full" onClick={generate}><Icon name="note" size={18} />상담 메모로 초안 만들기</button>}
+          {!aiDraft && !loading && <button className="button ai full" onClick={generate}><Icon name="spark" size={18} />AI로 상담 초안 만들기</button>}
           {aiDraft && !loading && <>
             <div className="ai-warning"><Icon name="alert" size={17} />메모를 바탕으로 정리한 미리보기입니다. 근거와 반영될 내용을 확인한 뒤 승인해 주세요.</div>
             <div className="ai-review-progress" aria-live="polite">
@@ -469,6 +468,6 @@ export default function ConsultationFormPage() {
         </section>
       </aside>
     </div>
-    <div className="mobile-savebar"><button className="button secondary" disabled={saving} onClick={generate}>초안 만들기</button><button className="button primary" disabled={saving} onClick={save}>{saving ? '저장 중...' : '상담 기록 저장'}</button></div>
+    <div className="mobile-savebar"><button className="button secondary" disabled={saving || loading} onClick={generate}>{loading ? <><Icon name="clock" size={16} />AI 초안 생성 중...</> : <><Icon name="spark" size={16} />AI 초안 만들기</>}</button><button className="button primary" disabled={saving} onClick={save}>{saving ? '저장 중...' : '상담 기록 저장'}</button></div>
   </>;
 }
