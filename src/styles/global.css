@@ -6646,6 +6646,18 @@ body :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: none;
 }
 
+.app-shell .search-field:focus-within,
+.student-portal .search-field:focus-within {
+  border-color: var(--primary-border);
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 0 0 3px var(--primary-muted) !important;
+}
+
+.app-shell .search-field input:focus-visible,
+.student-portal .search-field input:focus-visible {
+  outline: none;
+}
+
 .app-shell .topbar .icon-button,
 .app-shell .topbar .profile-button {
   border: 1px solid transparent;
