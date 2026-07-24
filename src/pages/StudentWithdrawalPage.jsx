@@ -7,14 +7,14 @@ import Icon from '../components/Icon';
 
 export default function StudentWithdrawalPage() {
   const { students, setStudents, notify } = useApp();
-  const { user, requestAccountWithdrawal, logout } = useAuth();
+  const { user, requestAccountWithdrawal } = useAuth();
   const student = user ? students.find(item => item.uid === user.uid) : students.find(item => item.id === DEMO_STUDENT_ID);
   const [confirmed, setConfirmed] = useState(false);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState('');
   const [demoDeletionDate, setDemoDeletionDate] = useState('');
 
-  if (!student) return <main className="app-loading" role="status">연결된 학생 정보를 찾고 있어요...</main>;
+  if (!student) return <div className="app-loading" role="status">연결된 학생 정보를 찾고 있어요...</div>;
   const deletionDate = demoDeletionDate || student.deletionScheduledAt?.slice(0, 10) || '';
   const withdrawalPending = Boolean(deletionDate || student.accountStatus === 'withdrawalPending');
 
@@ -48,10 +48,7 @@ export default function StudentWithdrawalPage() {
     }
   };
 
-  return <div className="student-portal student-withdrawal-page">
-    <header><Link className="brand" to="/student"><span className="brand-mark"><Icon name="target" size={22} /></span><span>커리어<span>핏</span></span></Link><div><strong>{student.name}</strong><button className="text-button" onClick={logout}>로그아웃</button></div></header>
-    <main>
-      <Link className="withdrawal-back-link" to="/student"><Icon name="arrow" size={16} />학생 홈으로 돌아가기</Link>
+  return <div className="student-page student-withdrawal-page">
       <section className="withdrawal-card">
         <span className="withdrawal-icon"><Icon name={withdrawalPending ? 'clock' : 'alert'} size={28} /></span>
         <span className="eyebrow">계정 관리</span>
@@ -71,6 +68,5 @@ export default function StudentWithdrawalPage() {
           <div className="withdrawal-actions"><Link className="button secondary" to="/student">취소</Link><button className="button withdrawal-submit" disabled={!confirmed || working}>{working ? '처리 중...' : '회원 탈퇴 요청'}</button></div>
         </form>}
       </section>
-    </main>
   </div>;
 }

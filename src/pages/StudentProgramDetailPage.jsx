@@ -1,6 +1,5 @@
 import { Link, useParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { useAuth } from '../auth/AuthContext';
 import Icon from '../components/Icon';
 import { EmptyState } from '../components/UI';
 import { PROGRAM_STATUS_LABELS, resolveProgramStatus } from '../utils/programs';
@@ -8,17 +7,11 @@ import { PROGRAM_STATUS_LABELS, resolveProgramStatus } from '../utils/programs';
 export default function StudentProgramDetailPage() {
   const { programId } = useParams();
   const { programs } = useApp();
-  const { user, logout } = useAuth();
   const program = programs.find(item => item.id === programId);
   const effectiveStatus = program ? resolveProgramStatus(program) : '';
 
-  return <div className="student-portal student-program-detail-page">
-    <header>
-      <Link className="brand" to="/student"><span className="brand-mark"><Icon name="target" size={22} /></span><span>커리어<span>핏</span></span></Link>
-      <div><strong>{user?.displayName || '학생'}</strong><button className="text-button" onClick={logout}>로그아웃</button></div>
-    </header>
-    <main>
-      <Link className="student-program-back" to="/student"><Icon name="arrow" size={16} />학생 홈으로</Link>
+  return <div className="student-page student-program-detail-page">
+      <Link className="student-program-back" to="/student?view=programs"><Icon name="arrow" size={16} />프로그램 목록으로</Link>
       {!program ? <EmptyState title="프로그램을 찾을 수 없습니다" description="프로그램 목록이 갱신되었거나 더 이상 제공되지 않는 정보입니다." action={<Link className="button primary" to="/student">학생 홈으로 돌아가기</Link>} /> : <>
         <section className="student-program-detail-hero">
           <div className="student-program-detail-heading">
@@ -68,7 +61,5 @@ export default function StudentProgramDetailPage() {
         </div>
         <p className="student-program-source-note">2026년 7월 23일 기준 강남대학교 대학일자리플러스센터 공개 정보를 바탕으로 구성했습니다. CareerFit은 신청을 직접 접수하지 않습니다.</p>
       </>}
-    </main>
-    <footer><div><strong>커리어핏</strong><span>학생 상담 지원 서비스 · 문의 대학일자리플러스센터</span></div></footer>
   </div>;
 }

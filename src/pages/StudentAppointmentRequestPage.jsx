@@ -18,7 +18,7 @@ export default function StudentAppointmentRequestPage() {
   const { availabilityId, appointmentId } = useParams();
   const navigate = useNavigate();
   const { students, counselorAvailability, setCounselorAvailability, appointments, setAppointments, notifications, setNotifications, persistDocument, persistDocumentGroup, notify } = useApp();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const student = useMemo(() => {
     const matched = user ? students.find(item => item.uid === user.uid) : students.find(item => item.id === DEMO_STUDENT_ID);
     return !user && matched ? { ...matched, counselorUid: 'demo-counselor' } : matched;
@@ -33,7 +33,7 @@ export default function StudentAppointmentRequestPage() {
   const bookable = isAvailabilityBookable(slot, student, appointments, toDateKey(now), now.toTimeString().slice(0, 5));
   const update = (key, value) => setForm(current => ({ ...current, [key]: value }));
 
-  if (!student) return <main className="app-loading" role="status">연결된 학생 정보를 찾고 있어요...</main>;
+  if (!student) return <div className="app-loading" role="status">연결된 학생 정보를 찾고 있어요...</div>;
   if (!slot || slot.counselorUid !== student.counselorUid) return <Navigate to="/student/appointments" replace />;
 
   const submit = async event => {
@@ -108,9 +108,7 @@ export default function StudentAppointmentRequestPage() {
     }
   };
 
-  return <div className="student-portal student-booking-page">
-    <header><Link className="brand" to="/student"><span className="brand-mark"><Icon name="target" size={22} /></span><span>커리어<span>핏</span></span></Link><div><strong>{student.name}</strong><button className="text-button" onClick={logout}>로그아웃</button></div></header>
-    <main>
+  return <div className="student-page student-booking-page">
       <Link className="withdrawal-back-link" to={changingAppointment ? `/student/appointments?change=${changingAppointment.id}` : '/student/appointments'}><Icon name="arrow" size={16} />다른 시간 선택하기</Link>
       <div className="student-request-layout">
         <aside className="student-selected-slot"><span className="eyebrow light">선택한 상담 시간</span><strong>{slot.date}</strong><b>{slot.time}–{getTimeRangeEnd(slot)}</b><p>{slot.duration}분 · {slot.location}</p><small>{student.counselor || '담당 상담사'} 상담사</small></aside>
@@ -128,6 +126,5 @@ export default function StudentAppointmentRequestPage() {
           </form>
         </section>
       </div>
-    </main>
   </div>;
 }

@@ -34,6 +34,7 @@ const ConsultationFormPage = lazy(() => import('./pages/ConsultationFormPage'));
 const FollowUpsPage = lazy(() => import('./pages/FollowUpsPage'));
 const ProgramsPage = lazy(() => import('./pages/ProgramsPage'));
 const StudentMyPage = lazy(() => import('./pages/StudentMyPage'));
+const StudentLayout = lazy(() => import('./components/StudentLayout'));
 const StudentWithdrawalPage = lazy(() => import('./pages/StudentWithdrawalPage'));
 const StudentAppointmentSlotsPage = lazy(() => import('./pages/StudentAppointmentSlotsPage'));
 const StudentAppointmentRequestPage = lazy(() => import('./pages/StudentAppointmentRequestPage'));
@@ -259,13 +260,15 @@ export default function App() {
     <Route path="/login" element={role ? <Navigate to={role === 'student' ? '/student' : '/dashboard'} replace /> : user ? <Navigate to="/account-status" replace /> : <LoginPage />} />
     <Route path="/signup" element={<SignupPage />} />
     <Route path="/account-status" element={<AccountStatusPage />} />
-    <Route path="/student" element={role === 'student' ? <StudentMyPage /> : <Navigate to="/login" replace />} />
-    <Route path="/student/withdrawal" element={role === 'student' ? <StudentWithdrawalPage /> : <Navigate to="/login" replace />} />
-    <Route path="/student/appointments" element={role === 'student' ? <StudentAppointmentSlotsPage /> : <Navigate to="/login" replace />} />
-    <Route path="/student/appointments/request/:availabilityId" element={role === 'student' ? <StudentAppointmentRequestPage /> : <Navigate to="/login" replace />} />
-    <Route path="/student/appointments/change/:appointmentId/:availabilityId" element={role === 'student' ? <StudentAppointmentRequestPage /> : <Navigate to="/login" replace />} />
-    <Route path="/student/programs/:programId" element={role === 'student' ? <StudentProgramDetailPage /> : <Navigate to="/login" replace />} />
-    <Route path="/student/notifications" element={role === 'student' ? <NotificationsPage /> : <Navigate to="/login" replace />} />
+    <Route path="/student" element={role === 'student' ? <StudentLayout /> : <Navigate to="/login" replace />}>
+      <Route index element={<StudentMyPage />} />
+      <Route path="withdrawal" element={<StudentWithdrawalPage />} />
+      <Route path="appointments" element={<StudentAppointmentSlotsPage />} />
+      <Route path="appointments/request/:availabilityId" element={<StudentAppointmentRequestPage />} />
+      <Route path="appointments/change/:appointmentId/:availabilityId" element={<StudentAppointmentRequestPage />} />
+      <Route path="programs/:programId" element={<StudentProgramDetailPage />} />
+      <Route path="notifications" element={<NotificationsPage />} />
+    </Route>
     <Route path="/*" element={isOperationsStaff(role) ? <CounselorRoutes /> : <Navigate to="/login" replace />} />
   </Routes></Suspense></AppProvider>;
 }

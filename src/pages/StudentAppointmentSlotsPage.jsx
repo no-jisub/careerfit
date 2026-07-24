@@ -22,7 +22,7 @@ export default function StudentAppointmentSlotsPage() {
   const [searchParams] = useSearchParams();
   const rescheduleId = searchParams.get('change') || '';
   const { students, counselorAvailability, setCounselorAvailability, appointments, setAppointments, setNotifications, persistDocumentGroup, notify } = useApp();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const student = useMemo(() => {
     const matched = user ? students.find(item => item.uid === user.uid) : students.find(item => item.id === DEMO_STUDENT_ID);
     return !user && matched ? { ...matched, counselorUid: 'demo-counselor' } : matched;
@@ -52,7 +52,7 @@ export default function StudentAppointmentSlotsPage() {
     if (firstDate) setVisibleMonth(`${firstDate.slice(0, 7)}-01`);
   }, [availableSlots, availableDates, selectedDate]);
 
-  if (!student) return <main className="app-loading" role="status">연결된 학생 정보를 찾고 있어요...</main>;
+  if (!student) return <div className="app-loading" role="status">연결된 학생 정보를 찾고 있어요...</div>;
 
   const respondToProposal = async (appointment, approve, originalAction = 'keep') => {
     const original = counselorAvailability.find(item => item.id === appointment.availabilityId);
@@ -69,10 +69,7 @@ export default function StudentAppointmentSlotsPage() {
     notify(approve ? '변경된 상담 일정에 참가한다고 응답했습니다.' : `변경 제안을 거절하고 기존 예약을 ${originalAction === 'keep' ? '유지했습니다' : '취소했습니다'}.`);
   };
 
-  return <div className="student-portal student-booking-page">
-    <header><Link className="brand" to="/student"><span className="brand-mark"><Icon name="target" size={22} /></span><span>커리어<span>핏</span></span></Link><div><strong>{student.name}</strong><button className="text-button" onClick={logout}>로그아웃</button></div></header>
-    <main>
-      <Link className="withdrawal-back-link" to="/student"><Icon name="arrow" size={16} />학생 홈으로 돌아가기</Link>
+  return <div className="student-page student-booking-page">
       <section className="student-booking-intro"><span className="eyebrow">{rescheduleAppointment ? '상담 일정 변경' : '상담 신청'}</span><h1>{rescheduleAppointment ? '새로운 날짜와 시간을 선택하세요' : '날짜와 시간을 선택하세요'}</h1><p>{rescheduleAppointment ? `${rescheduleAppointment.date} ${rescheduleAppointment.time} 예약은 상대방이 결정할 때까지 유지됩니다.` : `${student.counselor || '담당 상담사'} 상담사가 공개한 1시간 일정만 선택할 수 있습니다. 흐리게 표시된 날짜와 시간은 이미 예약되었거나 상담이 불가능합니다.`}</p></section>
       {myAppointments.length > 0 && !rescheduleAppointment && <section className="card student-appointment-history"><div className="section-header"><div><span className="eyebrow">나의 예약</span><h2>상담 신청 내역</h2><p>예약 상태와 취소한 사람을 함께 확인할 수 있어요.</p></div><span className="student-record-count">총 {myAppointments.length}건</span></div><div>{myAppointments.map(appointment => { const cancellationLabel = getAppointmentCancellationLabel(appointment); const counselorProposal = appointment.rescheduleRequest?.status === 'pending' && appointment.rescheduleRequest.initiatedByRole === 'counselor'; return <article key={appointment.id} className={appointment.status}><time><strong>{appointment.date}</strong><span>{appointment.time}–{getTimeRangeEnd(appointment)}</span></time><div><strong>{appointment.type}</strong><span>{appointment.location} · {student.counselor || '담당 상담사'} 상담사</span>{appointment.rescheduleRequest?.status === 'pending' && <small>변경 요청: {appointment.rescheduleRequest.date} {appointment.rescheduleRequest.time} · {counselorProposal ? '응답 필요' : '상담사 승인 대기'}</small>}{appointment.rescheduleHistory?.length > 0 && <small>이전 일정: {appointment.rescheduleHistory.at(-1).previousDate} {appointment.rescheduleHistory.at(-1).previousTime}</small>}</div><span className={`appointment-status ${appointment.status}`}>{appointment.status === 'cancelled' ? cancellationLabel : appointmentStatusLabels[appointment.status] || appointment.status}</span>{counselorProposal ? <div className="appointment-actions"><button className="button primary small" onClick={() => respondToProposal(appointment, true)}>참가·변경 승인</button><button className="button secondary small" onClick={() => respondToProposal(appointment, false, 'keep')}>불참·기존 유지</button><button className="text-button danger" onClick={() => respondToProposal(appointment, false, 'cancel')}>불참·기존 취소</button></div> : canRescheduleAppointment(appointment) && <Link className="button secondary small" to={`/student/appointments?change=${appointment.id}`}>시간 변경</Link>}</article>; })}</div></section>}
       <section className="card student-scheduler" aria-label="상담 날짜와 시간 선택">
@@ -87,7 +84,5 @@ export default function StudentAppointmentSlotsPage() {
           {selectedDate ? <div className="student-time-grid">{displayedTimes.map(slotTime => { const slot = slotsByTime.get(slotTime); return slot ? <Link key={slotTime} to={rescheduleAppointment ? `/student/appointments/change/${rescheduleAppointment.id}/${slot.id}` : `/student/appointments/request/${slot.id}`}><span>{slotTime}–{getTimeRangeEnd(slot)}</span><strong>선택</strong></Link> : <button type="button" key={slotTime} disabled><span>{slotTime}–{addMinutesToTime(slotTime, 60)}</span><strong>선택 불가</strong></button>; })}</div> : <div className="student-scheduler-empty"><Icon name="calendar" size={28} /><span>현재 공개된 상담 시간이 없습니다.</span></div>}
         </div>
       </section>
-    </main>
-    <footer><div><strong>커리어핏</strong><span>학생 상담 지원 서비스 · 문의 대학일자리플러스센터</span></div></footer>
   </div>;
 }
