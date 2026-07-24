@@ -25,12 +25,12 @@ export function EmptyState({ icon = 'search', title, description, action }) {
   return <div className="empty-state"><span className="empty-icon"><Icon name={icon} size={26} /></span><strong>{title}</strong>{description && <p>{description}</p>}{action}</div>;
 }
 
-export function SectionHeader({ eyebrow, title, description, action }) {
-  return <div className="section-header"><div>{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h2>{title}</h2>{description && <p>{description}</p>}</div>{action}</div>;
+export function SectionHeader({ title, description, action }) {
+  return <div className="section-header"><div><h2>{title}</h2>{description && <p>{description}</p>}</div>{action}</div>;
 }
 
-export function PageIntro({ eyebrow, title, description, action, icon }) {
-  return <div className="page-intro"><div className="page-intro-heading">{icon && <span className="page-intro-icon"><Icon name={icon} size={21} /></span>}<div>{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h1>{title}</h1>{description && <p>{description}</p>}</div></div>{action}</div>;
+export function PageIntro({ title, description, action, icon }) {
+  return <div className="page-intro"><div className="page-intro-heading">{icon && <span className="page-intro-icon"><Icon name={icon} size={21} /></span>}<div><h1>{title}</h1>{description && <p>{description}</p>}</div></div>{action}</div>;
 }
 
 export function StatusTabs({ label, options, value, onChange, className = '' }) {

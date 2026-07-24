@@ -39,6 +39,7 @@
 - **Body Font:** Pretendard / Noto Sans KR / system sans-serif, 400–600
 - **Mood:** trustworthy, calm, approachable, operational
 - **Loading:** system-first stack; no render-blocking remote font request
+- **Heading hierarchy:** Show the title directly. Do not place small eyebrow, kicker, or overline labels above page, section, card, or modal headings.
 
 **CSS Import:**
 ```css
