@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useApp } from '../App';
 import Icon from '../components/Icon';
 import { EmptyState, StatusBadge } from '../components/UI';
@@ -12,12 +12,14 @@ const studentTagOptions = ['면접 준비', '포트폴리오', '진로 미정', 
 
 export default function StudentDetailPage() {
   const { studentId } = useParams();
+  const [searchParams] = useSearchParams();
   const { students, setStudents, consultations, setConsultations, consultationSummaries, setConsultationSummaries, consultationNotes, followUps, setFollowUps, appointments, persistDocument, persistDocumentGroup, notify } = useApp();
   const { user, profile } = useAuth();
   const student = students.find(s => s.id === studentId);
   const history = student ? consultations.filter(c => c.studentId === student.id).sort((a, b) => b.date.localeCompare(a.date)) : [];
   const tasks = student ? followUps.filter(f => f.studentId === student.id && f.status !== 'complete') : [];
-  const [expanded, setExpanded] = useState(history[0]?.id);
+  const requestedConsultationId = searchParams.get('consultation');
+  const [expanded, setExpanded] = useState(requestedConsultationId || history[0]?.id);
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [savingStudent, setSavingStudent] = useState(false);
@@ -27,6 +29,14 @@ export default function StudentDetailPage() {
   const [dueDate, setDueDate] = useState(() => addDays(toDateKey(), 7));
   const [editingConsultation, setEditingConsultation] = useState(null);
   const [savingConsultation, setSavingConsultation] = useState(false);
+  useEffect(() => {
+    if (!requestedConsultationId || !history.some(item => item.id === requestedConsultationId)) return undefined;
+    setExpanded(requestedConsultationId);
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(`consultation-${requestedConsultationId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [requestedConsultationId, consultations]);
   useEffect(() => {
     if (!showAdd && !showEdit) return undefined;
     const closeModal = event => {
@@ -139,7 +149,7 @@ export default function StudentDetailPage() {
           <div className="prep-grid"><article><span className="prep-icon blue"><Icon name="note" /></span><div><strong>최근 상담 핵심 내용</strong><p>{history[0]?.summary || '아직 작성된 상담 기록이 없습니다.'}</p></div></article><article><span className="prep-icon orange"><Icon name="alert" /></span><div><strong>학생이 말한 주요 고민</strong><p>{student.concern}</p></div></article><article><span className="prep-icon green"><Icon name="check" /></span><div><strong>이전 상담에서 안내한 사항</strong><p>{history[0]?.guidance || '안내한 사항이 없습니다.'}</p></div></article><article><span className="prep-icon purple"><Icon name="target" /></span><div><strong>다음 상담에서 확인할 내용</strong><p>{history[0]?.nextCheckItems || '확인할 내용을 등록해 주세요.'}</p></div></article></div>
         </section>
         <section className="card"><div className="section-header"><div><span className="eyebrow">상담 히스토리</span><h2>상담 기록 타임라인</h2></div><Link className="text-link" to={`/students/${student.id}/consultation/new`}>기록 작성 <Icon name="plus" size={15} /></Link></div>
-          {history.length ? <div className="timeline">{history.map(c => { const internalNote = consultationNotes.find(note => note.consultationId === c.id); return <article key={c.id} className={`timeline-item ${expanded === c.id ? 'open' : ''}`}><span className="timeline-dot" /><button aria-expanded={expanded === c.id} onClick={() => setExpanded(expanded === c.id ? '' : c.id)}><div><time>{c.date}</time><span className="tag">{c.type}</span><h3>{c.purpose}</h3></div><Icon name="chevron" /></button>{expanded === c.id && <div className="timeline-body">{internalNote?.note && <div className="internal-note"><strong><Icon name="lock" size={15} />상담 담당자 내부 메모</strong><p>{internalNote.note}</p></div>}{c.aiReview && <details className="consultation-evidence-panel"><summary><span><Icon name="shield" size={17} />AI 요약 근거 및 상담사 검토</span><small>{c.aiReview.reviewedAt?.slice(0, 10)} · {c.aiReview.reviewedBy}</small></summary><div><p>AI 초안의 각 항목을 작성할 때 사용한 근거입니다. 원문 메모는 학생에게 공개되지 않습니다.</p>{consultationEvidenceFieldOptions.map(({ key, label }) => <section key={key}><strong>{label}</strong><ul>{(c.aiReview.evidence?.[key] || ['근거 부족']).map((evidence, index) => <li key={`${key}-${index}`}>{evidence}</li>)}</ul></section>)}{c.aiReview.needsConfirmation?.length > 0 && <section className="needs-confirmation"><strong>추가 확인 필요</strong><ul>{c.aiReview.needsConfirmation.map((item, index) => <li key={`confirm-${index}`}>{item}</li>)}</ul></section>}</div></details>}<dl><div><dt>학생 공개 요약</dt><dd>{c.summary}</dd></div><div><dt>학생의 강점</dt><dd>{c.strengths || '-'}</dd></div><div><dt>안내한 내용</dt><dd>{c.guidance}</dd></div><div><dt>학생의 다음 행동</dt><dd>{c.studentActions}</dd></div><div><dt>담당자의 다음 행동</dt><dd>{c.counselorActions}</dd></div><div><dt>다음 상담 확인 사항</dt><dd>{c.nextCheckItems}</dd></div></dl>{c.programs?.length > 0 && <div className="program-inline"><Icon name="spark" size={17} /><span>추천 프로그램</span><strong>{c.programs.join(', ')}</strong></div>}<div className="consultation-record-footer"><p className="counselor-line">{c.studentVisible === false ? '학생 비공개 · ' : '선택 항목 공개 · '}{c.aiReview ? 'AI 보조·상담사 근거 검토 완료 · ' : '상담사 직접 작성 · '}상담 담당자 {c.counselor}{c.modifiedAt ? ` · 마지막 수정 ${c.modifiedAt.slice(0, 10)} ${c.modifiedByName}` : ''}</p><button className="button secondary small" onClick={() => openConsultationEdit(c)}>기록 수정</button></div></div>}</article>; })}</div> : <EmptyState title="아직 작성된 상담 기록이 없습니다" description="첫 상담을 시작하고 학생의 목표와 다음 행동을 기록해 보세요." />}
+          {history.length ? <div className="timeline">{history.map(c => { const internalNote = consultationNotes.find(note => note.consultationId === c.id); return <article id={`consultation-${c.id}`} key={c.id} className={`timeline-item ${expanded === c.id ? 'open' : ''}`}><span className="timeline-dot" /><button aria-expanded={expanded === c.id} onClick={() => setExpanded(expanded === c.id ? '' : c.id)}><div><time>{c.date}</time><span className="tag">{c.type}</span><h3>{c.purpose}</h3></div><Icon name="chevron" /></button>{expanded === c.id && <div className="timeline-body">{internalNote?.note && <div className="internal-note"><strong><Icon name="lock" size={15} />상담 담당자 내부 메모</strong><p>{internalNote.note}</p></div>}{c.aiReview && <details className="consultation-evidence-panel" open={requestedConsultationId === c.id}><summary><span><Icon name="shield" size={17} />AI 요약 근거 및 상담사 검토</span><small>{c.aiReview.reviewedAt?.slice(0, 10)} · {c.aiReview.reviewedBy}</small></summary><div><p>AI 초안의 각 항목을 작성할 때 사용한 근거입니다. 원문 메모는 학생에게 공개되지 않습니다.</p>{consultationEvidenceFieldOptions.map(({ key, label }) => <section key={key}><strong>{label}</strong><ul>{(c.aiReview.evidence?.[key] || ['근거 부족']).map((evidence, index) => <li key={`${key}-${index}`}>{evidence}</li>)}</ul></section>)}{c.aiReview.needsConfirmation?.length > 0 && <section className="needs-confirmation"><strong>추가 확인 필요</strong><ul>{c.aiReview.needsConfirmation.map((item, index) => <li key={`confirm-${index}`}>{item}</li>)}</ul></section>}</div></details>}<dl><div><dt>학생 공개 요약</dt><dd>{c.summary}</dd></div><div><dt>학생의 강점</dt><dd>{c.strengths || '-'}</dd></div><div><dt>안내한 내용</dt><dd>{c.guidance}</dd></div><div><dt>학생의 다음 행동</dt><dd>{c.studentActions}</dd></div><div><dt>담당자의 다음 행동</dt><dd>{c.counselorActions}</dd></div><div><dt>다음 상담 확인 사항</dt><dd>{c.nextCheckItems}</dd></div></dl>{c.programs?.length > 0 && <div className="program-inline"><Icon name="spark" size={17} /><span>추천 프로그램</span><strong>{c.programs.join(', ')}</strong></div>}<div className="consultation-record-footer"><p className="counselor-line">{c.studentVisible === false ? '학생 비공개 · ' : '선택 항목 공개 · '}{c.aiReview ? 'AI 보조·상담사 근거 검토 완료 · ' : '상담사 직접 작성 · '}상담 담당자 {c.counselor}{c.modifiedAt ? ` · 마지막 수정 ${c.modifiedAt.slice(0, 10)} ${c.modifiedByName}` : ''}</p><button className="button secondary small" onClick={() => openConsultationEdit(c)}>기록 수정</button></div></div>}</article>; })}</div> : <EmptyState title="아직 작성된 상담 기록이 없습니다" description="첫 상담을 시작하고 학생의 목표와 다음 행동을 기록해 보세요." />}
         </section>
       </div>
       <aside className="detail-aside">

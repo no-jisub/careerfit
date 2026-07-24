@@ -39,7 +39,6 @@ const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const InsightsPage = lazy(() => import('./pages/InsightsPage'));
-const TrustCenterPage = lazy(() => import('./pages/TrustCenterPage'));
 
 const AppContext = createContext(null);
 const DEMO_DATA_VERSION = '2026-07-24-presentation-v2';
@@ -225,7 +224,6 @@ function CounselorRoutes() {
       <Route path="appointments" element={<AppointmentsPage />} />
       <Route path="notifications" element={<NotificationsPage />} />
       <Route path="insights" element={<InsightsPage />} />
-      <Route path="trust-center" element={<TrustCenterPage />} />
       <Route path="programs" element={<ProgramsPage />} />
       <Route path="settings" element={<SettingsPage />} />
       <Route path="admin/users" element={isAdministrator(role) ? <AdminUsersPage /> : <Navigate to="/dashboard" replace />} />

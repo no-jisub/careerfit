@@ -31,12 +31,6 @@ const navGroups = [
       { to: '/insights', label: '운영 통계', icon: 'chart' },
     ],
   },
-  {
-    label: '신뢰와 거버넌스',
-    items: [
-      { to: '/trust-center', label: 'AI 신뢰 센터', icon: 'shield' },
-    ],
-  },
 ];
 
 const navItems = navGroups.flatMap(group => group.items);
@@ -49,7 +43,6 @@ const pageMeta = {
   'follow-ups': { title: '상담 후 할 일', description: '학생과 상담사의 다음 행동' },
   programs: { title: '비교과 프로그램', description: '학생 맞춤 성장 기회' },
   insights: { title: '운영 통계', description: '상담 운영 데이터와 인사이트' },
-  'trust-center': { title: 'AI 신뢰 센터', description: '근거·검토·개인정보 통제 현황' },
   notifications: { title: '알림 센터', description: '확인이 필요한 최신 변화' },
   settings: { title: '설정', description: '서비스와 계정 환경' },
   admin: { title: '사용자 관리', description: '가입 승인과 학생 배정' },
@@ -59,7 +52,6 @@ const demoTourSteps = [
   { number: '01', time: '30초', icon: 'dashboard', title: '오늘의 운영 우선순위', description: '상담 일정과 기한 초과 업무를 한 화면에서 판단합니다.', to: '/dashboard', action: '대시보드 보기' },
   { number: '02', time: '45초', icon: 'students', title: '학생 360° 상담 맥락', description: '고민·이전 상담·다음 행동을 연결해 상담 준비 시간을 줄입니다.', to: '/students/s1', action: '김하늘 학생 보기' },
   { number: '03', time: '60초', icon: 'spark', title: '근거 기반 AI 상담일지', description: '개인정보를 마스킹하고 항목별 근거를 사람이 승인합니다.', to: '/students/s1/consultation/new', action: 'AI 상담 흐름 보기' },
-  { number: '04', time: '30초', icon: 'shield', title: 'Responsible AI 증명', description: '근거·검토·마스킹·보존 통제를 실데이터로 보여줍니다.', to: '/trust-center', action: '신뢰 센터 보기' },
 ];
 
 export default function AppLayout({ logout }) {
@@ -152,14 +144,14 @@ export default function AppLayout({ logout }) {
     {tourOpen && <div className="demo-tour-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && setTourOpen(false)}>
       <section className="demo-tour-modal" role="dialog" aria-modal="true" aria-labelledby="demo-tour-title">
         <button className="modal-close" aria-label="데모 안내 닫기" onClick={() => setTourOpen(false)}><Icon name="close" size={19} /></button>
-        <div className="demo-tour-heading"><span className="demo-tour-mark"><Icon name="play" size={22} /></span><div><span className="eyebrow">Presentation mode</span><h2 id="demo-tour-title">커리어핏 3분 데모</h2><p>상담의 시작부터 안전한 AI 활용과 성장기회 연결까지, 네 장면으로 보여주세요.</p></div></div>
+        <div className="demo-tour-heading"><span className="demo-tour-mark"><Icon name="play" size={22} /></span><div><span className="eyebrow">Presentation mode</span><h2 id="demo-tour-title">커리어핏 3분 데모</h2><p>상담의 시작부터 안전한 AI 활용까지, 세 장면으로 보여주세요.</p></div></div>
         <div className="demo-tour-steps">{demoTourSteps.map(step => <button key={step.number} onClick={() => { navigate(step.to); setTourOpen(false); }}>
           <span className="demo-tour-number">{step.number}</span>
           <span className="demo-tour-step-icon"><Icon name={step.icon} size={19} /></span>
           <span><small>{step.time}</small><strong>{step.title}</strong><em>{step.description}</em></span>
           <span className="demo-tour-action">{step.action}<Icon name="arrow" size={15} /></span>
         </button>)}</div>
-        <footer><span><Icon name="spark" size={15} />추천 발표 순서</span><p>문제 → 상담 맥락 → AI 차별점 → 신뢰 증명</p></footer>
+        <footer><span><Icon name="spark" size={15} />추천 발표 순서</span><p>문제 → 상담 맥락 → 근거 기반 AI 상담일지</p></footer>
       </section>
     </div>}
   </div>;
