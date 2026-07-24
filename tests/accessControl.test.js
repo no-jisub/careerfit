@@ -48,3 +48,9 @@ test('counselors and students cannot directly overwrite identity fields', () => 
   assert.match(rules, /hasOnly\(\['interests', 'goal', 'concern', 'status', 'appointmentDate',[\s\S]*'lastConsultation', 'updatedAt'\]\)/);
   assert.match(rules, /hasOnly\(\['interests', 'goal', 'concern', 'updatedAt'\]\)/);
 });
+
+test('anonymous demo sessions cannot directly access Firestore application data', () => {
+  assert.match(rules, /function nonAnonymousSignedIn\(\) \{[\s\S]*sign_in_provider != 'anonymous'/);
+  assert.match(rules, /match \/notifications\/\{notificationId\} \{[\s\S]*allow create: if nonAnonymousSignedIn\(\)/);
+  assert.match(rules, /match \/programs\/\{programId\} \{[\s\S]*allow read: if nonAnonymousSignedIn\(\)/);
+});
