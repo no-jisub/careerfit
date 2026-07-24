@@ -43,7 +43,7 @@ export default function SettingsPage() {
     <section className="card privacy-overview">
       <div className="privacy-overview-heading"><span className="privacy-shield"><Icon name="shield" size={24} /></span><div><span className="eyebrow">개인정보 보호</span><h2>상담정보는 최소 권한으로 분리해 관리합니다</h2><p>현재 역할은 <strong>{roleLabels[role] || '확인 중'}</strong>이며, {role === 'counselor' ? '배정된 학생의 상담 자료만 조회할 수 있습니다.' : role === 'admin' ? '계정·배정 관리와 보안 대응 범위의 권한이 적용됩니다.' : '본인에게 공개된 정보만 조회할 수 있습니다.'}</p></div></div>
       <div className="privacy-principles">
-        <article><Icon name="lock" size={18} /><div><strong>식별정보 추가 인증</strong><p>연락처·학번은 기본 마스킹하고 담당자가 별도 4자리 PIN을 확인한 뒤 5분 동안만 공개합니다.</p></div></article>
+        <article><Icon name="lock" size={18} /><div><strong>연락처 추가 인증</strong><p>연락처는 기본 마스킹하고 담당자가 별도 4자리 PIN을 확인한 뒤 5분 동안만 공개합니다. 학번은 업무 화면에 전체 공개됩니다.</p></div></article>
         <article><Icon name="students" size={18} /><div><strong>담당자 기반 접근</strong><p>상담사는 담당 학생 문서만 구독하며, 사용자 승인과 학생 재배정은 관리자만 수행합니다.</p></div></article>
         <article><Icon name="shield" size={18} /><div><strong>자동 정리 시 최소 정보 처리</strong><p>학생 이름·학번·연락처를 정리 요청에 포함하지 않고 메모 속 직접 식별정보 형식은 서버에서 가립니다.</p></div></article>
         <article><Icon name="check" size={18} /><div><strong>근거 검토 후 저장</strong><p>자동 정리된 초안은 항목별 근거를 제시하며 상담사가 검토 완료해야 최종 기록으로 저장됩니다.</p></div></article>
@@ -58,7 +58,7 @@ export default function SettingsPage() {
       <div className="retention-note"><Icon name="clock" size={17} /><div><strong>데이터 보존</strong><p>임시 상담 기록에는 7일 보존 기한을 기록합니다. 운영 배포 전 Firebase TTL 정책과 기관의 상담기록 보존·파기 기간을 반드시 확정해야 합니다.</p></div></div>
     </section>
     {['counselor', 'admin'].includes(role) && <section className="card sensitive-pin-settings">
-      <div className="sensitive-pin-settings-copy"><span className="privacy-shield"><Icon name="lock" size={22} /></span><div><span className="eyebrow">추가 본인 확인</span><h2>민감정보 열람 PIN</h2><p>로그인 비밀번호와 분리된 4자리 PIN입니다. 연락처·학번 전체값을 볼 때마다 다시 확인하며, 5회 실패하면 10분간 잠깁니다.</p></div></div>
+      <div className="sensitive-pin-settings-copy"><span className="privacy-shield"><Icon name="lock" size={22} /></span><div><span className="eyebrow">추가 본인 확인</span><h2>연락처 열람 PIN</h2><p>로그인 비밀번호와 분리된 4자리 PIN입니다. 연락처 전체값을 볼 때마다 다시 확인하며, 5회 실패하면 10분간 잠깁니다.</p></div></div>
       <form className="sensitive-pin-form" onSubmit={savePin}>
           <label>현재 계정 비밀번호<input type="password" autoComplete="current-password" value={pinForm.password} onChange={event => setPinForm(current => ({ ...current, password: event.target.value }))} required /></label>
           <label>새 4자리 PIN<input type="password" inputMode="numeric" pattern="[0-9]{4}" maxLength="4" autoComplete="new-password" value={pinForm.pin} onChange={event => setPinForm(current => ({ ...current, pin: normalizeSensitivePin(event.target.value) }))} required /></label>

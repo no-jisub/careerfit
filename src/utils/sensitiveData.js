@@ -21,14 +21,6 @@ export function maskPhone(value = '') {
   return `${prefix}-${middle.slice(0, 2)}${'•'.repeat(Math.max(0, middle.length - 2))}-${suffix.slice(0, 2)}••`;
 }
 
-export function maskStudentNo(value = '') {
-  const text = String(value).trim();
-  if (!text) return '등록되지 않음';
-  if (/[•*]/.test(text)) return text;
-  if (text.length <= 4) return '•'.repeat(text.length);
-  return `${text.slice(0, 4)}${'•'.repeat(Math.max(2, text.length - 6))}${text.slice(-2)}`;
-}
-
 export function formatRevealTime(seconds) {
   const safeSeconds = Math.max(0, Number(seconds) || 0);
   const minutes = Math.floor(safeSeconds / 60);

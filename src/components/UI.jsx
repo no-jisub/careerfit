@@ -31,7 +31,7 @@ export function SectionHeader({ title, description, action }) {
 }
 
 export function PageIntro({ title, description, action, icon }) {
-  return <div className="page-intro"><div className="page-intro-heading">{icon && <span className="page-intro-icon"><Icon name={icon} size={21} /></span>}<div><h1>{title}</h1>{description && <p>{description}</p>}</div></div>{action}</div>;
+  return <div className="page-intro"><div className="page-intro-heading">{icon && <span className="page-intro-icon"><Icon name={icon} size={22} /></span>}<div><h1>{title}</h1>{description && <p>{description}</p>}</div></div>{action}</div>;
 }
 
 export function StatusTabs({ label, options, value, onChange, className = '' }) {

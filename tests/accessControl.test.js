@@ -31,11 +31,17 @@ test('student follow-up subscriptions expose only tasks assigned to that account
   assert.match(rules, /isStudent\(\)[\s\S]*resource\.data\.assigneeUid == request\.auth\.uid[\s\S]*isValidStudentCompletion\(\)/);
 });
 
-test('sensitive identifiers, PIN state, and access audits are blocked from direct reads', () => {
+test('sensitive contact details, PIN state, and access audits are blocked from direct reads', () => {
   assert.match(rules, /match \/studentSensitiveProfiles\/\{studentId\} \{[\s\S]*allow read: if false/);
+  assert.match(rules, /hasOnly\(\['studentId', 'studentUid', 'counselorUid', 'phone', 'createdAt', 'updatedAt'\]\)/);
+  assert.doesNotMatch(rules, /function validStudentSensitiveProfile[\s\S]*validText\(data\.studentNo/);
   assert.match(rules, /match \/sensitiveAccessCredentials\/\{userId\} \{[\s\S]*allow read, write: if false/);
   assert.match(rules, /match \/sensitiveAccessAttempts\/\{userId\} \{[\s\S]*allow read, write: if false/);
   assert.match(rules, /match \/sensitiveAccessAudit\/\{auditId\} \{[\s\S]*allow read, write: if false/);
+});
+
+test('new public student numbers use seven digits', () => {
+  assert.match(rules, /request\.resource\.data\.studentNo\.matches\('\^\[0-9\]\{7\}\$'\)/);
 });
 
 test('counselors and students cannot directly overwrite identity fields', () => {

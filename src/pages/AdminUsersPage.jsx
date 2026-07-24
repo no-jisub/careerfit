@@ -5,7 +5,7 @@ import { PageIntro } from '../components/UI';
 import { useAuth } from '../auth/AuthContext';
 import { buildEventNotification } from '../utils/notifications';
 import { validateAccountInput } from '../utils/validation';
-import { maskPhone, maskStudentNo } from '../utils/sensitiveData';
+import { maskPhone } from '../utils/sensitiveData';
 
 const emptyAccount = { role: 'counselor', displayName: '', email: '', password: '' };
 const emptyStudent = { studentNo: '', department: '', grade: '1학년', phone: '', goal: '', concern: '', interests: '', counselorUid: '' };
@@ -176,7 +176,7 @@ export default function AdminUsersPage() {
       counselorUid: currentCounselorUid,
       counselor: counselorName,
       name: registration.displayName,
-      studentNo: useRemoteAdmin ? maskStudentNo(registration.studentNo) : registration.studentNo,
+      studentNo: registration.studentNo,
       department: registration.department,
       grade: registration.grade,
       phone: useRemoteAdmin ? maskPhone(registration.phone || '') : registration.phone || '',
@@ -196,14 +196,13 @@ export default function AdminUsersPage() {
       studentId: `student-${registration.uid}`,
       studentUid: registration.uid,
       counselorUid: currentCounselorUid,
-      studentNo: registration.studentNo,
       phone: registration.phone || '',
       createdAt: now,
       updatedAt: now,
     }));
     const approvedRegistrations = selected.map(item => ({
       ...item,
-      ...(useRemoteAdmin ? { studentNo: maskStudentNo(item.studentNo), phone: maskPhone(item.phone || '') } : {}),
+      ...(useRemoteAdmin ? { phone: maskPhone(item.phone || '') } : {}),
       status: 'approved',
       counselorUid: currentCounselorUid,
       assignedAt: now,
@@ -243,7 +242,7 @@ export default function AdminUsersPage() {
       {pendingRegistrations.length ? <div className="pending-registration-list">
         {pendingRegistrations.map(item => <article key={item.id} className={selectedRegistrationIds.includes(item.id) ? 'selected' : ''}>
           <label className="pending-registration-select"><input type="checkbox" checked={selectedRegistrationIds.includes(item.id)} disabled={item.emailVerified === false} onChange={() => toggleRegistration(item.id)} /><span className="sr-only">{item.displayName} 선택</span></label>
-          <div><strong>{item.displayName}</strong><span>{maskStudentNo(item.studentNo)} · {item.department} · {item.grade}</span><small>{item.email}</small></div>
+          <div><strong>{item.displayName}</strong><span>{item.studentNo} · {item.department} · {item.grade}</span><small>{item.email}</small></div>
           <span className={`verification-badge ${item.emailVerified === false ? 'waiting' : ''}`}>{item.emailVerified === false ? '이메일 인증 대기' : '이메일 인증 완료'}</span>
         </article>)}
       </div> : <p className="empty-assignment">현재 배정 대기 중인 학생이 없습니다.</p>}
@@ -257,7 +256,7 @@ export default function AdminUsersPage() {
           <label>이메일<input type="email" value={account.email} onChange={event => updateAccount('email', event.target.value)} required /></label>
           {useRemoteAdmin && <label>임시 비밀번호<input type="password" minLength="6" autoComplete="new-password" value={account.password} onChange={event => updateAccount('password', event.target.value)} required /></label>}
           {account.role === 'student' && <div className="student-account-fields">
-            <div className="form-row"><label>학번<input value={student.studentNo} onChange={event => updateStudent('studentNo', event.target.value)} required /></label><label>학년<select value={student.grade} onChange={event => updateStudent('grade', event.target.value)}>{['1학년','2학년','3학년','4학년','졸업생'].map(grade => <option key={grade}>{grade}</option>)}</select></label></div>
+            <div className="form-row"><label>학번<input inputMode="numeric" pattern="[0-9]{7}" maxLength="7" value={student.studentNo} onChange={event => updateStudent('studentNo', event.target.value.replace(/\D/g, '').slice(0, 7))} required /></label><label>학년<select value={student.grade} onChange={event => updateStudent('grade', event.target.value)}>{['1학년','2학년','3학년','4학년','졸업생'].map(grade => <option key={grade}>{grade}</option>)}</select></label></div>
             <label>학과<input value={student.department} onChange={event => updateStudent('department', event.target.value)} required /></label>
             <label>담당 상담사<select value={student.counselorUid} onChange={event => updateStudent('counselorUid', event.target.value)} required><option value="">상담사를 선택하세요</option>{counselors.map(item => <option key={item.id} value={item.id}>{item.displayName}</option>)}</select></label>
             <label>연락처<input value={student.phone} onChange={event => updateStudent('phone', event.target.value)} required /></label>
@@ -276,7 +275,7 @@ export default function AdminUsersPage() {
     </div>
     <section className="card assignment-card">
       <div className="section-header"><div><span className="eyebrow">담당 배정</span><h2>학생별 담당 상담사</h2></div></div>
-      {students.length ? <div className="assignment-list">{students.map(item => <article key={item.id}><div><strong>{item.name}</strong><span>{maskStudentNo(item.studentNo)} · {item.department} · 상담 기록 {consultations.filter(record => record.studentId === item.id).length}건</span></div><label><span className="sr-only">{item.name} 담당 상담사</span><select value={item.counselorUid || ''} onChange={event => assignCounselor(item, event.target.value)}><option value="">미배정</option>{counselors.map(counselor => <option key={counselor.id} value={counselor.id}>{counselor.displayName}</option>)}</select></label></article>)}</div> : <p>등록된 학생이 없습니다.</p>}
+      {students.length ? <div className="assignment-list">{students.map(item => <article key={item.id}><div><strong>{item.name}</strong><span>{item.studentNo} · {item.department} · 상담 기록 {consultations.filter(record => record.studentId === item.id).length}건</span></div><label><span className="sr-only">{item.name} 담당 상담사</span><select value={item.counselorUid || ''} onChange={event => assignCounselor(item, event.target.value)}><option value="">미배정</option>{counselors.map(counselor => <option key={counselor.id} value={counselor.id}>{counselor.displayName}</option>)}</select></label></article>)}</div> : <p>등록된 학생이 없습니다.</p>}
     </section>
   </>;
 }

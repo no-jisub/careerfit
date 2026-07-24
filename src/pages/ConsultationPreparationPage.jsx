@@ -3,7 +3,6 @@ import { useApp } from '../context/AppContext';
 import Icon from '../components/Icon';
 import { EmptyState, StatusBadge } from '../components/UI';
 import { openAttachment } from '../services/attachmentService';
-import { maskStudentNo } from '../utils/sensitiveData';
 import { toDateKey } from '../utils/date';
 
 const activeAppointmentStatuses = ['pending', 'confirmed', 'scheduled'];
@@ -52,7 +51,7 @@ export default function ConsultationPreparationPage() {
     <section className="profile-hero preparation-hero" aria-labelledby="preparation-student-name">
       <div className="preparation-student-summary">
         <div className="profile-main">
-          <div><div className="profile-name"><h1 id="preparation-student-name">{student.name}</h1><StatusBadge status={student.status} /></div><p>{maskStudentNo(student.studentNo)} · {student.department} · {student.grade}</p></div>
+          <div><div className="profile-name"><h1 id="preparation-student-name">{student.name}</h1><StatusBadge status={student.status} /></div><p>{student.studentNo} · {student.department} · {student.grade}</p></div>
         </div>
         <div className="preparation-goal">
           <span><Icon name="target" size={15} />현재 진로 목표</span>

@@ -4,6 +4,7 @@ const controlCharacters = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+const studentNoPattern = /^\d{7}$/;
 
 export function cleanText(value, maxLength = 500) {
   return String(value ?? '').replace(controlCharacters, '').trim().slice(0, maxLength);
@@ -22,7 +23,8 @@ export function validateAccountInput(account, student, existingUsers = []) {
   if (!emailPattern.test(email)) return { error: '유효한 이메일 형식으로 입력해 주세요.' };
   if (existingUsers.some(item => item.email?.toLowerCase() === email)) return { error: '이미 등록된 이메일입니다.' };
   if (account.role === 'student') {
-    if (!cleanText(student.studentNo, 30) || !cleanText(student.department, 80) || !student.counselorUid) return { error: '학번, 학과, 담당 상담사를 확인해 주세요.' };
+    if (!studentNoPattern.test(cleanText(student.studentNo, 40))) return { error: '학번은 숫자 7자리로 입력해 주세요.' };
+    if (!cleanText(student.department, 80) || !student.counselorUid) return { error: '학과와 담당 상담사를 확인해 주세요.' };
   }
   return { value: { ...account, displayName, email } };
 }
@@ -43,7 +45,8 @@ export function validateStudentRegistrationInput(form) {
 
   if (!displayName) return { error: '이름을 입력해 주세요.' };
   if (!emailPattern.test(email)) return { error: '유효한 이메일 형식으로 입력해 주세요.' };
-  if (!studentNo || !department || !form.grade) return { error: '학번, 학과, 학년을 모두 입력해 주세요.' };
+  if (!studentNoPattern.test(studentNo)) return { error: '학번은 숫자 7자리로 입력해 주세요.' };
+  if (!department || !form.grade) return { error: '학과와 학년을 모두 입력해 주세요.' };
   if (String(form.password || '').length < 8) return { error: '비밀번호는 8자 이상으로 입력해 주세요.' };
   if (!/[A-Za-z]/.test(form.password) || !/[0-9]/.test(form.password)) return { error: '비밀번호에 영문과 숫자를 모두 포함해 주세요.' };
   if (form.password !== form.passwordConfirm) return { error: '비밀번호 확인이 일치하지 않습니다.' };
@@ -81,7 +84,8 @@ export function validateNewStudentInput(form, existingStudents = []) {
     .slice(0, 20);
 
   if (!name) return { error: '학생 이름을 입력해 주세요.' };
-  if (!studentNo || !department || !grade) return { error: '학번, 학과, 학년을 모두 입력해 주세요.' };
+  if (!studentNoPattern.test(studentNo)) return { error: '학번은 숫자 7자리로 입력해 주세요.' };
+  if (!department || !grade) return { error: '학과와 학년을 모두 입력해 주세요.' };
   if (existingStudents.some(student => cleanText(student.studentNo, 40) === studentNo)) {
     return { error: '이미 등록된 학번입니다.' };
   }

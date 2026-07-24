@@ -5,7 +5,6 @@ import { revealStudentSensitiveData } from '../services/sensitiveAccessService';
 import {
   formatRevealTime,
   maskPhone,
-  maskStudentNo,
   normalizeSensitivePin,
 } from '../utils/sensitiveData';
 import Icon from './Icon';
@@ -82,7 +81,7 @@ export default function SensitiveStudentInfo({ student }) {
   };
 
   return <>
-    <section className={`sensitive-profile ${revealed ? 'is-revealed' : ''}`} aria-label="보호된 학생 식별정보">
+    <section className={`sensitive-profile ${revealed ? 'is-revealed' : ''}`} aria-label="보호된 학생 연락처">
       <div className="sensitive-profile-heading">
         <div><span><Icon name={revealed ? 'check' : 'lock'} size={14} />{revealed ? '인증됨' : '민감정보 보호 중'}</span><small>{revealed ? `${formatRevealTime(remaining)} 후 자동 잠금` : '담당자만 일시적으로 확인 가능'}</small></div>
         {revealed
@@ -91,7 +90,6 @@ export default function SensitiveStudentInfo({ student }) {
       </div>
       <dl>
         <div><dt>연락처</dt><dd className="sensitive-value">{revealed?.phone || maskPhone(student.phone)}</dd></div>
-        <div><dt>학번</dt><dd className="sensitive-value">{revealed?.studentNo || maskStudentNo(student.studentNo)}</dd></div>
       </dl>
       <p><Icon name="shield" size={13} />열람 성공·실패 이력은 보안 기록에 남으며 전체값은 5분 후 자동으로 가려집니다.</p>
     </section>
@@ -102,7 +100,7 @@ export default function SensitiveStudentInfo({ student }) {
         <span className="sensitive-modal-icon"><Icon name="lock" size={24} /></span>
         <span className="eyebrow">추가 본인 확인</span>
         <h2 id="sensitive-pin-title">민감정보 전체 보기</h2>
-        <p id="sensitive-pin-description">담당자 전용 4자리 보안 PIN을 입력하면 {student.name} 학생의 연락처와 학번을 5분간 확인할 수 있습니다.</p>
+        <p id="sensitive-pin-description">담당자 전용 4자리 보안 PIN을 입력하면 {student.name} 학생의 연락처를 5분간 확인할 수 있습니다.</p>
         <form onSubmit={verify}>
           <label htmlFor="sensitive-pin">4자리 보안 PIN</label>
           <input

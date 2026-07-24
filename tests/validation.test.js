@@ -38,21 +38,22 @@ test('consultation validation requires a meaningful private memo', () => {
 test('student registration requires verified identity fields and a strong matching password', () => {
   const base = {
     displayName: ' 김하늘 ', email: 'STUDENT@EXAMPLE.COM', password: 'careerfit1', passwordConfirm: 'careerfit1',
-    studentNo: ' 20261234 ', department: ' 컴퓨터공학과 ', grade: '2학년', phone: '', interests: 'UX, 데이터 분석, UX', goal: '', concern: '', privacyConsent: true,
+    studentNo: ' 2026123 ', department: ' 컴퓨터공학과 ', grade: '2학년', phone: '', interests: 'UX, 데이터 분석, UX', goal: '', concern: '', privacyConsent: true,
   };
   const valid = validateStudentRegistrationInput(base);
   assert.equal(valid.value.email, 'student@example.com');
-  assert.equal(valid.value.studentNo, '20261234');
+  assert.equal(valid.value.studentNo, '2026123');
   assert.deepEqual(valid.value.interests, ['UX', '데이터 분석', 'UX']);
   assert.match(validateStudentRegistrationInput({ ...base, password: 'abcdefgh', passwordConfirm: 'abcdefgh' }).error, /영문과 숫자/);
   assert.match(validateStudentRegistrationInput({ ...base, passwordConfirm: 'different' }).error, /일치/);
   assert.match(validateStudentRegistrationInput({ ...base, privacyConsent: false }).error, /동의/);
+  assert.match(validateStudentRegistrationInput({ ...base, studentNo: '20261234' }).error, /7자리/);
 });
 
 test('manual student registration normalizes counseling context and blocks duplicate student numbers', () => {
   const form = {
     name: ' 윤서아 ',
-    studentNo: ' 20269901 ',
+    studentNo: ' 2026901 ',
     department: ' 산업디자인학과 ',
     grade: '1학년',
     phone: ' 010-1234-5678 ',
@@ -62,7 +63,7 @@ test('manual student registration normalizes counseling context and blocks dupli
   };
   const valid = validateNewStudentInput(form);
   assert.equal(valid.value.name, '윤서아');
-  assert.equal(valid.value.studentNo, '20269901');
+  assert.equal(valid.value.studentNo, '2026901');
   assert.deepEqual(valid.value.interests, ['UX', '서비스 기획']);
-  assert.match(validateNewStudentInput(form, [{ studentNo: '20269901' }]).error, /이미 등록/);
+  assert.match(validateNewStudentInput(form, [{ studentNo: '2026901' }]).error, /이미 등록/);
 });

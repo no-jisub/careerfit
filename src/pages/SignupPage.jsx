@@ -67,7 +67,7 @@ export default function SignupPage() {
         </section>
         {form.role === 'student' && <section className="signup-form-section">
           <div className="signup-section-heading"><strong>학생 정보</strong><span>상담사 배정과 맞춤 상담 준비에 활용됩니다.</span></div>
-          <div className="form-row"><label>학번<input value={form.studentNo} onChange={event => update('studentNo', event.target.value)} required /></label><label>학년<select value={form.grade} onChange={event => update('grade', event.target.value)}>{['1학년','2학년','3학년','4학년','졸업생'].map(grade => <option key={grade}>{grade}</option>)}</select></label></div>
+          <div className="form-row"><label>학번<input inputMode="numeric" pattern="[0-9]{7}" maxLength="7" value={form.studentNo} onChange={event => update('studentNo', event.target.value.replace(/\D/g, '').slice(0, 7))} placeholder="2026123" required /></label><label>학년<select value={form.grade} onChange={event => update('grade', event.target.value)}>{['1학년','2학년','3학년','4학년','졸업생'].map(grade => <option key={grade}>{grade}</option>)}</select></label></div>
           <label>학과<input value={form.department} onChange={event => update('department', event.target.value)} required /></label>
           <label>연락처 <small>선택</small><input autoComplete="tel" value={form.phone} onChange={event => update('phone', event.target.value)} placeholder="010-0000-0000" /></label>
           <label>관심 분야 <small>선택 · 쉼표로 구분</small><input value={form.interests} onChange={event => update('interests', event.target.value)} placeholder="서비스 기획, 데이터 분석" /></label>

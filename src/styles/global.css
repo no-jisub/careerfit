@@ -3646,8 +3646,8 @@ label { letter-spacing: -.01em; }
   .student-consultation-records .consultation-date-navigation [role="tab"] { min-width: 142px; }
 }
 
-/* Step-up access for student identifiers */
-.masked-identifier,
+/* Public student number and step-up access for contact details */
+.student-identifier,
 .sensitive-value {
   font-variant-numeric: tabular-nums;
   letter-spacing: .025em;
@@ -5737,7 +5737,7 @@ time {
 .student-hero-sensitive .sensitive-profile dl {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
 }
 .student-hero-sensitive .sensitive-profile dl div {
   min-width: 0;
@@ -6850,5 +6850,88 @@ textarea {
   :root {
     --type-page: 26px;
     --type-title: 18px;
+  }
+}
+
+/* Shared workspace page start and title proportions. */
+:root {
+  --workspace-content-top: 24px;
+  --page-intro-icon-size: 46px;
+}
+
+.app-shell .content {
+  padding-top: var(--workspace-content-top);
+}
+
+.app-shell .content > :first-child {
+  margin-top: 0;
+}
+
+.app-shell .page-intro {
+  margin: 0 0 26px;
+  align-items: center;
+}
+
+.app-shell .page-intro-heading {
+  align-items: center;
+  gap: 14px;
+}
+
+.app-shell .page-intro-icon {
+  width: var(--page-intro-icon-size);
+  height: var(--page-intro-icon-size);
+  margin-top: 0;
+  flex-basis: var(--page-intro-icon-size);
+  border-color: rgba(var(--primary-rgb), .15);
+  border-radius: var(--radius-component);
+  color: var(--blue-dark);
+  background: rgba(var(--primary-rgb), .045);
+}
+
+.app-shell .page-intro h1 {
+  font-size: clamp(28px, 2vw, 30px);
+  line-height: 1.28;
+  letter-spacing: -.035em;
+}
+
+.app-shell .page-intro p {
+  max-width: 760px;
+  margin-top: 6px;
+  font-size: var(--type-body);
+  line-height: 1.6;
+}
+
+@media (max-width: 980px) {
+  :root {
+    --workspace-content-top: 22px;
+  }
+
+  .app-shell .page-intro {
+    margin-bottom: 24px;
+  }
+}
+
+@media (max-width: 600px) {
+  :root {
+    --workspace-content-top: 18px;
+    --page-intro-icon-size: 42px;
+  }
+
+  .app-shell .page-intro-heading {
+    align-items: flex-start;
+    gap: 11px;
+  }
+
+  .app-shell .page-intro-icon {
+    margin-top: 1px;
+  }
+
+  .app-shell .page-intro h1 {
+    font-size: 26px;
+  }
+
+  .app-shell .page-intro p {
+    margin-top: 5px;
+    font-size: var(--type-body-sm);
   }
 }

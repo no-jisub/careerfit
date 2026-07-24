@@ -7,7 +7,6 @@ import { IconButton } from './UI';
 import { useAuth } from '../auth/AuthContext';
 import { buildOperationalNotifications } from '../utils/operations';
 import { isAdministrator } from '../utils/roles';
-import { maskStudentNo } from '../utils/sensitiveData';
 import { filterNotificationsForRecipient, getSessionActorUid } from '../utils/demoInteraction';
 import { mergeNotifications } from '../utils/notifications';
 
@@ -132,7 +131,7 @@ export default function AppLayout({ logout }) {
   const searchResults = useMemo(() => {
     const query = deferredSearch.trim().toLowerCase();
     if (!query) return [];
-    const studentResults = students.filter(student => [student.name, student.studentNo, student.department, student.goal].some(value => value?.toLowerCase().includes(query))).slice(0, 4).map(student => ({ id: `student-${student.id}`, title: student.name, description: `${student.department} · ${maskStudentNo(student.studentNo)}`, to: `/students/${student.id}`, type: '학생' }));
+    const studentResults = students.filter(student => [student.name, student.studentNo, student.department, student.goal].some(value => value?.toLowerCase().includes(query))).slice(0, 4).map(student => ({ id: `student-${student.id}`, title: student.name, description: `${student.department} · ${student.studentNo}`, to: `/students/${student.id}`, type: '학생' }));
     const consultationResults = consultations.filter(item => [item.purpose, item.summary, item.type].some(value => value?.toLowerCase().includes(query))).slice(0, 3).map(item => { const student = students.find(candidate => candidate.id === item.studentId); return { id: `consultation-${item.id}`, title: item.purpose, description: `${student?.name || '학생'} · ${item.date}`, to: `/students/${item.studentId}`, type: '상담' }; });
     return [...studentResults, ...consultationResults];
   }, [deferredSearch, students, consultations]);
@@ -298,7 +297,7 @@ export default function AppLayout({ logout }) {
         <div className="quick-student-list">
           {quickStudents.map(student => <button type="button" key={student.id} onClick={() => startConsultation(student.id)}>
             <span className="avatar small" aria-hidden="true">{student.name.slice(0, 1)}</span>
-            <span><strong>{student.name}</strong><small>{student.department} · {maskStudentNo(student.studentNo)}</small></span>
+            <span><strong>{student.name}</strong><small>{student.department} · {student.studentNo}</small></span>
             <span className="quick-student-action">기록 작성<Icon name="arrow" size={15} /></span>
           </button>)}
           {!quickStudents.length && <div className="quick-student-empty"><Icon name="search" size={22} /><strong>일치하는 학생이 없습니다</strong><p>검색어를 줄이거나 학생 관리에서 먼저 학생을 확인해 주세요.</p></div>}

@@ -186,6 +186,8 @@
 
 **Pattern Name:** Trust + Next Best Action
 
+- **Workspace start:** Every counselor/admin tab starts `24px` below the floating top bar (`22px` on tablet, `18px` on mobile), regardless of whether its first block is a page intro or a custom hero.
+- **Page intro:** Use a `28–30px` title, `14px` description, and an optional `46px` rounded-square SVG icon container. Keep the icon and title group vertically centered and use a `14px` gap.
 - **Workflow Strategy:** Surface today's appointments and overdue actions first, then preserve context for deeper case work.
 - **CTA Placement:** One primary task action per page; secondary actions remain visually subordinate.
 - **Section Order:** 1. Page context, 2. urgent summary, 3. primary work list, 4. recent context and shortcuts.

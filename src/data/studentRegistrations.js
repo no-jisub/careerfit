@@ -4,7 +4,7 @@ export const initialStudentRegistrations = [
     uid: 'demo-pending-student',
     email: 'new-student@careerfit.local',
     displayName: '오지우',
-    studentNo: '20261307',
+    studentNo: '2026307',
     department: '경영학과',
     grade: '1학년',
     phone: '010-3184-7712',

@@ -67,10 +67,10 @@ service cloud.firestore {
     }
 
     function validStudentSensitiveProfile(data) {
-      return validText(data.studentId, 128)
+      return data.keys().hasOnly(['studentId', 'studentUid', 'counselorUid', 'phone', 'createdAt', 'updatedAt'])
+        && validText(data.studentId, 128)
         && validText(data.studentUid, 128)
         && validText(data.counselorUid, 128)
-        && validText(data.studentNo, 40)
         && validOptionalText(data, 'phone', 40);
     }
 
@@ -302,6 +302,7 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.auth.uid == userId
         && validStudentRegistration(request.resource.data)
+        && request.resource.data.studentNo.matches('^[0-9]{7}$')
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.emailVerified == false
@@ -327,7 +328,9 @@ service cloud.firestore {
         || (isStudent() && resource.data.uid == request.auth.uid);
       // Student identity and assignment changes remain administrator-only.
       // Assigned counselors can update the students in their own caseload.
-      allow create: if validStudent(request.resource.data) && (isAdmin()
+      allow create: if validStudent(request.resource.data)
+        && request.resource.data.studentNo.matches('^[0-9]{7}$')
+        && (isAdmin()
         || (isCounselor()
           && request.resource.data.counselorUid == request.auth.uid
           && request.resource.data.uid.matches('^manual-[A-Za-z0-9_-]+$')));
@@ -348,7 +351,7 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Full student identifiers are never readable from the client. They are
+    // Contact details are isolated from ordinary student documents and are
     // returned only by the callable function after assignment + PIN checks.
     match /studentSensitiveProfiles/{studentId} {
       allow read: if false;

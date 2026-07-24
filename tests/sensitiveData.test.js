@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import {
   isValidSensitivePin,
   maskPhone,
-  maskStudentNo,
   normalizeSensitivePin,
 } from '../src/utils/sensitiveData.js';
 import {
@@ -14,11 +13,9 @@ import {
   verifyPinCredential,
 } from '../functions/sensitiveAccess.js';
 
-test('student identifiers are masked without changing already masked values', () => {
+test('student phone numbers are masked without changing already masked values', () => {
   assert.equal(maskPhone('010-2412-5634'), '010-24••-56••');
   assert.equal(maskPhone('010-24**-56**'), '010-24**-56**');
-  assert.equal(maskStudentNo('20251234'), '2025••34');
-  assert.equal(maskStudentNo('2025••34'), '2025••34');
 });
 
 test('sensitive PIN input accepts exactly four digits', () => {

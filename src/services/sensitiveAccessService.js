@@ -39,7 +39,6 @@ export async function revealStudentSensitiveData({ student, pin, demoMode }) {
     return {
       sensitive: {
         phone: student.phone || '',
-        studentNo: student.studentNo || '',
       },
       expiresInSeconds: SENSITIVE_REVEAL_SECONDS,
     };

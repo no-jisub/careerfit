@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Icon from '../components/Icon';
 import { EmptyState, PageIntro } from '../components/UI';
-import { maskStudentNo } from '../utils/sensitiveData';
 
 const fullDateFormatter = new Intl.DateTimeFormat('ko-KR', {
   year: 'numeric',
@@ -65,7 +64,7 @@ export default function ConsultationsPage() {
         return <article className="card consultation-student-card" key={student.id}>
           <header className="consultation-student-head">
             <span className="consultation-student-avatar" aria-hidden="true">{student.name.slice(1, 3)}</span>
-            <div><h2>{student.name}</h2><p>{maskStudentNo(student.studentNo)} · {student.department} · {student.grade}</p></div>
+            <div><h2>{student.name}</h2><p>{student.studentNo} · {student.department} · {student.grade}</p></div>
             <dl><div><dt>누적 상담</dt><dd>{records.length}회</dd></div><div><dt>최근 상담</dt><dd>{getDateTabLabel(records[0].date).short}</dd></div></dl>
             <Link className="button secondary small" to={`/students/${student.id}`}>학생 전체 기록 <Icon name="arrow" size={15} /></Link>
           </header>

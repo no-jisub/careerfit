@@ -167,7 +167,7 @@ export const revealStudentSensitiveData = onCall({
       actorUid: request.auth.uid,
       actorRole: profile.role,
       studentId,
-      fields: ['phone', 'studentNo'],
+      fields: ['phone'],
       outcome: attempt.locked ? 'locked' : 'denied',
       accessedAt: FieldValue.serverTimestamp(),
     });
@@ -186,21 +186,20 @@ export const revealStudentSensitiveData = onCall({
   const sensitive = sensitiveSnapshot.exists ? sensitiveSnapshot.data() : studentSnapshot.data();
   const values = {
     phone: typeof sensitive?.phone === 'string' ? sensitive.phone : '',
-    studentNo: typeof sensitive?.studentNo === 'string' ? sensitive.studentNo : '',
   };
 
   await database.collection('sensitiveAccessAudit').add({
     actorUid: request.auth.uid,
     actorRole: profile.role,
     studentId,
-    fields: ['phone', 'studentNo'],
+    fields: ['phone'],
     outcome: 'granted',
     accessedAt: FieldValue.serverTimestamp(),
   });
   logger.info('Sensitive student data revealed', {
     actorUid: request.auth.uid,
     studentId,
-    fields: ['phone', 'studentNo'],
+    fields: ['phone'],
   });
   return { sensitive: values, expiresInSeconds: REVEAL_SECONDS };
 });
@@ -232,9 +231,10 @@ export const updateOwnSensitivePhone = onCall({
     ...(!sensitiveSnapshot.exists ? {
       studentId: studentSnapshot.id,
       studentUid: request.auth.uid,
-      studentNo: studentSnapshot.data().studentNo,
+      counselorUid: studentSnapshot.data().counselorUid,
     } : {}),
     phone,
+    studentNo: FieldValue.delete(),
     updatedAt: now,
   }, { merge: true });
   batch.set(studentSnapshot.ref, { phone: maskedPhone, updatedAt: now }, { merge: true });
