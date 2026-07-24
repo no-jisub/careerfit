@@ -1802,6 +1802,11 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .student-request-card form label { margin:0; color:var(--navy); font-size:12px; font-weight: 700; }
 .student-request-card form label > input, .student-request-card form label > select, .student-request-card form label > textarea { margin-top:7px; }
 .student-request-card form label > small { margin-top:6px; display:block; color:var(--muted); font-size:10px; font-weight:500; text-align:right; }
+.student-request-label-line { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+.student-request-label-line > span { min-width:0; }
+.student-request-label-line > small { flex:0 0 auto; margin:0; color:var(--muted); font-size:10px; font-weight:500; line-height:1.4; white-space:nowrap; }
+.student-request-attachment-field > input[type="file"] { margin-top:12px; }
+.student-request-card form .student-request-file-help { margin-top:8px; }
 .student-slot-warning { margin:0 0 18px!important; padding:12px 14px; border-radius:10px; color:#8c3036!important; background:var(--red-soft); }
 .student-request-actions { margin-top:5px; display:flex; justify-content:flex-end; gap:9px; }
 .appointment-request-details { margin-top:8px; }
