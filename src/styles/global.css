@@ -1523,9 +1523,14 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .recurring-preview,
 .recurring-availability-form > .form-error,
 .recurring-availability-form > .modal-actions { grid-column: 1 / -1; }
-.recurring-availability-form header { justify-content: space-between; align-items: center; }
+.recurring-availability-form header {
+  padding-right: 56px;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 4px;
+}
 .recurring-availability-form header h3 { margin: 2px 0 0; }
-.recurring-availability-form header p { max-width: 430px; margin: 0 48px 0 0; line-height: 1.5; }
+.recurring-availability-form header p { max-width: none; margin: 0; line-height: 1.5; }
 .recurring-availability-form fieldset { min-width: 0; border: 1px solid var(--border-color, #dfe5ec); border-radius: 12px; padding: 11px 12px; }
 .recurring-period-fields, .recurring-time-fields { gap: 10px; }
 .recurring-period-fields > label, .recurring-time-fields > label { flex: 1; margin-bottom: 0; }
