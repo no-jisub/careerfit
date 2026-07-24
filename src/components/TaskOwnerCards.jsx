@@ -27,8 +27,7 @@ export default function TaskOwnerCards({
             <small>{option.description}</small>
           </span>
           {typeof option.count === 'number'
-            ? <span className="task-owner-card-count"><strong>{option.count}</strong><small>건</small></span>
-            : <span className="task-owner-card-check" aria-hidden="true">{selected && <Icon name="check" size={16} />}</span>}
+            && <span className="task-owner-card-count"><strong>{option.count}</strong><small>건</small></span>}
         </label>;
       })}
     </div>

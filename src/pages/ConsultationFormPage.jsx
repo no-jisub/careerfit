@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useApp } from '../App';
+import { useApp } from '../context/AppContext';
 import Icon from '../components/Icon';
 import { EmptyState, StatusBadge } from '../components/UI';
 import { generateConsultationDraft } from '../services/consultationAiService';
@@ -154,7 +154,7 @@ export default function ConsultationFormPage() {
     const reviewedAt = new Date().toISOString();
     setAiReviewedAt(reviewedAt);
     setError('');
-    notify(`AI 초안을 검토 완료하고 추천 프로그램 ${reviewedPrograms.length}개와 할 일 ${reviewedTasks.length}개를 입력했습니다.`);
+    notify(`초안 검토를 마치고 추천 프로그램 ${reviewedPrograms.length}개와 할 일 ${reviewedTasks.length}개를 입력했습니다.`);
   };
   useEffect(() => {
     if (!student) return undefined;
@@ -209,7 +209,7 @@ export default function ConsultationFormPage() {
   };
   const generate = async () => {
     setError('');
-    if (!form.rawMemo.trim()) { setError('상담 메모를 입력하면 AI 초안을 생성할 수 있습니다.'); return; }
+    if (!form.rawMemo.trim()) { setError('상담 메모를 입력하면 정리된 초안을 만들 수 있습니다.'); return; }
     setLoading(true);
     try {
       setAiDraft(await generateConsultationDraft({
@@ -228,7 +228,7 @@ export default function ConsultationFormPage() {
   const save = async () => {
     if (saving) return;
     if (aiDraft && !aiReviewedAt) {
-      setError('AI 초안의 작성 근거를 확인하고 ‘근거 검토 완료’를 눌러 주세요.');
+      setError('초안의 작성 근거를 확인하고 ‘근거 검토 완료’를 눌러 주세요.');
       document.querySelector('#ai-review-confirm')?.focus();
       return;
     }
@@ -333,19 +333,26 @@ export default function ConsultationFormPage() {
 
   return <>
     <nav className="breadcrumb" aria-label="현재 위치"><Link to={`/students/${student.id}`}>{student.name}</Link><Icon name="chevron" size={14} /><span>상담 기록 작성</span></nav>
-    <div className="form-page-header"><div><span className="eyebrow">상담 진행 중 · {form.date}</span><h1>상담 기록 작성</h1><p>{linkedAppointment ? `${linkedAppointment.time}–${linkedAppointment.endTime} 예약과 연결됨` : '상담 중에는 핵심만 메모하고, AI 초안으로 정리해 보세요.'}</p>{draftSavedAt && <small>마지막 임시 저장 {new Date(draftSavedAt).toLocaleString('ko-KR')}</small>}</div><div><button className="button secondary" disabled={saving} onClick={async () => { await removeDocument('consultationDrafts', draftId); setConsultationDrafts(items => items.filter(item => item.id !== draftId)); setDraftForm(null); setDraftSavedAt(''); notify('임시 저장 내용을 삭제했습니다.'); }}>임시 기록 삭제</button><button className="button primary" disabled={saving} onClick={save}>{saving ? '저장 중...' : '상담 기록 저장'}</button></div></div>
+    <div className="form-page-header"><div><span className="eyebrow">상담 진행 중 · {form.date}</span><h1>상담 기록 작성</h1><p>{linkedAppointment ? `${linkedAppointment.time}–${linkedAppointment.endTime} 예약과 연결됨` : '핵심 메모를 남기면 상담 목적, 추천 프로그램과 할 일 순서로 정리할 수 있습니다.'}</p>{draftSavedAt && <small>마지막 임시 저장 {new Date(draftSavedAt).toLocaleString('ko-KR')}</small>}</div><div><button className="button secondary" disabled={saving} onClick={async () => { await removeDocument('consultationDrafts', draftId); setConsultationDrafts(items => items.filter(item => item.id !== draftId)); setDraftForm(null); setDraftSavedAt(''); notify('임시 저장 내용을 삭제했습니다.'); }}>임시 기록 삭제</button><button className="button primary" disabled={saving} onClick={save}><Icon name="check" size={17} />{saving ? '저장 중...' : '상담 기록 저장'}</button></div></div>
+    <nav className="consultation-step-nav" aria-label="상담 기록 작성 단계">
+      {[
+        { id: 'consultation-basic', icon: 'calendar', label: '1. 기본 정보', description: '날짜·유형·목적' },
+        { id: 'consultation-note', icon: 'note', label: '2. 상담 메모', description: '핵심 내용과 공개 범위' },
+        { id: 'consultation-tasks', icon: 'check', label: '3. 상담 후 할 일', description: '담당자·기한 등록' },
+      ].map(step => <button type="button" key={step.id} onClick={() => document.getElementById(step.id)?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })}><span><Icon name={step.icon} size={17} /></span><b>{step.label}</b><small>{step.description}</small></button>)}
+    </nav>
     <div className="consultation-layout">
       <section className="card consultation-form-card">
-        <div className="form-section-title"><span>1</span><div><h2>상담 기본 정보</h2><p>상담의 목적과 유형을 선택해 주세요.</p></div></div>
+        <div className="form-section-title" id="consultation-basic"><span>1</span><div><h2>상담 기본 정보</h2><p>상담의 목적과 유형을 선택해 주세요.</p></div></div>
         <div className="form-grid"><label>상담 날짜<input type="date" value={form.date} onChange={e => update('date', e.target.value)} /></label><label>상담 유형<select value={form.type} onChange={e => update('type', e.target.value)}>{['진로 탐색', '취업 준비', '자기소개서', '면접', '비교과 활동', '포트폴리오', '기타'].map(x => <option key={x}>{x}</option>)}</select></label><label className="full">상담 목적 <span className="required">필수</span><input value={form.purpose} onChange={e => update('purpose', e.target.value)} /></label></div>
         <div className="form-divider" />
-        <div className="form-section-title"><span>2</span><div><h2>상담 메모</h2><p>완성된 문장보다 중요한 키워드와 맥락을 편하게 남겨 주세요.</p></div></div>
+        <div className="form-section-title" id="consultation-note"><span>2</span><div><h2>상담 메모</h2><p>완성된 문장보다 중요한 키워드와 맥락을 편하게 남겨 주세요.</p></div></div>
         <label>학생의 현재 고민<textarea rows="3" value={form.currentConcern} onChange={e => update('currentConcern', e.target.value)} /></label>
-        <label>상담 담당자 내부 메모 <span className="required">필수</span><textarea id="rawMemo" className="memo-area" rows="8" value={form.rawMemo} onChange={e => update('rawMemo', e.target.value)} placeholder="예: 개발 수업은 재미있었지만, 문제를 정의하고 사람들과 조율하는 역할에 더 흥미를 느낌..." /><small className="field-hint">원문 메모는 학생에게 공개되지 않으며 담당 상담사와 권한이 있는 관리자만 접근할 수 있습니다. AI 초안 생성 시 이메일·전화번호·주민등록번호 형식은 전송 전에 자동 마스킹됩니다.</small>{privacyPreflight.needsMasking && <span className="privacy-preflight" role="status"><Icon name="shield" size={16} /><span><strong>개인정보 사전 점검</strong>{privacyPreflight.findings.map(item => `${item.label} ${item.count}건`).join(' · ')} 감지 — AI 전송 전 서버에서 마스킹됩니다.</span></span>}{error && <span className="field-error" role="alert">{error}</span>}</label>
+        <label>상담 담당자 내부 메모 <span className="required">필수</span><textarea id="rawMemo" className="memo-area" rows="8" value={form.rawMemo} onChange={e => update('rawMemo', e.target.value)} placeholder="예: 개발 수업은 재미있었지만, 문제를 정의하고 사람들과 조율하는 역할에 더 흥미를 느낌..." /><small className="field-hint">원문 메모는 학생에게 공개되지 않으며 담당 상담사와 권한이 있는 관리자만 접근할 수 있습니다. 초안 정리 전 이메일·전화번호·주민등록번호 형식은 서버에서 자동으로 가려집니다.</small>{privacyPreflight.needsMasking && <span className="privacy-preflight" role="status"><Icon name="shield" size={16} /><span><strong>개인정보 사전 점검</strong>{privacyPreflight.findings.map(item => `${item.label} ${item.count}건`).join(' · ')} 감지 — 정리 요청 전 서버에서 가려집니다.</span></span>}{error && <span className="field-error" role="alert">{error}</span>}</label>
         <fieldset className="publication-fieldset"><legend>학생에게 공개할 내용</legend><p>체크한 항목만 학생 화면에 표시됩니다. 상담사 내부 메모는 항상 비공개입니다.</p><div>{consultationPublicFieldOptions.map(item => <label key={item.key}><input type="checkbox" checked={form.visibility?.[item.key] ?? false} onChange={e => update('visibility', { ...form.visibility, [item.key]: e.target.checked })} /><span>{item.label}</span></label>)}</div></fieldset>
         <section className={`selected-programs ${form.programs.length ? 'has-selection' : ''}`} aria-labelledby="program-picker-title">
           <div className="selected-programs-header">
-            <span className="program-picker-icon"><Icon name="spark" size={20} /></span>
+            <span className="program-picker-icon"><Icon name="target" size={20} /></span>
             <div>
               <span className="eyebrow">학생 맞춤 비교과 연결</span>
               <h3 id="program-picker-title">추천 프로그램 찾기</h3>
@@ -359,7 +366,7 @@ export default function ConsultationFormPage() {
           </div> : <div className="selected-program-empty"><Icon name="target" size={17} /><span>아직 연결된 프로그램이 없습니다. 추천 결과에서 바로 선택할 수 있어요.</span></div>}
         </section>
         <div className="form-divider" />
-        <div className="form-section-title"><span>3</span><div><h2>상담 후 할 일</h2><p>상담이 끝난 뒤 실행할 일을 담당자와 기한까지 함께 등록하세요.</p></div></div>
+        <div className="form-section-title" id="consultation-tasks"><span>3</span><div><h2>상담 후 할 일</h2><p>상담이 끝난 뒤 실행할 일을 담당자와 기한까지 함께 등록하세요.</p></div></div>
         <section className="consultation-task-builder" aria-labelledby="task-builder-title">
           <div className="task-builder-heading">
             <div><span className="task-builder-icon"><Icon name="check" size={19} /></span><div><h3 id="task-builder-title">저장과 동시에 할 일로 등록</h3><p>내용을 입력한 항목만 상담 후 할 일 목록과 담당자 화면에 추가됩니다.</p></div></div>
@@ -393,16 +400,16 @@ export default function ConsultationFormPage() {
       <aside className="consultation-aside">
         <section className="card student-context"><div className="context-head"><div><strong>{student.name}</strong><p>{student.department} · {student.grade}</p></div><StatusBadge status="inProgress" /></div><dl><div><dt>진로 목표</dt><dd>{student.goal}</dd></div><div><dt>최근 상담</dt><dd>{student.lastConsultation}</dd></div></dl></section>
         <section className="card ai-card">
-          <span className="ai-label"><Icon name="spark" size={16} /> AI 작성 도우미</span>
+          <span className="ai-label"><Icon name="note" size={16} /> 상담 기록 정리 도우미</span>
           <h2>{aiDraft ? '상담일지 초안' : '메모를 상담일지로 정리해요'}</h2>
           {!aiDraft && <>
             <p>내부 메모 한 번으로 상담 요약, 추천 프로그램, 상담 후 할 일을 함께 만들어요. 검토 전에는 입력란에 반영되지 않습니다.</p>
             <div className="ai-privacy-notice"><Icon name="lock" size={16} /><span><strong>최소 정보만 전송</strong>학생 이름·학번·연락처는 요청 데이터에 포함하지 않고 메모 속 직접 식별정보 형식은 서버에서 마스킹합니다.</span></div>
           </>}
           {loading && <div className="ai-loading" role="status" aria-live="polite"><span className="spinner" />상담 맥락을 정리하고 있어요...</div>}
-          {!aiDraft && !loading && <button className="button ai full" onClick={generate}><Icon name="spark" size={18} />AI 통합 초안 만들기</button>}
+          {!aiDraft && !loading && <button className="button ai full" onClick={generate}><Icon name="note" size={18} />상담 메모로 초안 만들기</button>}
           {aiDraft && !loading && <>
-            <div className="ai-warning"><Icon name="alert" size={17} />AI가 작성한 미리보기입니다. 근거와 반영될 내용을 확인한 뒤 승인해 주세요.</div>
+            <div className="ai-warning"><Icon name="alert" size={17} />메모를 바탕으로 정리한 미리보기입니다. 근거와 반영될 내용을 확인한 뒤 승인해 주세요.</div>
             <div className="ai-review-progress" aria-live="polite">
               <div><span>근거 검토 진행률</span><strong>{reviewedEvidenceCount} / {consultationEvidenceFieldOptions.length}</strong></div>
               <i><b style={{ width: `${reviewedEvidenceCount / consultationEvidenceFieldOptions.length * 100}%` }} /></i>
@@ -411,15 +418,15 @@ export default function ConsultationFormPage() {
             <div className="ai-fields">
               {[['purpose', '상담 목적'], ['summary', '상담 주요 내용'], ['concern', '학생의 고민과 목표']].map(([key, label]) => <label key={key}>{label}<textarea rows={key === 'summary' ? 5 : 3} value={aiDraft[key] || ''} onChange={e => updateAiText(key, e.target.value)} /></label>)}
               <section className="ai-application-preview" aria-labelledby="ai-application-preview-title">
-                <div className="ai-preview-head"><div><span><Icon name="spark" size={15} />일괄 반영 미리보기</span><h3 id="ai-application-preview-title">승인하면 아래 내용이 입력됩니다</h3></div><strong>{(aiDraft.programs?.length || 0) + (aiDraft.followUpTasks?.length || 0)}개 항목</strong></div>
+                <div className="ai-preview-head"><div><span><Icon name="list" size={15} />일괄 반영 미리보기</span><h3 id="ai-application-preview-title">승인하면 아래 내용이 입력됩니다</h3></div><strong>{(aiDraft.programs?.length || 0) + (aiDraft.followUpTasks?.length || 0)}개 항목</strong></div>
                 <div className="ai-preview-block">
                   <div className="ai-preview-block-title"><span className="preview-kind program"><Icon name="target" size={14} /></span><div><strong>추천 프로그램</strong><small>실제 등록된 프로그램 후보에서만 선택</small></div></div>
-                  {aiDraft.programs?.length ? <div className="ai-preview-programs">{aiDraft.programs.map(program => <span key={program}>{program}<button type="button" aria-label={`${program} AI 추천에서 제외`} onClick={() => removeAiProgram(program)}><Icon name="close" size={13} /></button></span>)}</div> : <p className="ai-preview-empty">상담 내용과 직접 맞는 프로그램을 찾지 못했습니다.</p>}
+                  {aiDraft.programs?.length ? <div className="ai-preview-programs">{aiDraft.programs.map(program => <span key={program}>{program}<button type="button" aria-label={`${program} 추천에서 제외`} onClick={() => removeAiProgram(program)}><Icon name="close" size={13} /></button></span>)}</div> : <p className="ai-preview-empty">상담 내용과 직접 맞는 프로그램을 찾지 못했습니다.</p>}
                 </div>
                 <div className="ai-preview-block">
                   <div className="ai-preview-block-title"><span className="preview-kind task"><Icon name="check" size={14} /></span><div><strong>상담 후 할 일</strong><small>담당자와 권장 기한까지 함께 반영</small></div></div>
                   <div className="ai-preview-tasks">{(aiDraft.followUpTasks || []).map((task, index) => <article key={`${task.owner}-${index}`}>
-                    <div><span className={`task-owner-chip ${task.owner === '상담사' ? 'counselor' : 'student'}`}>{task.owner}</span><button type="button" aria-label={`AI 할 일 ${index + 1} 삭제`} onClick={() => removeAiTask(index)}><Icon name="close" size={14} /></button></div>
+                    <div><span className={`task-owner-chip ${task.owner === '상담사' ? 'counselor' : 'student'}`}>{task.owner}</span><button type="button" aria-label={`초안 할 일 ${index + 1} 삭제`} onClick={() => removeAiTask(index)}><Icon name="close" size={14} /></button></div>
                     <label>할 일 내용<textarea rows="2" maxLength="500" value={task.content} onChange={event => updateAiTask(index, 'content', event.target.value)} /></label>
                     <label className="ai-task-due">권장 완료일 <span>상담일로부터</span><input type="number" min="1" max="60" value={task.dueInDays} onChange={event => updateAiTask(index, 'dueInDays', event.target.value)} />일 후 · {addDays(form.date, task.dueInDays)}</label>
                   </article>)}</div>
@@ -427,7 +434,7 @@ export default function ConsultationFormPage() {
               </section>
               <section className="ai-review-section">
                 <h3>항목별 작성 근거</h3>
-                <p>AI가 사용한 상담 내용을 읽고 각 항목을 직접 확인해 주세요. ‘근거 부족’이면 초안 내용을 보완하거나 삭제합니다.</p>
+                <p>초안 작성에 사용된 상담 내용을 읽고 각 항목을 직접 확인해 주세요. ‘근거 부족’이면 내용을 보완하거나 삭제합니다.</p>
                 {consultationEvidenceFieldOptions.map(({ key, label }) => <div className={`ai-evidence ${evidenceReviews[key] ? 'reviewed' : ''}`} key={key}>
                   <div className="ai-evidence-head"><strong>{label}</strong><span>{evidenceReviews[key] ? '확인 완료' : '확인 필요'}</span></div>
                   <ul>{(aiDraft.evidence?.[key]?.length ? aiDraft.evidence[key] : ['근거 부족']).map((item, index) => <li key={`${key}-${index}`}>{item}</li>)}</ul>
@@ -442,7 +449,7 @@ export default function ConsultationFormPage() {
                 {aiDraft.needsConfirmation?.length ? <>
                   <ul>{aiDraft.needsConfirmation.map((item, index) => <li key={`confirmation-${index}`}>{item}</li>)}</ul>
                   <label className="ai-review-check"><input type="checkbox" checked={confirmationAcknowledged} onChange={event => { setConfirmationAcknowledged(event.target.checked); setAiReviewedAt(''); }} /><span>추가 확인 항목을 읽고 기록에 반영했습니다</span></label>
-                </> : <p>AI가 발견한 추가 확인 사항이 없습니다.</p>}
+                </> : <p>추가로 확인해야 할 사항이 없습니다.</p>}
               </section>
               {Boolean(aiDraft.sensitiveWarning?.length) && <section className="ai-review-section sensitive">
                 <h3><Icon name="alert" size={15} />공개 전 확인</h3>
@@ -462,6 +469,6 @@ export default function ConsultationFormPage() {
         </section>
       </aside>
     </div>
-    <div className="mobile-savebar"><button className="button secondary" disabled={saving} onClick={generate}>AI 초안</button><button className="button primary" disabled={saving} onClick={save}>{saving ? '저장 중...' : '상담 기록 저장'}</button></div>
+    <div className="mobile-savebar"><button className="button secondary" disabled={saving} onClick={generate}>초안 만들기</button><button className="button primary" disabled={saving} onClick={save}>{saving ? '저장 중...' : '상담 기록 저장'}</button></div>
   </>;
 }

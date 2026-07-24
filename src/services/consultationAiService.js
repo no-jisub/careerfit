@@ -38,13 +38,13 @@ export function generateLocalConsultationDraft(input) {
 }
 
 const errorMessages = {
-  'functions/unauthenticated': '로그인 후 AI 초안을 이용해 주세요.',
-  'functions/permission-denied': '승인된 상담 담당자만 AI 초안을 이용할 수 있습니다.',
-  'functions/resource-exhausted': '오늘의 AI 초안 생성 한도를 모두 사용했습니다.',
+  'functions/unauthenticated': '로그인 후 상담 기록 정리 도우미를 이용해 주세요.',
+  'functions/permission-denied': '승인된 상담 담당자만 기록 정리 도우미를 이용할 수 있습니다.',
+  'functions/resource-exhausted': '오늘의 자동 정리 사용 한도를 모두 사용했습니다.',
   'functions/invalid-argument': '상담 메모를 확인한 뒤 다시 시도해 주세요.',
-  'functions/deadline-exceeded': 'AI 응답 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.',
-  'functions/unavailable': 'AI 서비스에 일시적으로 연결할 수 없습니다.',
-  'functions/internal': 'AI 서버에서 초안을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  'functions/deadline-exceeded': '초안 정리 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.',
+  'functions/unavailable': '기록 정리 서비스에 일시적으로 연결할 수 없습니다.',
+  'functions/internal': '초안을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.',
 };
 
 function splitLegacyActions(value, owner, dueInDays) {
@@ -73,7 +73,7 @@ function normalizeDraftForPreview(draft, input) {
     evidence: {
       ...draft.evidence,
       programs: draft.evidence?.programs || ['상담 맥락과 제공된 프로그램 후보를 비교해 확인해야 합니다.'],
-      followUpTasks: draft.evidence?.followUpTasks || ['AI가 정리한 학생 및 상담사의 다음 행동을 확인해야 합니다.'],
+      followUpTasks: draft.evidence?.followUpTasks || ['정리된 학생 및 상담사의 다음 행동을 확인해야 합니다.'],
     },
   };
 }
@@ -82,7 +82,7 @@ export async function generateConsultationDraft(input) {
   if (!input.rawMemo?.trim()) throw new Error('상담 메모를 입력해 주세요.');
   const currentUser = auth?.currentUser;
   if (!currentUser) return generateLocalConsultationDraft(input);
-  if (!functions) throw new Error('AI 서비스를 사용할 수 있도록 Firebase 설정을 확인해 주세요.');
+  if (!functions) throw new Error('기록 정리 서비스를 사용할 수 있도록 Firebase 설정을 확인해 주세요.');
 
   try {
     const demoSession = currentUser.isAnonymous;
@@ -98,7 +98,7 @@ export async function generateConsultationDraft(input) {
       )
       : httpsCallable(functions, functionName, { timeout: 65000 });
     const result = await callable(input);
-    if (!result.data?.draft) throw new Error('AI 초안 응답 형식이 올바르지 않습니다.');
+    if (!result.data?.draft) throw new Error('초안 응답 형식이 올바르지 않습니다.');
     return {
       ...normalizeDraftForPreview(result.data.draft, input),
       reviewMeta: {
@@ -117,6 +117,6 @@ export async function generateConsultationDraft(input) {
     if (currentUser.isAnonymous && demoFallbackCodes.has(error?.code)) {
       return generateLocalConsultationDraft(input);
     }
-    throw new Error(errorMessages[error.code] || error.message || 'AI 초안을 만들지 못했습니다.');
+    throw new Error(errorMessages[error.code] || error.message || '상담 기록 초안을 만들지 못했습니다.');
   }
 }

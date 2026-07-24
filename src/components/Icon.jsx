@@ -24,6 +24,12 @@ const paths = {
   lock: <><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" /></>,
   shield: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="m9 12 2 2 4-4" /></>,
   eye: <><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></>,
+  key: <><circle cx="8" cy="15" r="4" /><path d="m11 12 8-8M17 4l3 3M15 8l2 2" /></>,
+  user: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>,
+  edit: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" /></>,
+  list: <><path d="M8 6h13M8 12h13M8 18h13" /><path d="M3 6h.01M3 12h.01M3 18h.01" /></>,
+  filter: <path d="M3 4h18l-7 8v6l-4 2v-8Z" />,
+  sidebar: <><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18M14 9l-3 3 3 3" /></>,
   play: <><circle cx="12" cy="12" r="9" /><path d="m10 8 6 4-6 4z" /></>,
   layers: <><path d="m12 2 9 5-9 5-9-5 9-5z" /><path d="m3 12 9 5 9-5M3 17l9 5 9-5" /></>,
 };

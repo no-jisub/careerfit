@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useApp } from '../App';
+import { useApp } from '../context/AppContext';
 import Icon from '../components/Icon';
 import { EmptyState, PageIntro } from '../components/UI';
 import { buildOperationalNotifications } from '../utils/operations';

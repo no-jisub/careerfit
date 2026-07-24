@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { useApp } from '../App';
+import { useApp } from '../context/AppContext';
 import { useAuth } from '../auth/AuthContext';
 import Icon from '../components/Icon';
 import { createRescheduleRequest, holdAvailabilityForReschedule, isAvailabilityBookable, upsertAppointmentById } from '../utils/appointments';

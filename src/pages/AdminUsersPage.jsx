@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useApp } from '../App';
+import { useApp } from '../context/AppContext';
 import { createManagedUser } from '../services/adminUserService';
 import { PageIntro } from '../components/UI';
 import { useAuth } from '../auth/AuthContext';
@@ -226,7 +226,7 @@ export default function AdminUsersPage() {
   };
 
   return <>
-    <PageIntro eyebrow="운영 관리" title="사용자와 담당 학생 관리" description="상담 담당자가 상담사와 학생 계정을 등록하고 담당 상담사를 배정합니다." />
+    <PageIntro icon="students" eyebrow="운영 관리" title="사용자와 담당 학생 관리" description="상담 담당자가 상담사와 학생 계정을 등록하고 담당 상담사를 배정합니다." />
     <section className="card pending-assignment-card">
       <div className="section-header"><div><span className="eyebrow">상담사 가입 승인</span><h2>승인 대기 {pendingCounselors.length}명</h2><p>이메일 인증을 마친 신규 상담사의 가입 요청을 승인하거나 거절하세요.</p></div></div>
       {pendingCounselors.length ? <div className="pending-registration-list counselor-approval-list">

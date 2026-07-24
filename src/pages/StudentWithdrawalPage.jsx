@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useApp } from '../App';
+import { useApp } from '../context/AppContext';
 import { useAuth } from '../auth/AuthContext';
 import { DEMO_STUDENT_ID } from '../utils/demoInteraction';
 import Icon from '../components/Icon';

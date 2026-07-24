@@ -1,4 +1,4 @@
-import { createContext, lazy, Suspense, useContext, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import AppLayout from './components/AppLayout';
 import { initialStudents } from './data/students';
@@ -19,6 +19,9 @@ import { isAdministrator, isOperationsStaff } from './utils/roles';
 import { createProgramRecommendationStore, createProgramStore, restoreProgramRecommendationStore, restoreProgramStore } from './utils/programs';
 import { restoreCounselorAvailabilityStore } from './utils/appointments';
 import { DEMO_STORAGE_KEYS } from './utils/demoInteraction';
+import { AppContext } from './context/AppContext';
+
+export { useApp } from './context/AppContext';
 
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const SignupPage = lazy(() => import('./pages/SignupPage'));
@@ -26,6 +29,7 @@ const AccountStatusPage = lazy(() => import('./pages/AccountStatusPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const StudentsPage = lazy(() => import('./pages/StudentsPage'));
 const StudentDetailPage = lazy(() => import('./pages/StudentDetailPage'));
+const ConsultationPreparationPage = lazy(() => import('./pages/ConsultationPreparationPage'));
 const ConsultationFormPage = lazy(() => import('./pages/ConsultationFormPage'));
 const FollowUpsPage = lazy(() => import('./pages/FollowUpsPage'));
 const ProgramsPage = lazy(() => import('./pages/ProgramsPage'));
@@ -40,15 +44,12 @@ const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const InsightsPage = lazy(() => import('./pages/InsightsPage'));
 
-const AppContext = createContext(null);
 const DEMO_DATA_VERSION = '2026-07-24-sensitive-access-v4';
 const DEMO_DATA_VERSION_KEY = 'careerfit_demo_data_version';
 const read = (key, fallback) => {
   try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; }
 };
 const readDemo = (key, fallback) => localStorage.getItem(DEMO_DATA_VERSION_KEY) === DEMO_DATA_VERSION ? read(key, fallback) : fallback;
-
-export function useApp() { return useContext(AppContext); }
 
 function RouteScrollManager() {
   const location = useLocation();
@@ -231,7 +232,10 @@ function CounselorRoutes() {
     <Route element={<AppLayout logout={logout} />}>
       <Route path="dashboard" element={<DashboardPage />} />
       <Route path="students" element={<StudentsPage />} />
+      <Route path="consultation-prep" element={<StudentsPage selectionMode="preparation" />} />
+      <Route path="consultation-write" element={<StudentsPage selectionMode="consultation" />} />
       <Route path="students/:studentId" element={<StudentDetailPage />} />
+      <Route path="students/:studentId/preparation" element={<ConsultationPreparationPage />} />
       <Route path="students/:studentId/consultation/new" element={<ConsultationFormPage />} />
       <Route path="consultations" element={<Navigate to="/students" replace />} />
       <Route path="follow-ups" element={<FollowUpsPage />} />

@@ -1,6 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useApp } from '../App';
+import { useApp } from '../context/AppContext';
 import { toDateKey } from '../utils/date';
 import Icon from './Icon';
 import { IconButton } from './UI';
@@ -13,23 +13,40 @@ import { mergeNotifications } from '../utils/notifications';
 
 const navGroups = [
   {
-    label: '오늘',
     items: [
-      { to: '/dashboard', label: '대시보드', shortLabel: '홈', icon: 'dashboard' },
+      { to: '/dashboard', label: '메인 대시보드', shortLabel: '홈', icon: 'dashboard' },
+      {
+        to: '/students',
+        label: '학생 관리',
+        shortLabel: '학생',
+        icon: 'students',
+        activeWhen: pathname => /^\/students\/[^/]+$/.test(pathname),
+      },
     ],
   },
   {
     label: '상담 관리',
     items: [
       { to: '/appointments', label: '상담 일정', shortLabel: '일정', icon: 'calendar' },
-      { to: '/students', label: '학생 관리', shortLabel: '학생', icon: 'students' },
+      {
+        to: '/consultation-prep',
+        label: '상담 전 준비',
+        icon: 'list',
+        activeWhen: pathname => pathname === '/consultation-prep' || /^\/students\/[^/]+\/preparation$/.test(pathname),
+      },
+      {
+        to: '/consultation-write',
+        label: '상담 기록 작성',
+        icon: 'note',
+        activeWhen: pathname => pathname === '/consultation-write' || /^\/students\/[^/]+\/consultation\/new$/.test(pathname),
+      },
       { to: '/follow-ups', label: '상담 후 할 일', shortLabel: '할 일', icon: 'check' },
     ],
   },
   {
     label: '성장 지원',
     items: [
-      { to: '/programs', label: '비교과 프로그램', shortLabel: '프로그램', icon: 'spark' },
+      { to: '/programs', label: '비교과 프로그램', shortLabel: '프로그램', icon: 'layers' },
       { to: '/insights', label: '운영 통계', icon: 'chart' },
     ],
   },
@@ -38,8 +55,10 @@ const navGroups = [
 const navItems = navGroups.flatMap(group => group.items);
 const mobileNavItems = navItems.filter(item => item.shortLabel);
 const pageMeta = {
-  dashboard: { title: '대시보드', description: '오늘의 상담 운영 현황' },
+  dashboard: { title: '메인 대시보드', description: '오늘의 상담 운영 현황' },
   students: { title: '학생 관리', description: '학생별 상담 맥락과 진행 상태' },
+  'consultation-prep': { title: '상담 전 준비', description: '이전 기록과 확인할 맥락 정리' },
+  'consultation-write': { title: '상담 기록 작성', description: '상담 내용을 빠르고 정확하게 기록' },
   appointments: { title: '상담 일정', description: '예약과 상담 가능 시간 관리' },
   'follow-ups': { title: '상담 후 할 일', description: '학생과 상담사의 다음 행동' },
   programs: { title: '비교과 프로그램', description: '학생 맞춤 성장 기회' },
@@ -51,10 +70,20 @@ const pageMeta = {
 
 export default function AppLayout({ logout }) {
   const [open, setOpen] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [panel, setPanel] = useState('');
   const [search, setSearch] = useState('');
+  const [quickConsultationOpen, setQuickConsultationOpen] = useState(false);
+  const [quickStudentSearch, setQuickStudentSearch] = useState('');
   const searchInputRef = useRef(null);
+  const quickSearchInputRef = useRef(null);
+  const quickReturnFocusRef = useRef(null);
+  const quickDialogRef = useRef(null);
+  const sidebarCloseTimerRef = useRef(null);
+  const sidebarPointerInsideRef = useRef(false);
+  const sidebarCollapsed = !sidebarExpanded;
   const deferredSearch = useDeferredValue(search);
+  const deferredQuickStudentSearch = useDeferredValue(quickStudentSearch);
   const { students, consultations, followUps, appointments, notifications: eventNotifications } = useApp();
   const { profile, user, role } = useAuth();
   const recipientUid = getSessionActorUid({ userUid: user?.uid, profileId: profile?.id, role });
@@ -63,7 +92,11 @@ export default function AppLayout({ logout }) {
   const location = useLocation();
   const navigate = useNavigate();
   const segment = location.pathname.split('/')[1] || 'dashboard';
-  const currentPage = pageMeta[segment] || { title: '학생 상담', description: '커리어핏 상담 운영' };
+  const currentPage = /^\/students\/[^/]+\/preparation$/.test(location.pathname)
+    ? pageMeta['consultation-prep']
+    : /^\/students\/[^/]+\/consultation\/new$/.test(location.pathname)
+      ? pageMeta['consultation-write']
+      : pageMeta[segment] || { title: '학생 상담', description: '커리어핏 상담 운영' };
   const today = toDateKey();
   const pendingCount = followUps.filter(item => item.status !== 'complete').length;
   const notifications = useMemo(() => buildOperationalNotifications(students, followUps, appointments, today), [students, followUps, appointments, today]);
@@ -83,21 +116,73 @@ export default function AppLayout({ logout }) {
     const consultationResults = consultations.filter(item => [item.purpose, item.summary, item.type].some(value => value?.toLowerCase().includes(query))).slice(0, 3).map(item => { const student = students.find(candidate => candidate.id === item.studentId); return { id: `consultation-${item.id}`, title: item.purpose, description: `${student?.name || '학생'} · ${item.date}`, to: `/students/${item.studentId}`, type: '상담' }; });
     return [...studentResults, ...consultationResults];
   }, [deferredSearch, students, consultations]);
+  const quickStudents = useMemo(() => {
+    const query = deferredQuickStudentSearch.trim().toLowerCase();
+    const matches = query
+      ? students.filter(student => [
+        student.name,
+        student.studentNo,
+        student.department,
+        student.goal,
+        ...(student.interests || []),
+      ].some(value => value?.toLowerCase().includes(query)))
+      : [...students].sort((a, b) => (b.lastConsultation || '').localeCompare(a.lastConsultation || ''));
+    return matches.slice(0, 6);
+  }, [deferredQuickStudentSearch, students]);
+  const openQuickConsultation = () => {
+    quickReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setPanel('');
+    setOpen(false);
+    setQuickStudentSearch('');
+    setQuickConsultationOpen(true);
+    window.requestAnimationFrame(() => quickSearchInputRef.current?.focus());
+  };
+  const closeQuickConsultation = () => {
+    setQuickConsultationOpen(false);
+    setQuickStudentSearch('');
+    window.requestAnimationFrame(() => quickReturnFocusRef.current?.focus());
+  };
+  const startConsultation = studentId => {
+    setQuickConsultationOpen(false);
+    setQuickStudentSearch('');
+    navigate(`/students/${studentId}/consultation/new`);
+  };
+  const expandSidebar = () => {
+    window.clearTimeout(sidebarCloseTimerRef.current);
+    setSidebarExpanded(true);
+  };
+  const collapseSidebar = () => {
+    window.clearTimeout(sidebarCloseTimerRef.current);
+    sidebarCloseTimerRef.current = window.setTimeout(() => setSidebarExpanded(false), 120);
+  };
+  const handleSidebarBlur = event => {
+    if (!event.currentTarget.contains(event.relatedTarget) && !sidebarPointerInsideRef.current) collapseSidebar();
+  };
+  const handleSidebarMouseEnter = () => {
+    sidebarPointerInsideRef.current = true;
+    expandSidebar();
+  };
+  const handleSidebarMouseLeave = event => {
+    sidebarPointerInsideRef.current = false;
+    if (!event.currentTarget.contains(document.activeElement)) collapseSidebar();
+  };
   useEffect(() => {
     setOpen(false);
     window.scrollTo(0, 0);
     window.requestAnimationFrame(() => document.querySelector('#main-content')?.focus({ preventScroll: true }));
   }, [location.pathname]);
+  useEffect(() => () => window.clearTimeout(sidebarCloseTimerRef.current), []);
   useEffect(() => { setSearch(''); setPanel(''); }, [location.pathname]);
   useEffect(() => {
     const closeOverlays = event => {
       if (event.key !== 'Escape') return;
       setOpen(false);
       setPanel('');
+      if (quickConsultationOpen) closeQuickConsultation();
     };
     window.addEventListener('keydown', closeOverlays);
     return () => window.removeEventListener('keydown', closeOverlays);
-  }, []);
+  }, [quickConsultationOpen]);
   useEffect(() => {
     const openSearch = event => {
       const target = event.target;
@@ -107,24 +192,52 @@ export default function AppLayout({ logout }) {
         setPanel('search');
         searchInputRef.current?.focus();
       }
+      if (event.altKey && event.key.toLowerCase() === 'n') {
+        event.preventDefault();
+        openQuickConsultation();
+      }
     };
     window.addEventListener('keydown', openSearch);
     return () => window.removeEventListener('keydown', openSearch);
-  }, []);
+  }, [students]);
 
-  return <div className="app-shell">
+  const trapQuickDialogFocus = event => {
+    if (event.key !== 'Tab') return;
+    const focusable = quickDialogRef.current?.querySelectorAll('button:not(:disabled), input:not(:disabled), a[href]');
+    if (!focusable?.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
+  return <div className={`app-shell sidebar-auto ${sidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-auto-expanded'}`}>
     <a className="skip-link" href="#main-content">본문으로 바로가기</a>
     {open && <button className="drawer-backdrop" aria-label="메뉴 닫기" onClick={() => setOpen(false)} />}
-    <aside className={`sidebar ${open ? 'is-open' : ''}`} aria-label="주요 메뉴">
-      <div className="sidebar-brand-row"><div className="brand"><span className="brand-mark"><Icon name="target" size={24} /></span><span>커리어<span>핏</span></span></div><IconButton className="sidebar-close" label="메뉴 닫기" icon="close" onClick={() => setOpen(false)} /></div>
-      <div className="workspace-card"><span className="workspace-icon"><Icon name="briefcase" size={17} /></span><div><strong>학생 상담 지원</strong><small>대학일자리플러스센터</small></div></div>
+    <aside
+      className={`sidebar ${open ? 'is-open' : ''}`}
+      aria-label="주요 메뉴"
+      onMouseEnter={handleSidebarMouseEnter}
+      onMouseLeave={handleSidebarMouseLeave}
+      onFocusCapture={expandSidebar}
+      onBlurCapture={handleSidebarBlur}
+    >
+      <div className="sidebar-brand-row">
+        <div className="brand"><span className="brand-mark"><Icon name="target" size={24} /></span><span className="brand-name">커리어<span>핏</span></span></div>
+        <IconButton className="sidebar-close" label="메뉴 닫기" icon="close" onClick={() => setOpen(false)} />
+      </div>
       <nav className="main-nav">
-        {navGroups.map(group => <div className="nav-group" key={group.label}><span className="nav-group-label">{group.label}</span>{group.items.map(item => <NavLink key={item.to} to={item.to} className={({ isActive }) => isActive ? 'active' : ''}><Icon name={item.icon} /><span>{item.label}</span>{item.to === '/follow-ups' && pendingCount > 0 && <em>{pendingCount}</em>}</NavLink>)}</div>)}
+        {navGroups.map(group => <div className="nav-group" key={group.label || group.items[0].to}>{group.label && <span className="nav-group-label">{group.label}</span>}{group.items.map(item => <NavLink end key={item.to} to={item.to} title={sidebarCollapsed ? item.label : undefined} aria-label={sidebarCollapsed ? item.label : undefined} className={({ isActive }) => isActive || item.activeWhen?.(location.pathname) ? 'active' : ''}><span className="sidebar-nav-icon"><Icon name={item.icon} /></span><span className="sidebar-nav-label">{item.label}</span>{item.to === '/follow-ups' && pendingCount > 0 && <em>{pendingCount}</em>}</NavLink>)}</div>)}
       </nav>
       <div className="sidebar-bottom">
-        {isAdministrator(role) && <NavLink to="/admin/users"><Icon name="students" /><span>사용자 관리</span></NavLink>}
-        <NavLink to="/settings"><Icon name="settings" /><span>설정</span></NavLink>
-        <button onClick={logout}><Icon name="logout" /><span>로그아웃</span></button>
+        {isAdministrator(role) && <NavLink to="/admin/users" title={sidebarCollapsed ? '사용자 관리' : undefined} aria-label={sidebarCollapsed ? '사용자 관리' : undefined}><span className="sidebar-nav-icon"><Icon name="students" /></span><span className="sidebar-nav-label">사용자 관리</span></NavLink>}
+        <NavLink to="/settings" title={sidebarCollapsed ? '설정' : undefined} aria-label={sidebarCollapsed ? '설정' : undefined}><span className="sidebar-nav-icon"><Icon name="settings" /></span><span className="sidebar-nav-label">설정</span></NavLink>
+        <button onClick={logout} title={sidebarCollapsed ? '로그아웃' : undefined} aria-label={sidebarCollapsed ? '로그아웃' : undefined}><span className="sidebar-nav-icon"><Icon name="logout" /></span><span className="sidebar-nav-label">로그아웃</span></button>
         <div className="counselor-card"><span className="counselor-avatar" aria-hidden="true">{shortCounselorName.slice(0, 1)}</span><div><strong>{counselorName}</strong><small>대학일자리플러스센터</small></div></div>
       </div>
     </aside>
@@ -142,5 +255,28 @@ export default function AppLayout({ logout }) {
         {mobileNavItems.map(item => <NavLink key={item.to} to={item.to} className={({ isActive }) => isActive ? 'active' : ''}><span className="mobile-nav-icon"><Icon name={item.icon} size={20} />{item.to === '/follow-ups' && pendingCount > 0 && <em>{pendingCount > 9 ? '9+' : pendingCount}</em>}</span><span>{item.shortLabel}</span></NavLink>)}
       </nav>
     </div>
+    {quickConsultationOpen && <div className="modal-backdrop quick-consultation-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && closeQuickConsultation()}>
+      <section ref={quickDialogRef} className="modal quick-consultation-dialog" role="dialog" aria-modal="true" aria-labelledby="quick-consultation-title" aria-describedby="quick-consultation-description" onKeyDown={trapQuickDialogFocus}>
+        <button className="modal-close" type="button" aria-label="빠른 상담 기록 닫기" onClick={closeQuickConsultation}><Icon name="close" size={19} /></button>
+        <span className="quick-dialog-icon"><Icon name="note" size={22} /></span>
+        <span className="eyebrow">빠른 실행</span>
+        <h2 id="quick-consultation-title">상담할 학생을 선택하세요</h2>
+        <p id="quick-consultation-description">학생을 선택하면 기본 정보가 연결된 상담 기록 작성 화면으로 바로 이동합니다.</p>
+        <label className="quick-student-search">
+          <span>학생 검색</span>
+          <span className="search-field"><Icon name="search" size={18} /><input ref={quickSearchInputRef} value={quickStudentSearch} onChange={event => setQuickStudentSearch(event.target.value)} placeholder="이름, 학과, 관심 분야로 검색" autoComplete="off" /></span>
+        </label>
+        <div className="quick-student-heading"><strong>{quickStudentSearch.trim() ? '검색 결과' : '최근 상담 학생'}</strong><span>{quickStudents.length}명</span></div>
+        <div className="quick-student-list">
+          {quickStudents.map(student => <button type="button" key={student.id} onClick={() => startConsultation(student.id)}>
+            <span className="avatar small" aria-hidden="true">{student.name.slice(0, 1)}</span>
+            <span><strong>{student.name}</strong><small>{student.department} · {maskStudentNo(student.studentNo)}</small></span>
+            <span className="quick-student-action">기록 작성<Icon name="arrow" size={15} /></span>
+          </button>)}
+          {!quickStudents.length && <div className="quick-student-empty"><Icon name="search" size={22} /><strong>일치하는 학생이 없습니다</strong><p>검색어를 줄이거나 학생 관리에서 먼저 학생을 확인해 주세요.</p></div>}
+        </div>
+        <div className="quick-dialog-footer"><button type="button" className="button secondary" onClick={() => { setQuickConsultationOpen(false); navigate('/students?select=consultation'); }}>학생 전체 보기</button><small><kbd>Alt</kbd> + <kbd>N</kbd>으로 언제든 열 수 있어요</small></div>
+      </section>
+    </div>}
   </div>;
 }

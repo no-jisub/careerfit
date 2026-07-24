@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useApp } from '../App';
+import { useApp } from '../context/AppContext';
 import Icon from '../components/Icon';
 import { EmptyState, PageIntro } from '../components/UI';
 import { maskStudentNo } from '../utils/sensitiveData';
@@ -52,7 +52,7 @@ export default function ConsultationsPage() {
   }, [filtered, students]);
 
   return <>
-    <PageIntro eyebrow="상담 기록" title="학생별 상담 흐름을 이어가세요" description="한 학생의 상담을 한곳에 모으고, 날짜를 선택해 회차별 기록과 검토 이력을 확인하세요." action={<Link className="button primary" to="/students?select=consultation"><Icon name="plus" size={18} />상담 기록 작성</Link>} />
+    <PageIntro icon="note" eyebrow="상담 기록" title="학생별 상담 흐름을 이어가세요" description="한 학생의 상담을 한곳에 모으고, 날짜를 선택해 회차별 기록과 검토 이력을 확인하세요." action={<Link className="button primary" to="/students?select=consultation"><Icon name="plus" size={18} />상담 기록 작성</Link>} />
     <section className="filter-card" aria-label="상담 기록 검색 및 필터"><label className="search-field"><span className="sr-only">상담 기록 검색</span><Icon name="search" size={19} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="학생, 학번, 상담 내용 검색" /></label><label><span>상담 유형</span><select value={type} onChange={event => setType(event.target.value)}><option value="all">전체 유형</option>{types.map(item => <option key={item}>{item}</option>)}</select></label><label><span>학생 공개</span><select value={visibility} onChange={event => setVisibility(event.target.value)}><option value="all">전체</option><option value="public">공개</option><option value="private">비공개</option></select></label><button className="text-button" onClick={() => { setQuery(''); setType('all'); setVisibility('all'); }}>필터 초기화</button></section>
     <section className="consultation-directory" aria-labelledby="consultation-directory-title">
       <div className="card consultation-directory-heading">
@@ -84,16 +84,16 @@ export default function ConsultationsPage() {
           </div>
           <section className="consultation-record-preview" id={`consultation-panel-${student.id}`} role="tabpanel" aria-labelledby={`consultation-tab-${selected.id}`}>
             <div className="consultation-record-preview-head">
-              <div><time dateTime={selected.date}>{selectedDate.full}</time><div><span className="tag">{selected.type}</span><span className={`visibility-tag ${selected.studentVisible === false ? 'private' : ''}`}>{selected.studentVisible === false ? '학생 비공개' : '학생 공개'}</span>{selected.aiReview && <span className="ai-reviewed-tag"><Icon name="shield" size={12} />AI 근거 검토 완료</span>}</div></div>
+              <div><time dateTime={selected.date}>{selectedDate.full}</time><div><span className="tag">{selected.type}</span><span className={`visibility-tag ${selected.studentVisible === false ? 'private' : ''}`}>{selected.studentVisible === false ? '학생 비공개' : '학생 공개'}</span>{selected.aiReview && <span className="ai-reviewed-tag"><Icon name="shield" size={12} />근거 검토 완료</span>}</div></div>
               <Link className="button secondary small" to={`/students/${student.id}?consultation=${selected.id}`}>상세 기록 보기 <Icon name="chevron" size={15} /></Link>
             </div>
             <h3>{selected.purpose}</h3>
             <p className="consultation-record-summary">{selected.summary}</p>
             <div className="consultation-record-context">
               {selected.concern && <div><span><Icon name="alert" size={15} />학생의 고민</span><p>{selected.concern}</p></div>}
-              <div><span><Icon name="spark" size={15} />추천 프로그램</span>{selected.programs?.length ? <ul>{selected.programs.map(program => <li key={program}>{program}</li>)}</ul> : <p className="muted">연결된 프로그램이 없습니다.</p>}</div>
+              <div><span><Icon name="target" size={15} />추천 프로그램</span>{selected.programs?.length ? <ul>{selected.programs.map(program => <li key={program}>{program}</li>)}</ul> : <p className="muted">연결된 프로그램이 없습니다.</p>}</div>
             </div>
-            <footer><span>상담 담당자 {selected.counselor || student.counselor || '담당 상담사'}</span><span>{selected.aiReview ? 'AI 보조 작성 · 상담사 검토 완료' : '상담사 직접 작성'}</span></footer>
+            <footer><span>상담 담당자 {selected.counselor || student.counselor || '담당 상담사'}</span><span>{selected.aiReview ? '작성 도우미 활용 · 상담사 검토 완료' : '상담사 직접 작성'}</span></footer>
           </section>
         </article>;
       })}</div> : <section className="card"><EmptyState title="조건에 맞는 상담 기록이 없습니다" description="검색어나 필터를 바꾸어 보세요." /></section>}

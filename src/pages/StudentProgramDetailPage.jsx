@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom';
-import { useApp } from '../App';
+import { useApp } from '../context/AppContext';
 import { useAuth } from '../auth/AuthContext';
 import Icon from '../components/Icon';
 import { EmptyState } from '../components/UI';
@@ -57,7 +57,7 @@ export default function StudentProgramDetailPage() {
           <section className="card student-program-detail-section">
             <span className="eyebrow">추천 안내</span>
             <h2>이런 준비에 도움이 됩니다</h2>
-            <p className="student-program-detail-reason"><Icon name="spark" size={19} />{program.reason}</p>
+            <p className="student-program-detail-reason"><Icon name="target" size={19} />{program.reason}</p>
             <dl>
               <div><dt>담당 부서</dt><dd>{program.department}</dd></div>
               <div><dt>문의</dt><dd>{program.contact || '대학일자리플러스센터'}</dd></div>

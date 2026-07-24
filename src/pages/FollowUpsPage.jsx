@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useApp } from '../App';
+import { useApp } from '../context/AppContext';
 import Icon from '../components/Icon';
 import TaskOwnerCards from '../components/TaskOwnerCards';
 import { EmptyState, PageIntro, StatusBadge, StatusTabs } from '../components/UI';
@@ -144,7 +144,7 @@ export default function FollowUpsPage() {
   };
 
   return <>
-    <PageIntro eyebrow="상담 후 할 일 관리" title="다음 행동을 놓치지 않도록" description="학생과 상담사의 할 일을 기한과 담당자별로 모아 확인하세요." action={<button className="button primary" onClick={() => setShowAdd(true)}><Icon name="plus" size={18} />할 일 추가</button>} />
+    <PageIntro icon="check" eyebrow="상담 후 할 일 관리" title="다음 행동을 놓치지 않도록" description="학생과 상담사의 할 일을 기한과 담당자별로 모아 확인하세요." action={<button className="button primary" onClick={() => setShowAdd(true)}><Icon name="plus" size={18} />할 일 추가</button>} />
     <section className="card task-filter-panel">
       <StatusTabs
         className="task-status-tabs compact-status-tabs"

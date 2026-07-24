@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useApp } from '../App';
+import { useApp } from '../context/AppContext';
 import { EmptyState } from './UI';
 import Icon from './Icon';
 import { recommendPrograms } from '../utils/programRecommendations';

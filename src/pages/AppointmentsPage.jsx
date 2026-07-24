@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useApp } from '../App';
+import { useApp } from '../context/AppContext';
 import Icon from '../components/Icon';
 import { EmptyState, PageIntro, StatusTabs } from '../components/UI';
 import { getTimeRangeEnd, parseDateKey, toDateKey } from '../utils/date';
@@ -289,7 +289,7 @@ export default function AppointmentsPage() {
   };
 
   return <>
-    <PageIntro eyebrow="상담 운영" title="상담 일정 관리" description="학생이 신청할 수 있는 시간을 열고, 접수된 상담 내용을 확인해 일정을 확정하세요." action={<div className="page-action-group appointment-page-actions"><button className="button secondary" onClick={() => setShowRecurringForm(true)}><Icon name="calendar" size={18} />주간 반복 등록</button><button className="button secondary" onClick={() => { setAvailabilityError(''); setAvailabilityForm(emptyAvailabilityForm()); setAvailabilityMonth(`${toDateKey().slice(0, 7)}-01`); setShowAvailabilityForm(true); }}><Icon name="calendar" size={18} />날짜별 일괄 등록</button><button className="button primary" onClick={openCreate}><Icon name="plus" size={18} />직접 예약</button></div>} />
+    <PageIntro icon="calendar" eyebrow="상담 운영" title="상담 일정 관리" description="학생이 신청할 수 있는 시간을 열고, 접수된 상담 내용을 확인해 일정을 확정하세요." action={<div className="page-action-group appointment-page-actions"><button className="button secondary" onClick={() => setShowRecurringForm(true)}><Icon name="calendar" size={18} />주간 반복 등록</button><button className="button secondary" onClick={() => { setAvailabilityError(''); setAvailabilityForm(emptyAvailabilityForm()); setAvailabilityMonth(`${toDateKey().slice(0, 7)}-01`); setShowAvailabilityForm(true); }}><Icon name="calendar" size={18} />날짜별 일괄 등록</button><button className="button primary" onClick={openCreate}><Icon name="plus" size={18} />직접 예약</button></div>} />
     <section className="card availability-management-card">
       <div className="section-header"><div><span className="eyebrow">상담 신청 설정</span><h2>학생에게 공개된 상담 가능 시간</h2><p>열린 시간만 담당 학생의 상담 신청 화면에 표시됩니다.</p></div><span className="availability-open-count">신청 가능 {myAvailability.filter(item => item.status === 'open').length}개</span></div>
       {myAvailability.length ? <div className="availability-date-groups">{Object.entries(availabilityByDate).map(([date, slots]) => {

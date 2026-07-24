@@ -1,15 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useApp } from '../App';
+import { useApp } from '../context/AppContext';
 import Icon from '../components/Icon';
-import { EmptyState, PageIntro, SectionHeader, StatusBadge } from '../components/UI';
-import { formatKoreanDate, getDayPeriod, toDateKey } from '../utils/date';
-import { useAuth } from '../auth/AuthContext';
+import { EmptyState, SectionHeader, StatusBadge } from '../components/UI';
+import { getDayPeriod, toDateKey } from '../utils/date';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { students, consultations, followUps, appointments } = useApp();
-  const { profile, user } = useAuth();
-  const counselorName = (profile?.displayName || user?.displayName || '상담 담당자').replace(/\s*상담사$/, '');
   const today = new Date();
   const todayKey = toDateKey(today);
   const scheduled = appointments.filter(item => item.date === todayKey && ['confirmed', 'scheduled'].includes(item.status)).sort((a, b) => a.time.localeCompare(b.time));
@@ -18,14 +15,6 @@ export default function DashboardPage() {
   const overdue = pending.filter(f => f.status === 'overdue');
   const studentById = id => students.find(s => s.id === id);
   return <>
-    <section className="dashboard-masthead">
-      <PageIntro eyebrow={formatKoreanDate(today)} title={`좋은 아침이에요, ${counselorName} 상담사님!`} description="오늘 상담과 놓치기 쉬운 할 일을 먼저 모아봤어요." action={<Link className="button primary" to="/students?select=consultation"><Icon name="plus" size={18} />상담 기록 작성</Link>} />
-      <Link className={`priority-brief ${overdue.length ? 'urgent' : 'clear'}`} to={overdue.length ? '/follow-ups' : '/appointments'}>
-        <span className="priority-brief-icon"><Icon name={overdue.length ? 'alert' : 'check'} size={19} /></span>
-        <div><small>오늘의 우선순위</small><strong>{overdue.length ? `기한이 지난 할 일 ${overdue.length}건을 먼저 확인해 주세요.` : '기한을 넘긴 업무가 없습니다. 오늘 일정을 준비해 보세요.'}</strong></div>
-        <span className="priority-brief-action">{overdue.length ? '지금 확인' : '일정 보기'}<Icon name="arrow" size={16} /></span>
-      </Link>
-    </section>
     <section className="summary-grid" aria-label="오늘의 상담 요약">
       <Link className="summary-card blue" to="/appointments" aria-label={`오늘 상담 예정 ${scheduled.length}명 확인`}><span className="summary-icon"><Icon name="calendar" /></span><div><small>오늘 상담 예정</small><strong>{scheduled.length}<em>명</em></strong><p>{scheduled[0] ? <><b>다음</b> {getDayPeriod(scheduled[0].time)} {scheduled[0].time} {studentById(scheduled[0].studentId)?.name}</> : '예정된 상담이 없습니다'}</p></div><Icon name="arrow" className="summary-arrow" size={17} /></Link>
       <Link className="summary-card purple" to="/students?select=consultation" aria-label={`기록 작성 필요 ${writing.length}건 확인`}><span className="summary-icon"><Icon name="note" /></span><div><small>기록 작성 필요</small><strong>{writing.length}<em>건</em></strong><p>{writing.length ? '오늘 안에 기록해 주세요' : '밀린 기록이 없습니다'}</p></div><Icon name="arrow" className="summary-arrow" size={17} /></Link>

@@ -65,10 +65,10 @@
 
 | Level | Value | Usage |
 |-------|-------|-------|
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)` | Cards, buttons |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | Modals, dropdowns |
-| `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Hero images, featured cards |
+| `--shadow-xs` | `none` | Inputs, buttons, icons |
+| `--shadow` | `none` | Cards and standard surfaces |
+| `--shadow-hover` | `none` | Hover states use border/background only |
+| `--shadow-float` | `none` | Modals and popovers use a scrim, border, and surface contrast |
 
 ---
 
@@ -113,14 +113,13 @@
   background: #FFFFFF;
   border-radius: 12px;
   padding: 24px;
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
   transition: all 200ms ease;
   border: 1px solid #DFE6EF;
 }
 
 .card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
+  border-color: #CBD5E1;
 }
 ```
 
@@ -154,7 +153,8 @@
   background: white;
   border-radius: 16px;
   padding: 32px;
-  box-shadow: var(--shadow-xl);
+  border: 1px solid #DFE6EF;
+  box-shadow: none;
   max-width: 500px;
   width: 90%;
 }
@@ -179,6 +179,8 @@
 - **Workflow Strategy:** Surface today's appointments and overdue actions first, then preserve context for deeper case work.
 - **CTA Placement:** One primary task action per page; secondary actions remain visually subordinate.
 - **Section Order:** 1. Page context, 2. urgent summary, 3. primary work list, 4. recent context and shortcuts.
+- **Primary Navigation:** Keep `학생 관리` directly below `메인 대시보드` as the top-level student directory, outside the counseling workflow group.
+- **Counseling Workflow Navigation:** Keep `상담 일정 → 상담 전 준비 → 상담 기록 작성 → 상담 후 할 일` in operational order. Preparation exposes scheduled students only; writing exposes in-progress and documentation-needed students only.
 
 ---
 
@@ -196,6 +198,7 @@
 - ✅ Motion must explain feedback or hierarchy.
 - ❌ Do not animate dense data rows on entry.
 - ⚡ Animate transform and opacity; honor `prefers-reduced-motion`.
+- ✅ Keep normal page scrolling native and immediate; use smooth scrolling only for explicit in-page navigation actions.
 
 ---
 
@@ -212,6 +215,7 @@
 - ❌ **Low contrast text** — Maintain 4.5:1 minimum contrast ratio
 - ❌ **Instant state changes** — Always use transitions (150-300ms)
 - ❌ **Invisible focus states** — Focus states must be visible for a11y
+- ❌ **Decorative surface shadows** — Use borders and background states for cards, buttons, tabs, and icons; reserve shadows for overlays
 
 ---
 

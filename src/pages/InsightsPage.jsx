@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useApp } from '../App';
+import { useApp } from '../context/AppContext';
 import { PageIntro } from '../components/UI';
 import { addDays, toDateKey } from '../utils/date';
 import { summarizeOperations } from '../utils/operations';

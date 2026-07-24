@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useApp } from '../App';
+import { useApp } from '../context/AppContext';
 import Icon from '../components/Icon';
 import { EmptyState, StatusBadge } from '../components/UI';
 import { getAppointmentDateParts, getDayPeriod, getTimeRangeEnd, toDateKey } from '../utils/date';
@@ -13,7 +13,7 @@ import { updateOwnSensitivePhone } from '../services/sensitiveAccessService';
 import { DEMO_STUDENT_ID } from '../utils/demoInteraction';
 
 const getSummaryProvenanceLabel = summary => summary?.provenance?.type === 'ai-assisted'
-  ? 'AI 보조 초안을 상담사가 근거 확인한 요약'
+  ? '상담사가 작성 근거를 확인한 상담 요약'
   : '상담사가 직접 작성하고 확인한 요약';
 
 export default function StudentMyPage() {

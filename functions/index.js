@@ -54,7 +54,7 @@ async function assertCounselorStudentAccess(uid, profile, studentId) {
   if (profile.role === 'admin') return;
   const snapshot = await getFirestore().doc(`students/${studentId}`).get();
   if (!snapshot.exists || snapshot.data()?.counselorUid !== uid) {
-    throw new HttpsError('permission-denied', '담당 학생의 상담 기록만 AI 초안으로 만들 수 있습니다.');
+    throw new HttpsError('permission-denied', '담당 학생의 상담 기록만 자동으로 정리할 수 있습니다.');
   }
 }
 
@@ -249,7 +249,7 @@ async function consumeDailyQuota(uid) {
     const snapshot = await transaction.get(ref);
     const count = snapshot.data()?.count || 0;
     if (count >= DAILY_LIMIT) {
-      throw new HttpsError('resource-exhausted', `오늘의 AI 초안 생성 한도(${DAILY_LIMIT}회)를 모두 사용했습니다.`);
+      throw new HttpsError('resource-exhausted', `오늘의 상담 기록 자동 정리 한도(${DAILY_LIMIT}회)를 모두 사용했습니다.`);
     }
     transaction.set(ref, {
       uid,
@@ -359,15 +359,15 @@ function throwConsultationAiError(error, stage, flow) {
     flow,
   });
   if (reason === 'VERTEX_PERMISSION_DENIED') {
-    throw new HttpsError('permission-denied', 'AI 서버 권한 설정을 확인해 주세요.', { reason });
+    throw new HttpsError('permission-denied', '기록 정리 서버 권한 설정을 확인해 주세요.', { reason });
   }
   if (reason === 'VERTEX_QUOTA_EXCEEDED') {
-    throw new HttpsError('resource-exhausted', 'AI 사용량이 일시적으로 초과되었습니다.', { reason });
+    throw new HttpsError('resource-exhausted', '기록 정리 사용량이 일시적으로 초과되었습니다.', { reason });
   }
   if (['VERTEX_TIMEOUT', 'VERTEX_MODEL_NOT_FOUND'].includes(reason)) {
-    throw new HttpsError('unavailable', 'AI 모델에 일시적으로 연결할 수 없습니다.', { reason });
+    throw new HttpsError('unavailable', '기록 정리 서비스에 일시적으로 연결할 수 없습니다.', { reason });
   }
-  throw new HttpsError('internal', 'AI 초안을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.', { reason });
+  throw new HttpsError('internal', '상담 기록 초안을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.', { reason });
 }
 
 export const generateDemoConsultationDraft = onCall({
