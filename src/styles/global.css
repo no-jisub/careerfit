@@ -1505,19 +1505,48 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
   .program-form-grid .span-2 { grid-column: 1; }
 }
 
-.recurring-availability-modal { width: min(760px, calc(100vw - 32px)); }
-.recurring-availability-form { display: grid; gap: 20px; }
+.recurring-availability-modal {
+  width: min(980px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  padding: 24px;
+  overflow-y: auto;
+}
+.recurring-availability-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
 .recurring-availability-form header, .recurring-period-fields, .recurring-time-fields, .recurring-exclusion-row, .recurring-excluded-date-input { display: flex; gap: 12px; align-items: end; }
-.recurring-availability-form header { justify-content: space-between; align-items: start; }
-.recurring-availability-form fieldset { border: 1px solid var(--border-color, #dfe5ec); border-radius: 12px; padding: 14px; }
+.recurring-availability-form > header,
+.recurring-time-fields,
+.recurring-preview,
+.recurring-availability-form > .form-error,
+.recurring-availability-form > .modal-actions { grid-column: 1 / -1; }
+.recurring-availability-form header { justify-content: space-between; align-items: center; }
+.recurring-availability-form header h3 { margin: 2px 0 0; }
+.recurring-availability-form header p { max-width: 430px; margin: 0 48px 0 0; line-height: 1.5; }
+.recurring-availability-form fieldset { min-width: 0; border: 1px solid var(--border-color, #dfe5ec); border-radius: 12px; padding: 11px 12px; }
+.recurring-period-fields, .recurring-time-fields { gap: 10px; }
+.recurring-period-fields > label, .recurring-time-fields > label { flex: 1; margin-bottom: 0; }
+.recurring-time-fields > label:last-child { flex: 1.5; }
 .recurring-weekdays { display: flex; gap: 8px; flex-wrap: wrap; }
-.recurring-weekdays button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #d6dde7; background: white; }
+.recurring-weekdays button { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #d6dde7; background: white; }
 .recurring-weekdays button.selected { background: #2358d8; color: white; border-color: #2358d8; }
-.recurring-preview { background: #f5f8ff; border-radius: 12px; padding: 16px; }
-.recurring-preview dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
-.recurring-preview dl div { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; }
+.recurring-availability-form fieldset > .button { margin-top: 8px; }
+.recurring-preview { background: #f5f8ff; border-radius: 12px; padding: 12px 14px; }
+.recurring-preview dl { margin: 8px 0 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.recurring-preview dl div { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; }
+.recurring-preview dt, .recurring-preview dd { margin: 0; }
+.recurring-preview dd { margin-top: 3px; }
+.recurring-availability-form > .modal-actions { margin-top: 0; }
 .attachment-list { display: grid; justify-items: start; gap: 8px; }
-@media (max-width: 700px) { .recurring-availability-form header, .recurring-period-fields, .recurring-time-fields, .recurring-exclusion-row { align-items: stretch; flex-direction: column; } }
+@media (max-width: 700px) {
+  .recurring-availability-form { grid-template-columns: 1fr; }
+  .recurring-availability-form > * { grid-column: 1; }
+  .recurring-availability-form header, .recurring-period-fields, .recurring-time-fields, .recurring-exclusion-row { align-items: stretch; flex-direction: column; }
+  .recurring-preview dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 /* Unified counselor search fields */
 .global-search, .search-field, .quick-search label {
