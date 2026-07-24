@@ -21,7 +21,7 @@ const navGroups = [
     items: [
       { to: '/students', label: '학생 관리', shortLabel: '학생', icon: 'students' },
       { to: '/consultations', label: '상담 기록', icon: 'note' },
-      { to: '/follow-ups', label: '후속 조치', shortLabel: '할 일', icon: 'check' },
+      { to: '/follow-ups', label: '상담 후 할 일', shortLabel: '할 일', icon: 'check' },
     ],
   },
   {
@@ -46,7 +46,7 @@ const pageMeta = {
   students: { title: '학생 관리', description: '학생별 상담 맥락과 진행 상태' },
   appointments: { title: '상담 일정', description: '예약과 상담 가능 시간 관리' },
   consultations: { title: '상담 기록', description: '상담 이력과 공개 요약' },
-  'follow-ups': { title: '후속 조치', description: '학생과 담당자의 다음 행동' },
+  'follow-ups': { title: '상담 후 할 일', description: '학생과 상담사의 다음 행동' },
   programs: { title: '비교과 프로그램', description: '학생 맞춤 성장 기회' },
   insights: { title: '운영 통계', description: '상담 운영 데이터와 인사이트' },
   'trust-center': { title: 'AI 신뢰 센터', description: '근거·검토·개인정보 통제 현황' },

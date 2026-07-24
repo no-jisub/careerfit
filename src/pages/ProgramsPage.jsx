@@ -23,7 +23,7 @@ const managementStatusOptions = [
   { value: 'completed', label: '모집 완료', description: '접수 종료·운영 완료', icon: 'note' },
 ];
 
-const groupManagementStatus = status => ['closed', 'completed'].includes(status) ? 'completed' : status;
+const groupManagementStatus = status => ['closed', 'completed', 'archived'].includes(status) ? 'completed' : status;
 const managementStatusLabel = status => groupManagementStatus(status) === 'completed' ? '모집 완료' : PROGRAM_STATUS_LABELS[status];
 
 const emptyProgram = () => ({
@@ -34,6 +34,8 @@ const emptyProgram = () => ({
 function ProgramFormModal({ program, onClose, onSave }) {
   const [form, setForm] = useState(() => program ? {
     ...program,
+    status: program.status === 'archived' ? 'completed' : program.status,
+    archived: false,
     tags: program.tags.join(', '),
     targetDepartments: program.targetDepartments.join(', '),
   } : emptyProgram());
@@ -113,7 +115,7 @@ function ProgramManagementPage() {
   const managementStatusCounts = {
     scheduled: statusCounts.scheduled || 0,
     recruiting: statusCounts.recruiting || 0,
-    completed: (statusCounts.closed || 0) + (statusCounts.completed || 0),
+    completed: (statusCounts.closed || 0) + (statusCounts.completed || 0) + (statusCounts.archived || 0),
   };
   const activePrograms = programs.filter(program => ['scheduled', 'recruiting'].includes(resolveProgramStatus(program, today)));
   const matchCandidates = programs.filter(program => !['archived', 'completed', 'draft'].includes(resolveProgramStatus(program, today)));
@@ -148,17 +150,6 @@ function ProgramManagementPage() {
     setEditing(null);
     setCreating(false);
     notify(editing ? '프로그램 수정 내용을 저장했습니다.' : '새 비교과 프로그램을 등록했습니다.');
-  };
-  const duplicateProgram = program => {
-    const now = new Date().toISOString();
-    const copy = normalizeProgram({ ...program, id: `p-${Date.now()}`, name: `${program.name} 복사본`, status: 'draft', featured: false, archived: false, createdAt: now, updatedAt: now });
-    setPrograms(items => [copy, ...items]);
-    notify('프로그램을 작성 중 상태로 복제했습니다.');
-  };
-  const toggleArchive = program => {
-    const archived = resolveProgramStatus(program, today) !== 'archived';
-    setPrograms(items => items.map(item => item.id === program.id ? normalizeProgram({ ...item, archived, status: archived ? 'archived' : 'scheduled', updatedAt: new Date().toISOString() }) : item));
-    notify(archived ? '프로그램을 보관했습니다. 언제든 복원할 수 있습니다.' : '프로그램을 복원했습니다.');
   };
   const reset = () => {
     if (!window.confirm('프로그램과 추천 내역을 최초 데모 데이터로 되돌릴까요?')) return;
@@ -223,7 +214,7 @@ function ProgramManagementPage() {
               {capacity > 0 && <span className="program-applicant-bar" role="img" aria-label={`신청 ${applicantCount}명, 정원 ${capacity}명`}><i style={{ width: `${applicantProgress}%` }} /></span>}
             </div>}
           </dl>
-          <div className="program-management-actions"><button className="button secondary small" onClick={() => setEditing(program)}>수정</button><button className="text-button" onClick={() => duplicateProgram(program)}>복제</button><button className="text-button" onClick={() => toggleArchive(program)}>보관</button></div>
+          <div className="program-management-actions"><button className="button secondary small" aria-label={`${program.name} 수정`} onClick={() => setEditing(program)}>수정</button></div>
         </article>;
       })}</div> : <EmptyState title="조건에 맞는 프로그램이 없습니다" description="검색어나 모집 상태를 변경해 보세요." action={<button className="button secondary" onClick={() => { setQuery(''); setStatus('recruiting'); setType('전체'); }}>필터 초기화</button>} />}
     </section>

@@ -11,7 +11,7 @@ export function generateLocalConsultationDraft(input) {
     guidance: input.guidance?.trim() || '상담 중 안내한 내용을 추가해 주세요.',
     programs: input.programs || [],
     studentActions: input.studentActions?.trim() || '학생의 다음 행동을 구체적으로 작성해 주세요.',
-    counselorActions: input.counselorActions?.trim() || '담당자의 후속 조치를 작성해 주세요.',
+    counselorActions: input.counselorActions?.trim() || '상담사가 해야 할 일을 작성해 주세요.',
     nextCheckItems: input.nextCheckItems?.trim() || '다음 상담에서 확인할 내용을 작성해 주세요.',
     evidence: {
       summary: ['상담 담당자가 입력한 내부 메모를 바탕으로 정리했습니다.'],

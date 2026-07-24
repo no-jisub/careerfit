@@ -7,9 +7,9 @@ export function buildOperationalNotifications(students, followUps, appointments,
     if (item.status === 'complete') return;
     const student = studentById.get(item.studentId);
     if (item.status === 'overdue' || item.dueDate < today) {
-      notices.push({ id: `followup-overdue-${item.id}`, type: 'overdue', title: `${student?.name || '학생'} 후속 조치 기한 초과`, description: item.content, date: item.dueDate, to: '/follow-ups', priority: 0 });
+      notices.push({ id: `followup-overdue-${item.id}`, type: 'overdue', title: `${student?.name || '학생'} 할 일 기한 초과`, description: item.content, date: item.dueDate, to: '/follow-ups', priority: 0 });
     } else if (item.dueDate <= addDays(today, 2)) {
-      notices.push({ id: `followup-due-${item.id}`, type: 'due', title: `${student?.name || '학생'} 후속 조치 마감 임박`, description: item.content, date: item.dueDate, to: '/follow-ups', priority: 1 });
+      notices.push({ id: `followup-due-${item.id}`, type: 'due', title: `${student?.name || '학생'} 할 일 마감 임박`, description: item.content, date: item.dueDate, to: '/follow-ups', priority: 1 });
     }
   });
   appointments.forEach(item => {

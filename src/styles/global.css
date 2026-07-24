@@ -1192,8 +1192,8 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .program-applicant-status dd strong { margin-right: 2px; color: var(--blue-dark); font-size: 17px; }
 .program-applicant-bar { height: 6px; overflow: hidden; border-radius: 999px; display: block; background: #dfe8f5; }
 .program-applicant-bar i { height: 100%; border-radius: inherit; display: block; background: linear-gradient(90deg, #2d68c9, #61a0ed); }
-.program-management-actions { display: grid; justify-items: stretch; gap: 7px; }
-.program-management-actions .text-button { min-height: 30px; }
+.program-management-actions { display: flex; align-items: center; justify-content: center; }
+.program-management-actions .button { min-width: 104px; }
 .program-form-modal { width: min(900px, calc(100% - 40px)); max-height: calc(100vh - 40px); overflow-y: auto; }
 .program-form-modal > h2, .recommendation-modal > h2 { margin-bottom: 20px; }
 .program-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
@@ -1242,7 +1242,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
   .appointment-filter-tools { padding-top: 14px; grid-template-columns: 1fr; }
   .appointment-filter-tools .button { width: 100%; }
   .program-management-item { grid-template-columns: 1fr; }
-  .program-management-actions { grid-column: 1; grid-row: auto; grid-template-columns: repeat(3, 1fr); }
+  .program-management-actions { grid-column: 1; grid-row: auto; justify-content: center; }
   .program-form-grid { grid-template-columns: 1fr; }
   .program-form-grid .span-2 { grid-column: 1; }
 }

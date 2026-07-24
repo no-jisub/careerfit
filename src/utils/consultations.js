@@ -3,7 +3,7 @@ export const consultationPublicFieldOptions = [
   { key: 'strengths', label: '학생의 강점' },
   { key: 'concern', label: '개선 또는 고민 사항' },
   { key: 'programs', label: '추천 프로그램' },
-  { key: 'studentActions', label: '후속 조치' },
+  { key: 'studentActions', label: '상담 후 할 일' },
   { key: 'nextCheckItems', label: '다음 상담 계획' },
 ];
 

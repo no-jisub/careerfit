@@ -112,7 +112,7 @@ export function validateStudentAppointmentRequest(form) {
 
 export function validateFollowUpInput(form) {
   const content = cleanText(form.content, 300);
-  if (!form.studentId || !content) return { error: '학생과 후속 조치 내용을 입력해 주세요.' };
+  if (!form.studentId || !content) return { error: '학생과 할 일 내용을 입력해 주세요.' };
   if (!isDateKey(form.dueDate)) return { error: '유효한 완료 기한을 선택해 주세요.' };
   return { value: { ...form, content } };
 }

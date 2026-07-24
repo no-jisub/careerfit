@@ -46,13 +46,13 @@ export default function LoginPage() {
   return <main className="login-page">
     <section className="login-brand-panel">
       <div className="login-brand"><span className="brand-mark"><Icon name="target" size={26} /></span>커리어<span>핏</span></div>
-      <div className="login-message"><span className="eyebrow light">학생의 다음 걸음을 함께</span><h1>상담의 맥락을 잇고,<br />다음 행동을 선명하게.</h1><p>흩어진 상담 기록과 후속 조치를 한곳에서 확인하고<br />학생에게 꼭 필요한 다음 걸음을 안내하세요.</p></div>
+      <div className="login-message"><span className="eyebrow light">학생의 다음 걸음을 함께</span><h1>상담의 맥락을 잇고,<br />다음 행동을 선명하게.</h1><p>흩어진 상담 기록과 상담 후 할 일을 한곳에서 확인하고<br />학생에게 꼭 필요한 다음 걸음을 안내하세요.</p></div>
       <div className="login-visual" aria-hidden="true">
         <div className="workflow-preview-head"><span>상담 업무 흐름</span><strong>한 곳에서 자연스럽게 이어져요</strong></div>
         <div className="workflow-preview-steps">
           <div><span><Icon name="search" size={18} /></span><p><b>상담 전</b><small>이전 상담 맥락과 할 일을 확인해요</small></p></div>
           <div><span><Icon name="note" size={18} /></span><p><b>상담 중</b><small>핵심 메모를 빠르게 기록해요</small></p></div>
-          <div><span><Icon name="check" size={18} /></span><p><b>상담 후</b><small>다음 행동과 후속 조치를 이어가요</small></p></div>
+          <div><span><Icon name="check" size={18} /></span><p><b>상담 후</b><small>학생과 상담사의 할 일을 이어가요</small></p></div>
         </div>
       </div>
       <p className="copyright">© 2026 CareerFit · 대학 학생상담 통합 지원</p>

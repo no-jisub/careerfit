@@ -4,7 +4,7 @@ import { PageIntro } from '../components/UI';
 import { useAuth } from '../auth/AuthContext';
 
 const accessRows = [
-  { role: '학생', scope: '본인 정보', canRead: '선택 공개된 상담 요약, 본인 일정·후속 조치', blocked: '내부 메모, AI 근거, 다른 학생 정보' },
+  { role: '학생', scope: '본인 정보', canRead: '선택 공개된 상담 요약, 본인 일정·할 일', blocked: '내부 메모, AI 근거, 다른 학생 정보' },
   { role: '상담사', scope: '담당 학생', canRead: '담당 학생 상담 기록·내부 메모·근거·일정', blocked: '미배정 학생, 사용자 승인·학생 재배정' },
   { role: '관리자', scope: '기관 운영', canRead: '계정 승인·배정 및 보안 사고 대응에 필요한 자료', blocked: '일상 상담 목적으로 불필요한 열람 금지' },
 ];
@@ -15,7 +15,7 @@ export default function SettingsPage() {
   const { notify, resetDemoData } = useApp();
   const { user, role, demoModeEnabled } = useAuth();
   const reset = () => {
-    if (window.confirm('학생, 상담, 일정, 후속 조치와 프로그램 데모 데이터를 처음 상태로 되돌릴까요?')) resetDemoData();
+    if (window.confirm('학생, 상담, 일정, 상담 후 할 일과 프로그램 데모 데이터를 처음 상태로 되돌릴까요?')) resetDemoData();
   };
   return <><PageIntro eyebrow="설정" title="업무 환경 설정" description="알림과 개인정보 보호, 역할별 접근 범위를 확인합니다." />
     <section className="card privacy-overview">
@@ -35,5 +35,5 @@ export default function SettingsPage() {
       </div>
       <div className="retention-note"><Icon name="clock" size={17} /><div><strong>데이터 보존</strong><p>임시 상담 기록에는 7일 보존 기한을 기록합니다. 운영 배포 전 Firebase TTL 정책과 기관의 상담기록 보존·파기 기간을 반드시 확정해야 합니다.</p></div></div>
     </section>
-    <section className="card settings-card"><h2>알림 설정</h2><label><span><strong>상담 일정 알림</strong><small>상담 시작 30분 전에 알려드려요.</small></span><input type="checkbox" defaultChecked /></label><label><span><strong>후속 조치 기한 알림</strong><small>기한 전날과 당일에 알려드려요.</small></span><input type="checkbox" defaultChecked /></label><button className="button primary" onClick={() => notify('설정을 저장했습니다.')}>설정 저장</button></section>{demoModeEnabled && !user && <section className="card settings-card demo-reset-card"><h2>발표용 데이터</h2><p>발표 중 변경된 학생 배정, 상담 기록, 예약과 후속 조치를 초기 상태로 되돌립니다.</p><button className="button secondary danger" onClick={reset}>전체 데모 데이터 초기화</button></section>}</>;
+    <section className="card settings-card"><h2>알림 설정</h2><label><span><strong>상담 일정 알림</strong><small>상담 시작 30분 전에 알려드려요.</small></span><input type="checkbox" defaultChecked /></label><label><span><strong>할 일 기한 알림</strong><small>기한 전날과 당일에 알려드려요.</small></span><input type="checkbox" defaultChecked /></label><button className="button primary" onClick={() => notify('설정을 저장했습니다.')}>설정 저장</button></section>{demoModeEnabled && !user && <section className="card settings-card demo-reset-card"><h2>발표용 데이터</h2><p>발표 중 변경된 학생 배정, 상담 기록, 예약과 할 일을 초기 상태로 되돌립니다.</p><button className="button secondary danger" onClick={reset}>전체 데모 데이터 초기화</button></section>}</>;
 }

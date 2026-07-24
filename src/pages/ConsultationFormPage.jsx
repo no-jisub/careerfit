@@ -177,7 +177,7 @@ export default function ConsultationFormPage() {
     };
     const studentNotifications = [
       ...(publishedSummary.published && student.uid ? [buildEventNotification({ eventId: `${consultation.id}-published`, recipientUid: student.uid, actorUid: counselorUid, type: 'summary', title: '새 상담 요약이 공개되었습니다', description: `${form.date} 상담에서 공개된 내용을 확인하세요.`, to: '/student', createdAt: now })] : []),
-      ...newTasks.filter(task => task.owner === '학생' && student.uid).map(task => buildEventNotification({ eventId: `${task.id}-assigned`, recipientUid: student.uid, actorUid: counselorUid, type: 'followup', title: '새 후속 조치가 등록되었습니다', description: `${task.content} · ${task.dueDate}까지`, to: '/student', createdAt: now })),
+      ...newTasks.filter(task => task.owner === '학생' && student.uid).map(task => buildEventNotification({ eventId: `${task.id}-assigned`, recipientUid: student.uid, actorUid: counselorUid, type: 'followup', title: '새로운 할 일이 등록되었습니다', description: `${task.content} · ${task.dueDate}까지`, to: '/student', createdAt: now })),
     ];
     setSaving(true);
     setError('');
@@ -248,7 +248,7 @@ export default function ConsultationFormPage() {
               <small>현재 근거 충족률 {getEvidenceCoverage(aiDraft)}%</small>
             </div>
             <div className="ai-fields">
-              {[['purpose', '상담 목적'], ['summary', '상담 주요 내용'], ['strengths', '학생의 강점'], ['concern', '학생의 고민과 목표'], ['guidance', '담당자의 안내 내용'], ['studentActions', '학생의 다음 행동'], ['counselorActions', '담당자의 후속 조치'], ['nextCheckItems', '다음 상담 확인 사항']].map(([key, label]) => <label key={key}>{label}<textarea rows={key === 'summary' ? 5 : 3} value={aiDraft[key]} onChange={e => {
+              {[['purpose', '상담 목적'], ['summary', '상담 주요 내용'], ['strengths', '학생의 강점'], ['concern', '학생의 고민과 목표'], ['guidance', '담당자의 안내 내용'], ['studentActions', '학생의 할 일'], ['counselorActions', '상담사의 할 일'], ['nextCheckItems', '다음 상담 확인 사항']].map(([key, label]) => <label key={key}>{label}<textarea rows={key === 'summary' ? 5 : 3} value={aiDraft[key]} onChange={e => {
                 setAiDraft(prev => ({ ...prev, [key]: e.target.value }));
                 setAiReviewedAt('');
                 if (consultationEvidenceFieldOptions.some(item => item.key === key)) setEvidenceReviews(prev => ({ ...prev, [key]: false }));
@@ -293,7 +293,7 @@ export default function ConsultationFormPage() {
             </div>
           </>}
         </section>
-        <section className="card task-register"><span className="eyebrow">저장 시 함께 등록</span><h2>후속 조치</h2><label>학생 담당<input value={studentTask} onChange={e => setStudentTask(e.target.value)} /></label><label>교직원 담당<input value={counselorTask} onChange={e => setCounselorTask(e.target.value)} /></label><small><Icon name="calendar" size={14} />기한 {form.nextDate}</small></section>
+        <section className="card task-register"><span className="eyebrow">저장 시 함께 등록</span><h2>상담 후 할 일</h2><label>학생 할 일<input value={studentTask} onChange={e => setStudentTask(e.target.value)} /></label><label>상담사 할 일<input value={counselorTask} onChange={e => setCounselorTask(e.target.value)} /></label><small><Icon name="calendar" size={14} />기한 {form.nextDate}</small></section>
       </aside>
     </div>
     <div className="mobile-savebar"><button className="button secondary" disabled={saving} onClick={generate}>AI 초안</button><button className="button primary" disabled={saving} onClick={save}>{saving ? '저장 중...' : '상담 기록 저장'}</button></div>
