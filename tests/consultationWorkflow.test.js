@@ -20,12 +20,35 @@ test('student summary contains only counselor-selected public fields', () => {
   assert.equal('guidance' in summary, false);
   assert.equal('counselorActions' in summary, false);
   assert.equal(summary.published, true);
+  assert.deepEqual(summary.provenance, {
+    type: 'counselor-authored',
+    reviewedAt: consultation.updatedAt,
+    reviewedBy: '박지현',
+  });
 });
 
 test('an empty publication selection hides the whole summary', () => {
   const summary = buildConsultationSummary(consultation, Object.fromEntries(Object.keys(defaultConsultationVisibility).map(key => [key, false])));
   assert.equal(summary.published, false);
   assert.deepEqual(summary.visibleFields, []);
+});
+
+test('AI-assisted summary discloses counselor review without exposing internal evidence', () => {
+  const summary = buildConsultationSummary({
+    ...consultation,
+    aiReview: {
+      reviewedAt: '2026-07-22T01:00:00.000Z',
+      reviewedBy: '박지현',
+      evidence: { summary: ['내부 근거'] },
+    },
+  });
+  assert.deepEqual(summary.provenance, {
+    type: 'ai-assisted',
+    reviewedAt: '2026-07-22T01:00:00.000Z',
+    reviewedBy: '박지현',
+  });
+  assert.equal('aiReview' in summary, false);
+  assert.equal('evidence' in summary, false);
 });
 
 test('appointment conflict blocks only the same counselor active time slot', () => {

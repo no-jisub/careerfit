@@ -27,6 +27,11 @@ export function generateLocalConsultationDraft(input) {
     },
     needsConfirmation: [],
     sensitiveWarning: [],
+    reviewMeta: {
+      model: 'local-demo',
+      generatedAt: new Date().toISOString(),
+      identifiersRedacted: true,
+    },
   };
 }
 
@@ -58,7 +63,14 @@ export async function generateConsultationDraft(input) {
       : httpsCallable(functions, 'generateConsultationDraft', { timeout: 65000 });
     const result = await callable(input);
     if (!result.data?.draft) throw new Error('AI 초안 응답 형식이 올바르지 않습니다.');
-    return result.data.draft;
+    return {
+      ...result.data.draft,
+      reviewMeta: {
+        model: result.data.model || 'unknown',
+        generatedAt: result.data.generatedAt || new Date().toISOString(),
+        identifiersRedacted: true,
+      },
+    };
   } catch (error) {
     throw new Error(errorMessages[error.code] || error.message || 'AI 초안을 만들지 못했습니다.');
   }

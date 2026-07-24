@@ -1,17 +1,27 @@
 import { collection, deleteDoc, doc, onSnapshot, or, query, setDoc, where, writeBatch } from 'firebase/firestore';
 import { db, firestoreSyncEnabled } from '../lib/firebase';
-import { isOperationsStaff } from '../utils/roles';
 
 const collectionNamesFor = role => {
   if (role === 'student') return ['students', 'consultationSummaries', 'followUps', 'appointments', 'counselorAvailability', 'notifications'];
-  return ['users', 'studentRegistrations', 'students', 'consultations', 'consultationSummaries', 'consultationNotes', 'consultationDrafts', 'followUps', 'appointments', 'counselorAvailability', 'notifications'];
+  if (role === 'counselor') return ['students', 'consultations', 'consultationSummaries', 'consultationNotes', 'consultationDrafts', 'followUps', 'appointments', 'counselorAvailability', 'notifications'];
+  if (role === 'admin') return ['users', 'studentRegistrations', 'students', 'consultations', 'consultationSummaries', 'consultationNotes', 'followUps', 'appointments', 'counselorAvailability', 'notifications'];
+  return [];
 };
+
+export const careerCollectionCountFor = role => collectionNamesFor(role).length;
 
 function constraintsFor(name, session) {
   if (name === 'consultationDrafts') return [where('counselorUid', '==', session.user.uid)];
   if (name === 'notifications') return [where('recipientUid', '==', session.user.uid)];
   if (name === 'counselorAvailability' && session.role === 'student') return [or(where('status', '==', 'open'), where('bookedByUid', '==', session.user.uid))];
-  if (isOperationsStaff(session.role)) return [];
+  if (session.role === 'admin') return [];
+  if (session.role === 'counselor') {
+    if (['students', 'consultations', 'consultationSummaries', 'consultationNotes', 'appointments', 'counselorAvailability'].includes(name)) {
+      return [where('counselorUid', '==', session.user.uid)];
+    }
+    if (name === 'followUps') return [where('ownerUid', '==', session.user.uid)];
+    return [];
+  }
   if (name === 'students') return [where('uid', '==', session.user.uid)];
   if (name === 'consultations') return [where('studentUid', '==', session.user.uid), where('studentVisible', '==', true)];
   if (name === 'consultationSummaries') return [where('studentUid', '==', session.user.uid), where('published', '==', true)];

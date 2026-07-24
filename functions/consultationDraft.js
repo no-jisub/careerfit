@@ -1,4 +1,5 @@
 const TEXT_LIMITS = {
+  studentId: 128,
   purpose: 500,
   currentConcern: 3000,
   rawMemo: 8000,
@@ -59,6 +60,13 @@ function cleanText(value, maxLength) {
     : '';
 }
 
+export function redactDirectIdentifiers(value) {
+  return cleanText(value, 10000)
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[이메일 마스킹]')
+    .replace(/\b01[016789][-\s]?\d{3,4}[-\s]?\d{4}\b/g, '[전화번호 마스킹]')
+    .replace(/\b\d{6}[-\s]?[1-4]\d{6}\b/g, '[주민등록번호 마스킹]');
+}
+
 function cleanStringList(value, maxItems = 10, maxLength = 500) {
   return Array.isArray(value)
     ? value.map((item) => cleanText(item, maxLength)).filter(Boolean).slice(0, maxItems)
@@ -69,12 +77,18 @@ export function sanitizeConsultationInput(input = {}) {
   const result = Object.fromEntries(
     Object.entries(TEXT_LIMITS).map(([key, limit]) => [key, cleanText(input[key], limit)]),
   );
+  for (const field of Object.keys(TEXT_LIMITS).filter(key => !['studentId'].includes(key))) {
+    result[field] = redactDirectIdentifiers(result[field]).slice(0, TEXT_LIMITS[field]);
+  }
   result.type = cleanText(input.type, 100);
   result.programs = Array.isArray(input.programs)
     ? input.programs.map((item) => cleanText(item, 200)).filter(Boolean).slice(0, 10)
     : [];
   if (result.rawMemo.length < 10) {
     throw new Error('상담 메모를 10자 이상 입력해 주세요.');
+  }
+  if (!result.studentId) {
+    throw new Error('상담 대상 학생 정보가 필요합니다.');
   }
   return result;
 }

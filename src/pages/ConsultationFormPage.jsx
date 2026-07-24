@@ -7,19 +7,15 @@ import { generateConsultationDraft } from '../services/consultationAiService';
 import { addDays, toDateKey } from '../utils/date';
 import { useAuth } from '../auth/AuthContext';
 import { cleanText, validateConsultationInput } from '../utils/validation';
-import { buildConsultationSummary, consultationPublicFieldOptions, defaultConsultationVisibility } from '../utils/consultations';
+import { buildConsultationSummary, consultationEvidenceFieldOptions, consultationPublicFieldOptions, defaultConsultationVisibility } from '../utils/consultations';
 import { buildEventNotification } from '../utils/notifications';
+import { detectDirectIdentifiers } from '../utils/privacy';
+import { getEvidenceCoverage } from '../utils/trust';
 
 const createEmptyForm = () => { const today = toDateKey(); return { date: today, type: '진로 탐색', purpose: '관심 직무 구체화 및 경험 계획 수립', currentConcern: '', rawMemo: '', guidance: '', strengths: '', programs: [], studentActions: '', counselorActions: '', nextCheckItems: '', nextDate: addDays(today, 14), studentVisible: true, visibility: { ...defaultConsultationVisibility } }; };
 const appendMissingDocuments = (current, additions) => [
   ...current,
   ...additions.filter(addition => !current.some(item => item.id === addition.id)),
-];
-const aiEvidenceOptions = [
-  { key: 'summary', label: '상담 주요 내용' },
-  { key: 'strengths', label: '학생의 강점' },
-  { key: 'concern', label: '학생의 고민과 목표' },
-  { key: 'guidance', label: '담당자의 안내 내용' },
 ];
 const cleanAiList = value => Array.isArray(value)
   ? value.map(item => cleanText(item, 500)).filter(Boolean).slice(0, 10)
@@ -38,6 +34,10 @@ export default function ConsultationFormPage() {
   const draftId = useMemo(() => `draft-${appointmentId || `${counselorUid}-${studentId}`}`.replace(/[^A-Za-z0-9_-]/g, '-'), [appointmentId, counselorUid, studentId]);
   const [form, setForm] = useState(() => draftForm?.studentId === student?.id ? draftForm.form : { ...createEmptyForm(), currentConcern: student?.concern || '' });
   const [aiDraft, setAiDraft] = useState(null);
+  const [aiReviewedAt, setAiReviewedAt] = useState('');
+  const [evidenceReviews, setEvidenceReviews] = useState(() => Object.fromEntries(consultationEvidenceFieldOptions.map(({ key }) => [key, false])));
+  const [confirmationAcknowledged, setConfirmationAcknowledged] = useState(false);
+  const [sensitiveAcknowledged, setSensitiveAcknowledged] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -47,6 +47,19 @@ export default function ConsultationFormPage() {
   const [draftRestored, setDraftRestored] = useState(false);
   const lastDraftPayload = useRef('');
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
+  const privacyPreflight = useMemo(() => detectDirectIdentifiers([form.rawMemo, form.currentConcern, form.guidance].join('\n')), [form.currentConcern, form.guidance, form.rawMemo]);
+  const reviewedEvidenceCount = consultationEvidenceFieldOptions.filter(({ key }) => evidenceReviews[key]).length;
+  const allEvidenceReviewed = reviewedEvidenceCount === consultationEvidenceFieldOptions.length;
+  const reviewReady = Boolean(aiDraft)
+    && allEvidenceReviewed
+    && (!aiDraft.needsConfirmation?.length || confirmationAcknowledged)
+    && (!aiDraft.sensitiveWarning?.length || sensitiveAcknowledged);
+  const resetAiReview = () => {
+    setAiReviewedAt('');
+    setEvidenceReviews(Object.fromEntries(consultationEvidenceFieldOptions.map(({ key }) => [key, false])));
+    setConfirmationAcknowledged(false);
+    setSensitiveAcknowledged(false);
+  };
   useEffect(() => {
     if (!student) return undefined;
     // Remove drafts saved by older builds; counseling notes must not persist in
@@ -74,7 +87,7 @@ export default function ConsultationFormPage() {
     if (payload === lastDraftPayload.current) return undefined;
     const timer = setTimeout(async () => {
       const updatedAt = new Date().toISOString();
-      const record = { id: draftId, appointmentId, studentId: student.id, studentUid: student.uid || '', counselorUid, form, studentTask, counselorTask, updatedAt };
+      const record = { id: draftId, appointmentId, studentId: student.id, studentUid: student.uid || '', counselorUid, form, studentTask, counselorTask, updatedAt, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) };
       try {
         await persistDocument('consultationDrafts', record);
         setConsultationDrafts(items => items.some(item => item.id === draftId) ? items.map(item => item.id === draftId ? record : item) : [...items, record]);
@@ -93,7 +106,8 @@ export default function ConsultationFormPage() {
     if (!form.rawMemo.trim()) { setError('상담 메모를 입력하면 AI 초안을 생성할 수 있습니다.'); return; }
     setLoading(true);
     try {
-      setAiDraft(await generateConsultationDraft(form));
+      setAiDraft(await generateConsultationDraft({ ...form, studentId: student.id }));
+      resetAiReview();
       notify('상담일지 초안을 생성했습니다.');
     } catch (e) {
       setError(e.message);
@@ -103,6 +117,11 @@ export default function ConsultationFormPage() {
   };
   const save = async () => {
     if (saving) return;
+    if (aiDraft && !aiReviewedAt) {
+      setError('AI 초안의 작성 근거를 확인하고 ‘근거 검토 완료’를 눌러 주세요.');
+      document.querySelector('#ai-review-confirm')?.focus();
+      return;
+    }
     const validated = validateConsultationInput(form);
     if (validated.error) { setError(validated.error); document.querySelector('#rawMemo')?.focus(); return; }
     const safeForm = validated.value;
@@ -120,12 +139,21 @@ export default function ConsultationFormPage() {
       nextCheckItems: cleanText(draft.nextCheckItems, 2000),
     };
     const aiReview = aiDraft ? {
-      evidence: Object.fromEntries(aiEvidenceOptions.map(({ key }) => [
+      evidence: Object.fromEntries(consultationEvidenceFieldOptions.map(({ key }) => [
         key,
         cleanAiList(aiDraft.evidence?.[key]).slice(0, 5),
       ])),
       needsConfirmation: cleanAiList(aiDraft.needsConfirmation),
       sensitiveWarning: cleanAiList(aiDraft.sensitiveWarning),
+      model: cleanText(aiDraft.reviewMeta?.model || 'unknown', 100),
+      generatedAt: cleanText(aiDraft.reviewMeta?.generatedAt || '', 40),
+      reviewedAt: aiReviewedAt,
+      reviewedBy: (profile?.displayName || user?.displayName || '상담 담당자').replace(/\s*상담사$/, ''),
+      reviewedFields: consultationEvidenceFieldOptions.filter(({ key }) => evidenceReviews[key]).map(({ key }) => key),
+      evidenceCoverage: getEvidenceCoverage(aiDraft),
+      confirmationAcknowledged: !aiDraft.needsConfirmation?.length || confirmationAcknowledged,
+      sensitiveAcknowledged: !aiDraft.sensitiveWarning?.length || sensitiveAcknowledged,
+      identifiersRedacted: aiDraft.reviewMeta?.identifiersRedacted === true,
     } : null;
     if (linkedAppointment && new Date(`${linkedAppointment.date}T${linkedAppointment.time}:00`) > new Date()) { setError('최종 상담 기록은 상담 시작 이후 저장할 수 있습니다. 지금은 임시 저장을 이용해 주세요.'); return; }
     if (linkedAppointment && consultations.some(item => item.appointmentId === linkedAppointment.id)) { setError('이 예약에는 이미 최종 상담 기록이 저장되어 있습니다.'); return; }
@@ -192,7 +220,7 @@ export default function ConsultationFormPage() {
         <div className="form-divider" />
         <div className="form-section-title"><span>2</span><div><h2>상담 메모</h2><p>완성된 문장보다 중요한 키워드와 맥락을 편하게 남겨 주세요.</p></div></div>
         <label>학생의 현재 고민<textarea rows="3" value={form.currentConcern} onChange={e => update('currentConcern', e.target.value)} /></label>
-        <label>상담 담당자 내부 메모 <span className="required">필수</span><textarea id="rawMemo" className="memo-area" rows="8" value={form.rawMemo} onChange={e => update('rawMemo', e.target.value)} placeholder="예: 개발 수업은 재미있었지만, 문제를 정의하고 사람들과 조율하는 역할에 더 흥미를 느낌..." /><small className="field-hint">이 원문 메모는 상담 담당자만 볼 수 있는 별도 공간에 저장됩니다.</small>{error && <span className="field-error" role="alert">{error}</span>}</label>
+        <label>상담 담당자 내부 메모 <span className="required">필수</span><textarea id="rawMemo" className="memo-area" rows="8" value={form.rawMemo} onChange={e => update('rawMemo', e.target.value)} placeholder="예: 개발 수업은 재미있었지만, 문제를 정의하고 사람들과 조율하는 역할에 더 흥미를 느낌..." /><small className="field-hint">원문 메모는 학생에게 공개되지 않으며 담당 상담사와 권한이 있는 관리자만 접근할 수 있습니다. AI 초안 생성 시 이메일·전화번호·주민등록번호 형식은 전송 전에 자동 마스킹됩니다.</small>{privacyPreflight.needsMasking && <span className="privacy-preflight" role="status"><Icon name="shield" size={16} /><span><strong>개인정보 사전 점검</strong>{privacyPreflight.findings.map(item => `${item.label} ${item.count}건`).join(' · ')} 감지 — AI 전송 전 서버에서 마스킹됩니다.</span></span>}{error && <span className="field-error" role="alert">{error}</span>}</label>
         <label>학생의 강점<textarea rows="3" value={form.strengths} onChange={e => update('strengths', e.target.value)} placeholder="상담 중 확인한 학생의 강점이나 긍정적인 자원을 입력하세요." /></label>
         <fieldset className="publication-fieldset"><legend>학생에게 공개할 내용</legend><p>체크한 항목만 학생 화면에 표시됩니다. 상담사 내부 메모는 항상 비공개입니다.</p><div>{consultationPublicFieldOptions.map(item => <label key={item.key}><input type="checkbox" checked={form.visibility?.[item.key] ?? false} onChange={e => update('visibility', { ...form.visibility, [item.key]: e.target.checked })} /><span>{item.label}</span></label>)}</div></fieldset>
         <label>담당자가 안내한 내용<textarea rows="4" value={form.guidance} onChange={e => update('guidance', e.target.value)} placeholder="상담 중 안내한 자료나 조언을 입력하세요." /></label>
@@ -203,9 +231,67 @@ export default function ConsultationFormPage() {
       </section>
       <aside className="consultation-aside">
         <section className="card student-context"><div className="context-head"><div><strong>{student.name}</strong><p>{student.department} · {student.grade}</p></div><StatusBadge status="inProgress" /></div><dl><div><dt>진로 목표</dt><dd>{student.goal}</dd></div><div><dt>최근 상담</dt><dd>{student.lastConsultation}</dd></div></dl></section>
-        <section className="card ai-card"><span className="ai-label"><Icon name="spark" size={16} /> AI 작성 도우미</span><h2>{aiDraft ? '상담일지 초안' : '메모를 상담일지로 정리해요'}</h2>{!aiDraft && <p>입력한 상담 메모를 바탕으로 구조화된 초안을 만들어요. 자동 저장되지 않습니다.</p>}{loading && <div className="ai-loading" role="status" aria-live="polite"><span className="spinner" />상담 맥락을 정리하고 있어요...</div>}
+        <section className="card ai-card">
+          <span className="ai-label"><Icon name="spark" size={16} /> AI 작성 도우미</span>
+          <h2>{aiDraft ? '상담일지 초안' : '메모를 상담일지로 정리해요'}</h2>
+          {!aiDraft && <>
+            <p>입력한 상담 메모를 바탕으로 구조화된 초안을 만들어요. 자동 저장되지 않습니다.</p>
+            <div className="ai-privacy-notice"><Icon name="lock" size={16} /><span><strong>최소 정보만 전송</strong>학생 이름·학번·연락처는 요청 데이터에 포함하지 않고, 메모 속 직접 식별정보 형식은 서버에서 마스킹합니다.</span></div>
+          </>}
+          {loading && <div className="ai-loading" role="status" aria-live="polite"><span className="spinner" />상담 맥락을 정리하고 있어요...</div>}
           {!aiDraft && !loading && <button className="button ai full" onClick={generate}><Icon name="spark" size={18} />AI 상담일지 초안 만들기</button>}
-          {aiDraft && !loading && <><div className="ai-warning"><Icon name="alert" size={17} />AI가 작성한 초안이므로 저장 전 내용과 근거를 확인하세요.</div><div className="ai-fields">{[['purpose','상담 목적'],['summary','상담 주요 내용'],['strengths','학생의 강점'],['concern','학생의 고민과 목표'],['guidance','담당자의 안내 내용'],['studentActions','학생의 다음 행동'],['counselorActions','담당자의 후속 조치'],['nextCheckItems','다음 상담 확인 사항']].map(([key,label]) => <label key={key}>{label}<textarea rows={key === 'summary' ? 5 : 3} value={aiDraft[key]} onChange={e => setAiDraft(prev => ({ ...prev, [key]: e.target.value }))} /></label>)}<section className="ai-review-section"><h3>작성 근거</h3><p>AI가 각 항목을 작성할 때 사용한 상담 내용입니다.</p>{aiEvidenceOptions.map(({ key, label }) => <div className="ai-evidence" key={key}><strong>{label}</strong><ul>{(aiDraft.evidence?.[key]?.length ? aiDraft.evidence[key] : ['근거 부족']).map((item, index) => <li key={`${key}-${index}`}>{item}</li>)}</ul></div>)}</section><section className="ai-review-section"><h3>추가 확인 필요</h3>{aiDraft.needsConfirmation?.length ? <ul>{aiDraft.needsConfirmation.map((item, index) => <li key={`confirmation-${index}`}>{item}</li>)}</ul> : <p>AI가 발견한 추가 확인 사항이 없습니다.</p>}</section>{Boolean(aiDraft.sensitiveWarning?.length) && <section className="ai-review-section sensitive"><h3><Icon name="alert" size={15} />공개 전 확인</h3><ul>{aiDraft.sensitiveWarning.map((item, index) => <li key={`warning-${index}`}>{item}</li>)}</ul></section>}</div><div className="ai-actions"><button className="button secondary" onClick={generate}>초안 다시 생성</button><button className="button ai" onClick={() => notify('AI 초안 검토를 완료했습니다.')}>검토 완료</button></div></>}
+          {aiDraft && !loading && <>
+            <div className="ai-warning"><Icon name="alert" size={17} />AI가 작성한 초안입니다. 저장하려면 각 항목의 근거를 직접 확인해야 합니다.</div>
+            <div className="ai-review-progress" aria-live="polite">
+              <div><span>근거 검토 진행률</span><strong>{reviewedEvidenceCount} / {consultationEvidenceFieldOptions.length}</strong></div>
+              <i><b style={{ width: `${reviewedEvidenceCount / consultationEvidenceFieldOptions.length * 100}%` }} /></i>
+              <small>현재 근거 충족률 {getEvidenceCoverage(aiDraft)}%</small>
+            </div>
+            <div className="ai-fields">
+              {[['purpose', '상담 목적'], ['summary', '상담 주요 내용'], ['strengths', '학생의 강점'], ['concern', '학생의 고민과 목표'], ['guidance', '담당자의 안내 내용'], ['studentActions', '학생의 다음 행동'], ['counselorActions', '담당자의 후속 조치'], ['nextCheckItems', '다음 상담 확인 사항']].map(([key, label]) => <label key={key}>{label}<textarea rows={key === 'summary' ? 5 : 3} value={aiDraft[key]} onChange={e => {
+                setAiDraft(prev => ({ ...prev, [key]: e.target.value }));
+                setAiReviewedAt('');
+                if (consultationEvidenceFieldOptions.some(item => item.key === key)) setEvidenceReviews(prev => ({ ...prev, [key]: false }));
+              }} /></label>)}
+              <section className="ai-review-section">
+                <h3>항목별 작성 근거</h3>
+                <p>AI가 사용한 상담 내용을 읽고 각 항목을 직접 확인해 주세요. ‘근거 부족’이면 초안 내용을 보완하거나 삭제합니다.</p>
+                {consultationEvidenceFieldOptions.map(({ key, label }) => <div className={`ai-evidence ${evidenceReviews[key] ? 'reviewed' : ''}`} key={key}>
+                  <div className="ai-evidence-head"><strong>{label}</strong><span>{evidenceReviews[key] ? '확인 완료' : '확인 필요'}</span></div>
+                  <ul>{(aiDraft.evidence?.[key]?.length ? aiDraft.evidence[key] : ['근거 부족']).map((item, index) => <li key={`${key}-${index}`}>{item}</li>)}</ul>
+                  <label className="ai-review-check"><input type="checkbox" checked={evidenceReviews[key]} onChange={event => {
+                    setEvidenceReviews(prev => ({ ...prev, [key]: event.target.checked }));
+                    setAiReviewedAt('');
+                  }} /><span>이 근거와 초안 내용을 직접 확인했습니다</span></label>
+                </div>)}
+              </section>
+              <section className="ai-review-section">
+                <h3>추가 확인 필요</h3>
+                {aiDraft.needsConfirmation?.length ? <>
+                  <ul>{aiDraft.needsConfirmation.map((item, index) => <li key={`confirmation-${index}`}>{item}</li>)}</ul>
+                  <label className="ai-review-check"><input type="checkbox" checked={confirmationAcknowledged} onChange={event => { setConfirmationAcknowledged(event.target.checked); setAiReviewedAt(''); }} /><span>추가 확인 항목을 읽고 기록에 반영했습니다</span></label>
+                </> : <p>AI가 발견한 추가 확인 사항이 없습니다.</p>}
+              </section>
+              {Boolean(aiDraft.sensitiveWarning?.length) && <section className="ai-review-section sensitive">
+                <h3><Icon name="alert" size={15} />공개 전 확인</h3>
+                <ul>{aiDraft.sensitiveWarning.map((item, index) => <li key={`warning-${index}`}>{item}</li>)}</ul>
+                <label className="ai-review-check"><input type="checkbox" checked={sensitiveAcknowledged} onChange={event => { setSensitiveAcknowledged(event.target.checked); setAiReviewedAt(''); }} /><span>민감정보 경고를 확인하고 공개 범위를 점검했습니다</span></label>
+              </section>}
+            </div>
+            <div className={`ai-review-confirmation ${aiReviewedAt ? 'confirmed' : ''}`}>
+              <Icon name={aiReviewedAt ? 'check' : 'shield'} size={18} />
+              <span><strong>{aiReviewedAt ? '근거 검토 완료' : reviewReady ? '최종 승인 준비 완료' : '상담사 확인이 필요합니다'}</strong>{aiReviewedAt ? '확인 시각과 검토자가 상담 기록에 함께 저장됩니다.' : reviewReady ? '모든 필수 확인이 끝났습니다. 검토 완료를 승인해 주세요.' : '항목별 근거와 표시된 경고를 모두 확인해야 최종 저장할 수 있습니다.'}</span>
+            </div>
+            <div className="ai-actions">
+              <button className="button secondary" onClick={generate}>초안 다시 생성</button>
+              <button id="ai-review-confirm" className={`button ${aiReviewedAt ? 'secondary' : 'ai'}`} disabled={!reviewReady && !aiReviewedAt} onClick={() => {
+                const reviewedAt = new Date().toISOString();
+                setAiReviewedAt(reviewedAt);
+                setError('');
+                notify('AI 초안의 내용과 근거를 검토 완료했습니다.');
+              }}>{aiReviewedAt ? '검토 완료됨' : '근거 검토 완료'}</button>
+            </div>
+          </>}
         </section>
         <section className="card task-register"><span className="eyebrow">저장 시 함께 등록</span><h2>후속 조치</h2><label>학생 담당<input value={studentTask} onChange={e => setStudentTask(e.target.value)} /></label><label>교직원 담당<input value={counselorTask} onChange={e => setCounselorTask(e.target.value)} /></label><small><Icon name="calendar" size={14} />기한 {form.nextDate}</small></section>
       </aside>

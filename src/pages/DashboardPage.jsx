@@ -4,10 +4,11 @@ import Icon from '../components/Icon';
 import { EmptyState, PageIntro, SectionHeader, StatusBadge } from '../components/UI';
 import { formatKoreanDate, getDayPeriod, toDateKey } from '../utils/date';
 import { useAuth } from '../auth/AuthContext';
+import { summarizeTrustPosture } from '../utils/trust';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { students, consultations, followUps, appointments } = useApp();
+  const { students, consultations, consultationSummaries, consultationDrafts, followUps, appointments } = useApp();
   const { profile, user } = useAuth();
   const counselorName = (profile?.displayName || user?.displayName || '상담 담당자').replace(/\s*상담사$/, '');
   const today = new Date();
@@ -16,15 +17,29 @@ export default function DashboardPage() {
   const writing = students.filter(s => s.status === 'writing');
   const pending = followUps.filter(f => f.status !== 'complete');
   const overdue = pending.filter(f => f.status === 'overdue');
+  const trust = summarizeTrustPosture({ consultations, summaries: consultationSummaries, drafts: consultationDrafts });
   const studentById = id => students.find(s => s.id === id);
   return <>
-    <PageIntro eyebrow={formatKoreanDate(today)} title={`좋은 아침이에요, ${counselorName} 상담사님!`} description="오늘 상담과 놓치기 쉬운 후속 조치를 먼저 모아봤어요." action={<Link className="button primary" to="/students?select=consultation"><Icon name="plus" size={18} />상담 기록 작성</Link>} />
+    <section className="dashboard-masthead">
+      <PageIntro eyebrow={formatKoreanDate(today)} title={`좋은 아침이에요, ${counselorName} 상담사님!`} description="오늘 상담과 놓치기 쉬운 후속 조치를 먼저 모아봤어요." action={<Link className="button primary" to="/students?select=consultation"><Icon name="plus" size={18} />상담 기록 작성</Link>} />
+      <Link className={`priority-brief ${overdue.length ? 'urgent' : 'clear'}`} to={overdue.length ? '/follow-ups' : '/appointments'}>
+        <span className="priority-brief-icon"><Icon name={overdue.length ? 'alert' : 'check'} size={19} /></span>
+        <div><small>오늘의 우선순위</small><strong>{overdue.length ? `기한이 지난 후속 조치 ${overdue.length}건을 먼저 확인해 주세요.` : '기한을 넘긴 업무가 없습니다. 오늘 일정을 준비해 보세요.'}</strong></div>
+        <span className="priority-brief-action">{overdue.length ? '지금 확인' : '일정 보기'}<Icon name="arrow" size={16} /></span>
+      </Link>
+    </section>
     <section className="summary-grid" aria-label="오늘의 상담 요약">
       <Link className="summary-card blue" to="/appointments" aria-label={`오늘 상담 예정 ${scheduled.length}명 확인`}><span className="summary-icon"><Icon name="calendar" /></span><div><small>오늘 상담 예정</small><strong>{scheduled.length}<em>명</em></strong><p>{scheduled[0] ? <><b>다음</b> {getDayPeriod(scheduled[0].time)} {scheduled[0].time} {studentById(scheduled[0].studentId)?.name}</> : '예정된 상담이 없습니다'}</p></div><Icon name="arrow" className="summary-arrow" size={17} /></Link>
       <Link className="summary-card purple" to="/students?select=consultation" aria-label={`기록 작성 필요 ${writing.length}건 확인`}><span className="summary-icon"><Icon name="note" /></span><div><small>기록 작성 필요</small><strong>{writing.length}<em>건</em></strong><p>{writing.length ? '오늘 안에 기록해 주세요' : '밀린 기록이 없습니다'}</p></div><Icon name="arrow" className="summary-arrow" size={17} /></Link>
       <Link className="summary-card green" to="/follow-ups" aria-label={`미완료 후속 조치 ${pending.length}건 확인`}><span className="summary-icon"><Icon name="check" /></span><div><small>미완료 후속 조치</small><strong>{pending.length}<em>건</em></strong><p>학생 {pending.filter(f => f.owner === '학생').length} · 교직원 {pending.filter(f => f.owner === '교직원').length}</p></div><Icon name="arrow" className="summary-arrow" size={17} /></Link>
       <Link className="summary-card red" to="/follow-ups" aria-label={`기한 초과 ${overdue.length}건 확인`}><span className="summary-icon"><Icon name="alert" /></span><div><small>기한 초과</small><strong>{overdue.length}<em>건</em></strong><p>{overdue.length ? '우선 확인이 필요해요' : '기한을 넘긴 항목이 없습니다'}</p></div><Icon name="arrow" className="summary-arrow" size={17} /></Link>
     </section>
+    <Link className="dashboard-trust-strip" to="/trust-center">
+      <span className="dashboard-trust-icon"><Icon name="shield" size={21} /></span>
+      <div><span className="eyebrow">Responsible AI</span><strong>상담 AI의 근거와 개인정보 통제를 확인하세요</strong><p>근거 충족 {trust.averageEvidenceCoverage}% · 사람 검토 {trust.humanReviewRate}% · 식별정보 마스킹 {trust.redactionRate}%</p></div>
+      <span className="dashboard-trust-score"><small>신뢰 점수</small><strong>{trust.score}</strong></span>
+      <span className="dashboard-trust-action">신뢰 센터 <Icon name="arrow" size={16} /></span>
+    </Link>
     <div className="dashboard-grid">
       <section className="card span-2"><SectionHeader eyebrow="오늘의 일정" title="오늘 상담 예정 학생" description="상담 전 이전 기록과 후속 조치를 확인해 보세요." action={<Link to="/appointments">전체 보기 <Icon name="chevron" size={16} /></Link>} />
         <div className="schedule-list">{scheduled.map(appointment => { const student = studentById(appointment.studentId); const count = pending.filter(f => f.studentId === appointment.studentId).length; return <Link className="schedule-item" to={`/students/${appointment.studentId}`} key={appointment.id}><div className="schedule-time"><strong>{appointment.time}</strong><span>{getDayPeriod(appointment.time)}</span></div><div className="schedule-info"><div><strong>{student?.name || '학생'}</strong><span>{student?.department} · {student?.grade}</span></div><p>{appointment.type} · {appointment.location}</p><div className="item-meta"><StatusBadge status="scheduled" />{count > 0 && <span className="follow-count"><Icon name="alert" size={14} /> 미완료 {count}건</span>}</div></div><Icon name="chevron" className="row-arrow" /></Link>; })}{scheduled.length === 0 && <EmptyState icon="calendar" title="오늘 예정된 상담이 없습니다" />}</div>

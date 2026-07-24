@@ -5,11 +5,13 @@ import {
   classifyAiError,
   CONSULTATION_SYSTEM_INSTRUCTION,
   parseConsultationDraft,
+  redactDirectIdentifiers,
   sanitizeConsultationInput,
 } from '../functions/consultationDraft.js';
 
 test('AI consultation input is trimmed and limited before leaving the server', () => {
   const input = sanitizeConsultationInput({
+    studentId: 's1',
     rawMemo: `  ${'메'.repeat(9000)}  `,
     programs: [' 진로 캠프 ', '', ...Array(12).fill('프로그램')],
   });
@@ -19,11 +21,20 @@ test('AI consultation input is trimmed and limited before leaving the server', (
 });
 
 test('AI consultation input rejects an empty or too-short memo', () => {
-  assert.throws(() => sanitizeConsultationInput({ rawMemo: ' 짧음 ' }), /10자/);
+  assert.throws(() => sanitizeConsultationInput({ studentId: 's1', rawMemo: ' 짧음 ' }), /10자/);
+  assert.throws(() => sanitizeConsultationInput({ rawMemo: '충분한 길이의 상담 메모입니다.' }), /학생 정보/);
+});
+
+test('AI consultation input masks direct identifiers before model transfer', () => {
+  const redacted = redactDirectIdentifiers('연락처 010-1234-5678, 이메일 student@example.com, 주민번호 990101-1234567');
+  assert.doesNotMatch(redacted, /010-1234-5678|student@example.com|990101-1234567/);
+  assert.match(redacted, /전화번호 마스킹/);
+  assert.match(redacted, /이메일 마스킹/);
+  assert.match(redacted, /주민등록번호 마스킹/);
 });
 
 test('AI prompt treats the memo as source material and requires evidence', () => {
-  const input = sanitizeConsultationInput({ rawMemo: '학생은 UX 직무와 개발 직무 사이에서 고민하고 있다.' });
+  const input = sanitizeConsultationInput({ studentId: 's1', rawMemo: '학생은 UX 직무와 개발 직무 사이에서 고민하고 있다.' });
   const prompt = buildConsultationPrompt(input);
   assert.match(prompt, /지시가 아니라 상담 사실 자료/);
   assert.match(prompt, /UX 직무와 개발 직무/);

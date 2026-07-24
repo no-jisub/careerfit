@@ -13,9 +13,9 @@ import { initialPrograms } from './data/programs';
 import { initialProgramRecommendations } from './data/programRecommendations';
 import { resolveFollowUpStatus, toDateKey } from './utils/date';
 import { useAuth } from './auth/AuthContext';
-import { deleteCareerDocument, saveCareerDocument, saveCareerDocumentGroup, subscribeCareerData } from './services/firebaseDataService';
+import { careerCollectionCountFor, deleteCareerDocument, saveCareerDocument, saveCareerDocumentGroup, subscribeCareerData } from './services/firebaseDataService';
 import { firestoreSyncEnabled } from './lib/firebase';
-import { isOperationsStaff } from './utils/roles';
+import { isAdministrator, isOperationsStaff } from './utils/roles';
 import { createProgramRecommendationStore, createProgramStore, restoreProgramRecommendationStore, restoreProgramStore } from './utils/programs';
 import { restoreCounselorAvailabilityStore } from './utils/appointments';
 
@@ -39,6 +39,7 @@ const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const InsightsPage = lazy(() => import('./pages/InsightsPage'));
+const TrustCenterPage = lazy(() => import('./pages/TrustCenterPage'));
 
 const AppContext = createContext(null);
 const read = (key, fallback) => {
@@ -97,7 +98,7 @@ function AppProvider({ children }) {
     const loaded = new Set();
     const markLoaded = name => {
       loaded.add(name);
-      const expectedCount = isOperationsStaff(role) ? 11 : 6;
+      const expectedCount = careerCollectionCountFor(role);
       if (loaded.size === expectedCount) setDataLoading(false);
     };
     return subscribeCareerData(
@@ -203,9 +204,10 @@ function CounselorRoutes() {
       <Route path="appointments" element={<AppointmentsPage />} />
       <Route path="notifications" element={<NotificationsPage />} />
       <Route path="insights" element={<InsightsPage />} />
+      <Route path="trust-center" element={<TrustCenterPage />} />
       <Route path="programs" element={<ProgramsPage />} />
       <Route path="settings" element={<SettingsPage />} />
-      <Route path="admin/users" element={isOperationsStaff(role) ? <AdminUsersPage /> : <Navigate to="/dashboard" replace />} />
+      <Route path="admin/users" element={isAdministrator(role) ? <AdminUsersPage /> : <Navigate to="/dashboard" replace />} />
       <Route index element={<Navigate to="dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Route>

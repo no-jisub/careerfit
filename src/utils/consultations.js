@@ -7,6 +7,13 @@ export const consultationPublicFieldOptions = [
   { key: 'nextCheckItems', label: '다음 상담 계획' },
 ];
 
+export const consultationEvidenceFieldOptions = [
+  { key: 'summary', label: '상담 주요 내용' },
+  { key: 'strengths', label: '학생의 강점' },
+  { key: 'concern', label: '학생의 고민과 목표' },
+  { key: 'guidance', label: '담당자의 안내 내용' },
+];
+
 export const defaultConsultationVisibility = Object.fromEntries(
   consultationPublicFieldOptions.map(item => [item.key, true]),
 );
@@ -32,6 +39,15 @@ export function buildConsultationSummary(consultation, visibility = defaultConsu
     nextCheckItems: isVisible('nextCheckItems') ? consultation.nextCheckItems || '' : '',
     visibleFields,
     published: visibleFields.length > 0 && consultation.studentVisible !== false,
+    provenance: consultation.aiReview ? {
+      type: 'ai-assisted',
+      reviewedAt: consultation.aiReview.reviewedAt || '',
+      reviewedBy: consultation.aiReview.reviewedBy || consultation.counselor || '',
+    } : {
+      type: 'counselor-authored',
+      reviewedAt: consultation.updatedAt || consultation.createdAt || `${consultation.date}T00:00:00.000Z`,
+      reviewedBy: consultation.counselor || '상담 담당자',
+    },
     createdAt: consultation.createdAt,
     updatedAt: consultation.updatedAt,
   };

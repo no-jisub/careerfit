@@ -29,6 +29,15 @@ async function assertApprovedCounselor(uid) {
   if (!approved) {
     throw new HttpsError('permission-denied', '승인된 상담 담당자만 AI 초안을 만들 수 있습니다.');
   }
+  return profile;
+}
+
+async function assertCounselorStudentAccess(uid, profile, studentId) {
+  if (profile.role === 'admin') return;
+  const snapshot = await getFirestore().doc(`students/${studentId}`).get();
+  if (!snapshot.exists || snapshot.data()?.counselorUid !== uid) {
+    throw new HttpsError('permission-denied', '담당 학생의 상담 기록만 AI 초안으로 만들 수 있습니다.');
+  }
 }
 
 async function consumeDailyQuota(uid) {
@@ -63,7 +72,7 @@ export const generateConsultationDraft = onCall({
     }
 
     stage = 'authorization';
-    await assertApprovedCounselor(request.auth.uid);
+    const profile = await assertApprovedCounselor(request.auth.uid);
 
     stage = 'input-validation';
     let input;
@@ -72,6 +81,9 @@ export const generateConsultationDraft = onCall({
     } catch (error) {
       throw new HttpsError('invalid-argument', error.message);
     }
+
+    stage = 'student-authorization';
+    await assertCounselorStudentAccess(request.auth.uid, profile, input.studentId);
 
     stage = 'quota';
     await consumeDailyQuota(request.auth.uid);
@@ -107,6 +119,7 @@ export const generateConsultationDraft = onCall({
     return {
       draft: parseConsultationDraft(responseText),
       model: MODEL,
+      generatedAt: new Date().toISOString(),
     };
   } catch (error) {
     if (error instanceof HttpsError) throw error;
