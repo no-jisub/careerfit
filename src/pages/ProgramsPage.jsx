@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../App';
 import Icon from '../components/Icon';
-import { EmptyState, PageIntro } from '../components/UI';
+import { EmptyState, PageIntro, StatusTabs } from '../components/UI';
 import { recommendPrograms } from '../utils/programRecommendations';
 import { useAuth } from '../auth/AuthContext';
 import {
@@ -17,6 +17,14 @@ import {
 
 const gradeOptions = ['1학년', '2학년', '3학년', '4학년'];
 const editableStatuses = ['draft', 'scheduled', 'recruiting', 'closed', 'completed'];
+const managementStatusOptions = [
+  { value: 'scheduled', label: '모집 예정', description: '아직 신청 전', icon: 'calendar' },
+  { value: 'recruiting', label: '모집 중', description: '지금 신청 가능', icon: 'check' },
+  { value: 'completed', label: '모집 완료', description: '접수 종료·운영 완료', icon: 'note' },
+];
+
+const groupManagementStatus = status => ['closed', 'completed'].includes(status) ? 'completed' : status;
+const managementStatusLabel = status => groupManagementStatus(status) === 'completed' ? '모집 완료' : PROGRAM_STATUS_LABELS[status];
 
 const emptyProgram = () => ({
   name: '', type: PROGRAM_TYPES[0], description: '', reason: '', tags: '', grades: ['1학년', '2학년', '3학년', '4학년'], targetDepartments: '', target: '전 학과 재학생',
@@ -90,9 +98,9 @@ function ProgramFormModal({ program, onClose, onSave }) {
 }
 
 function ProgramManagementPage() {
-  const { programs, setPrograms, resetProgramDemo, notify } = useApp();
+  const { students, programs, setPrograms, programRecommendations, resetProgramDemo, notify } = useApp();
   const [query, setQuery] = useState('');
-  const [status, setStatus] = useState('active');
+  const [status, setStatus] = useState('recruiting');
   const [type, setType] = useState('전체');
   const [editing, setEditing] = useState(null);
   const [creating, setCreating] = useState(false);
@@ -102,15 +110,37 @@ function ProgramManagementPage() {
     counts[key] = (counts[key] || 0) + 1;
     return counts;
   }, {});
+  const managementStatusCounts = {
+    scheduled: statusCounts.scheduled || 0,
+    recruiting: statusCounts.recruiting || 0,
+    completed: (statusCounts.closed || 0) + (statusCounts.completed || 0),
+  };
+  const activePrograms = programs.filter(program => ['scheduled', 'recruiting'].includes(resolveProgramStatus(program, today)));
+  const matchCandidates = programs.filter(program => !['archived', 'completed', 'draft'].includes(resolveProgramStatus(program, today)));
+  const matchQueue = students.map(student => {
+    const eligible = matchCandidates.filter(program => isProgramEligibleForStudent(program, student));
+    const program = recommendPrograms(eligible, student, 1)[0];
+    const profileText = [...student.interests, student.goal, student.concern].join(' ').toLowerCase().replace(/\s+/g, '');
+    const signalCount = program?.tags.filter(tag => {
+      const normalized = tag.toLowerCase().replace(/\s+/g, '');
+      return profileText.includes(normalized) || normalized.includes(profileText);
+    }).length || 0;
+    return { student, program, eligibleCount: eligible.length, signalCount };
+  }).filter(item => item.program).sort((left, right) => right.signalCount - left.signalCount || right.program.score - left.program.score);
+  const respondedRecommendations = programRecommendations.filter(item => ['interested', 'applied'].includes(item.status)).length;
   const visiblePrograms = useMemo(() => programs
     .filter(program => {
       const effectiveStatus = resolveProgramStatus(program, today);
-      const matchesStatus = status === 'all' || (status === 'active' ? !['archived', 'completed'].includes(effectiveStatus) : effectiveStatus === status);
+      const matchesStatus = groupManagementStatus(effectiveStatus) === status;
       const normalizedQuery = query.trim().toLowerCase();
       const matchesQuery = !normalizedQuery || [program.name, program.department, program.description, ...program.tags].some(value => value?.toLowerCase().includes(normalizedQuery));
       return matchesStatus && matchesQuery && (type === '전체' || program.type === type);
     })
-    .sort((left, right) => Number(right.featured) - Number(left.featured) || left.recruitmentEndDate.localeCompare(right.recruitmentEndDate)), [programs, query, status, type, today]);
+    .sort((left, right) => {
+      if (status === 'completed') return (right.recruitmentEndDate || '').localeCompare(left.recruitmentEndDate || '');
+      const dateField = status === 'scheduled' ? 'recruitmentStartDate' : 'recruitmentEndDate';
+      return Number(right.featured) - Number(left.featured) || (left[dateField] || '').localeCompare(right[dateField] || '');
+    }), [programs, query, status, type, today]);
   const saveProgram = candidate => {
     const now = new Date().toISOString();
     const saved = normalizeProgram({ ...candidate, id: editing?.id || `p-${Date.now()}`, createdAt: editing?.createdAt || now, updatedAt: now });
@@ -137,10 +167,65 @@ function ProgramManagementPage() {
   };
   return <>
     <PageIntro eyebrow="운영 관리" title="비교과 프로그램 관리" description="상담에 활용할 프로그램을 등록하고 모집 상태와 학생 추천 정보를 관리합니다." action={<div className="page-action-group"><button className="button secondary" onClick={reset}>데모 데이터 초기화</button><button className="button primary" onClick={() => setCreating(true)}><Icon name="plus" size={17} />새 프로그램 등록</button></div>} />
-    <section className="program-stat-grid" aria-label="프로그램 현황"><article className="card"><span>전체 프로그램</span><strong>{programs.length}</strong></article><article className="card"><span>현재 모집 중</span><strong>{statusCounts.recruiting || 0}</strong></article><article className="card"><span>모집 예정</span><strong>{statusCounts.scheduled || 0}</strong></article><article className="card"><span>작성 중</span><strong>{statusCounts.draft || 0}</strong></article></section>
+    <section className="program-intelligence-hero">
+      <div className="program-intelligence-copy">
+        <span className="program-live-label"><i /> Student × Opportunity intelligence</span>
+        <span className="eyebrow">학생 성장기회 매칭</span>
+        <h2>프로그램을 관리하는 데서 끝나지 않고<br />필요한 학생에게 먼저 연결합니다</h2>
+        <p>상담 맥락의 관심 분야·학년과 실제 모집 가능한 프로그램을 비교해 상담사가 설명 가능한 추천을 완성합니다.</p>
+        <div className="program-intelligence-metrics"><div><small>매칭 대기 학생</small><strong>{matchQueue.length}<em>명</em></strong></div><div><small>추천 가능 기회</small><strong>{activePrograms.length}<em>개</em></strong></div><div><small>학생 반응</small><strong>{respondedRecommendations}<em>건</em></strong></div></div>
+      </div>
+      <div className="program-match-queue">
+        <div className="program-match-heading"><span><Icon name="spark" size={16} />추천 우선순위</span><small>상담 맥락 기반</small></div>
+        {matchQueue.slice(0, 3).map(({ student, program, eligibleCount, signalCount }, index) => <Link to={`/programs?student=${student.id}`} key={student.id}>
+          <span className="match-rank">0{index + 1}</span>
+          <span className="match-avatar">{student.name.slice(1, 3)}</span>
+          <span><strong>{student.name} · {student.goal}</strong><small>{program.name}</small></span>
+          <span className="match-count">{signalCount ? `근거 ${signalCount}` : `후보 ${eligibleCount}`}</span>
+          <Icon name="arrow" size={16} />
+        </Link>)}
+        <Link className="program-match-all" to="/students">담당 학생 전체에서 추천 시작 <Icon name="arrow" size={16} /></Link>
+      </div>
+    </section>
     <section className="card program-management-card">
-      <div className="program-management-toolbar"><label className="search-field"><Icon name="search" size={17} /><span className="sr-only">프로그램 검색</span><input value={query} onChange={event => setQuery(event.target.value)} placeholder="프로그램명, 담당 부서, 태그 검색" /></label><select aria-label="프로그램 상태" value={status} onChange={event => setStatus(event.target.value)}><option value="active">운영 대상</option><option value="all">전체 상태</option>{Object.entries(PROGRAM_STATUS_LABELS).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select><select aria-label="프로그램 분류" value={type} onChange={event => setType(event.target.value)}><option>전체</option>{PROGRAM_TYPES.map(item => <option key={item}>{item}</option>)}</select></div>
-      {visiblePrograms.length ? <div className="program-management-list">{visiblePrograms.map(program => { const effectiveStatus = resolveProgramStatus(program, today); return <article key={program.id} className="program-management-item"><div className="program-management-main"><div><span className={`program-status status-${effectiveStatus}`}>{PROGRAM_STATUS_LABELS[effectiveStatus]}</span>{program.featured && <span className="program-featured">주요</span>}</div><h2>{program.name}</h2><p>{program.description}</p><div className="program-tags">{program.tags.map(tag => <span key={tag}>{tag}</span>)}</div></div><dl className="program-management-meta"><div><dt>담당 부서</dt><dd>{program.department}</dd></div><div><dt>모집 기간</dt><dd>{program.recruit}</dd></div><div><dt>운영 기간</dt><dd>{program.period}</dd></div><div><dt>방식·정원</dt><dd>{program.mode} · {program.capacity ? `${program.capacity}명` : '제한 없음'}</dd></div></dl><div className="program-management-actions"><button className="button secondary small" onClick={() => setEditing(program)}>수정</button><button className="text-button" onClick={() => duplicateProgram(program)}>복제</button><button className="text-button" onClick={() => toggleArchive(program)}>{effectiveStatus === 'archived' ? '복원' : '보관'}</button></div></article>; })}</div> : <EmptyState title="조건에 맞는 프로그램이 없습니다" description="검색어나 상태 필터를 변경해 보세요." action={<button className="button secondary" onClick={() => { setQuery(''); setStatus('active'); setType('전체'); }}>필터 초기화</button>} />}
+      <div className="program-management-head"><div><span className="eyebrow">Opportunity catalog</span><h2>프로그램 운영 목록</h2><p>현재 조건에 맞는 프로그램 <strong>{visiblePrograms.length}개</strong></p></div><span className="program-data-sync"><i />데모 데이터 동기화됨</span></div>
+      <StatusTabs
+        className="program-status-tabs"
+        label="모집 상태"
+        options={managementStatusOptions.map(option => ({ ...option, count: managementStatusCounts[option.value] }))}
+        value={status}
+        onChange={setStatus}
+      />
+      <div className="program-management-toolbar">
+        <label className="search-field"><Icon name="search" size={17} /><span className="sr-only">프로그램 검색</span><input value={query} onChange={event => setQuery(event.target.value)} placeholder="프로그램명, 담당 부서, 태그 검색" /></label>
+        <select aria-label="프로그램 분류" value={type} onChange={event => setType(event.target.value)}><option>전체</option>{PROGRAM_TYPES.map(item => <option key={item}>{item}</option>)}</select>
+      </div>
+      {visiblePrograms.length ? <div className="program-management-list">{visiblePrograms.map(program => {
+        const effectiveStatus = resolveProgramStatus(program, today);
+        const applicantCount = Number(program.currentApplicants) || 0;
+        const capacity = Number(program.capacity) || 0;
+        const applicantProgress = capacity ? Math.min(100, Math.round((applicantCount / capacity) * 100)) : 0;
+        const showApplicants = ['recruiting', 'closed', 'completed'].includes(effectiveStatus);
+        return <article key={program.id} className="program-management-item">
+          <div className="program-management-main">
+            <div><span className={`program-status status-${effectiveStatus}`}>{managementStatusLabel(effectiveStatus)}</span>{program.featured && <span className="program-featured">주요</span>}</div>
+            <h2>{program.name}</h2>
+            <p>{program.description}</p>
+            <div className="program-tags">{program.tags.map(tag => <span key={tag}>{tag}</span>)}</div>
+          </div>
+          <dl className="program-management-meta">
+            <div><dt>담당 부서</dt><dd>{program.department}</dd></div>
+            <div><dt>모집 기간</dt><dd>{program.recruit}</dd></div>
+            <div><dt>운영 기간</dt><dd>{program.period}</dd></div>
+            <div><dt>방식·정원</dt><dd>{program.mode} · {capacity ? `${capacity}명` : '제한 없음'}</dd></div>
+            {showApplicants && <div className="program-applicant-status">
+              <div><dt>신청 현황</dt><dd><strong>{applicantCount}</strong>{capacity ? ` / ${capacity}명` : '명'}</dd></div>
+              {capacity > 0 && <span className="program-applicant-bar" role="img" aria-label={`신청 ${applicantCount}명, 정원 ${capacity}명`}><i style={{ width: `${applicantProgress}%` }} /></span>}
+            </div>}
+          </dl>
+          <div className="program-management-actions"><button className="button secondary small" onClick={() => setEditing(program)}>수정</button><button className="text-button" onClick={() => duplicateProgram(program)}>복제</button><button className="text-button" onClick={() => toggleArchive(program)}>보관</button></div>
+        </article>;
+      })}</div> : <EmptyState title="조건에 맞는 프로그램이 없습니다" description="검색어나 모집 상태를 변경해 보세요." action={<button className="button secondary" onClick={() => { setQuery(''); setStatus('recruiting'); setType('전체'); }}>필터 초기화</button>} />}
     </section>
     {(creating || editing) && <ProgramFormModal program={editing} onClose={() => { setCreating(false); setEditing(null); }} onSave={saveProgram} />}
   </>;

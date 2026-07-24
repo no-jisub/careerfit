@@ -42,9 +42,12 @@ const InsightsPage = lazy(() => import('./pages/InsightsPage'));
 const TrustCenterPage = lazy(() => import('./pages/TrustCenterPage'));
 
 const AppContext = createContext(null);
+const DEMO_DATA_VERSION = '2026-07-24-presentation-v2';
+const DEMO_DATA_VERSION_KEY = 'careerfit_demo_data_version';
 const read = (key, fallback) => {
   try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; }
 };
+const readDemo = (key, fallback) => localStorage.getItem(DEMO_DATA_VERSION_KEY) === DEMO_DATA_VERSION ? read(key, fallback) : fallback;
 
 export function useApp() { return useContext(AppContext); }
 
@@ -57,23 +60,40 @@ function RouteScrollManager() {
 function AppProvider({ children }) {
   const { user, role } = useAuth();
   const syncingRemoteData = firestoreSyncEnabled && Boolean(user) && Boolean(role);
-  const [users, setUsers] = useState(() => syncingRemoteData ? [] : read('careerfit_users', initialUsers));
-  const [studentRegistrations, setStudentRegistrations] = useState(() => syncingRemoteData ? [] : read('careerfit_student_registrations', initialStudentRegistrations));
-  const [students, setStudents] = useState(() => syncingRemoteData ? [] : read('careerfit_students', initialStudents).map(student => student.appointment && !student.appointmentDate ? { ...student, appointmentDate: toDateKey() } : student));
-  const [consultations, setConsultations] = useState(() => syncingRemoteData ? [] : read('careerfit_consultations', initialConsultations));
-  const [consultationSummaries, setConsultationSummaries] = useState(() => syncingRemoteData ? [] : read('careerfit_consultation_summaries', initialConsultationSummaries));
-  const [consultationNotes, setConsultationNotes] = useState(() => syncingRemoteData ? [] : read('careerfit_consultation_notes', []));
-  const [consultationDrafts, setConsultationDrafts] = useState(() => syncingRemoteData ? [] : read('careerfit_consultation_drafts', []));
-  const [followUps, setFollowUps] = useState(() => syncingRemoteData ? [] : read('careerfit_followups', initialFollowUps).map(followUp => ({ ...followUp, status: resolveFollowUpStatus(followUp) })));
-  const [appointments, setAppointments] = useState(() => syncingRemoteData ? [] : read('careerfit_appointments', initialAppointments));
-  const [counselorAvailability, setCounselorAvailability] = useState(() => syncingRemoteData ? [] : restoreCounselorAvailabilityStore(read('careerfit_counselor_availability', initialCounselorAvailability), initialCounselorAvailability));
-  const [notifications, setNotifications] = useState(() => syncingRemoteData ? [] : read('careerfit_notifications', []));
-  const [programs, setPrograms] = useState(() => restoreProgramStore(read('careerfit_program_store', null), initialPrograms));
-  const [programRecommendations, setProgramRecommendations] = useState(() => restoreProgramRecommendationStore(read('careerfit_program_recommendation_store', null), initialProgramRecommendations));
+  const [users, setUsers] = useState(() => syncingRemoteData ? [] : readDemo('careerfit_users', initialUsers));
+  const [studentRegistrations, setStudentRegistrations] = useState(() => syncingRemoteData ? [] : readDemo('careerfit_student_registrations', initialStudentRegistrations));
+  const [students, setStudents] = useState(() => syncingRemoteData ? [] : readDemo('careerfit_students', initialStudents).map(student => student.appointment && !student.appointmentDate ? { ...student, appointmentDate: toDateKey() } : student));
+  const [consultations, setConsultations] = useState(() => syncingRemoteData ? [] : readDemo('careerfit_consultations', initialConsultations));
+  const [consultationSummaries, setConsultationSummaries] = useState(() => syncingRemoteData ? [] : readDemo('careerfit_consultation_summaries', initialConsultationSummaries));
+  const [consultationNotes, setConsultationNotes] = useState(() => syncingRemoteData ? [] : readDemo('careerfit_consultation_notes', []));
+  const [consultationDrafts, setConsultationDrafts] = useState(() => syncingRemoteData ? [] : readDemo('careerfit_consultation_drafts', []));
+  const [followUps, setFollowUps] = useState(() => syncingRemoteData ? [] : readDemo('careerfit_followups', initialFollowUps).map(followUp => ({ ...followUp, status: resolveFollowUpStatus(followUp) })));
+  const [appointments, setAppointments] = useState(() => syncingRemoteData ? [] : readDemo('careerfit_appointments', initialAppointments));
+  const [counselorAvailability, setCounselorAvailability] = useState(() => syncingRemoteData ? [] : restoreCounselorAvailabilityStore(readDemo('careerfit_counselor_availability', initialCounselorAvailability), initialCounselorAvailability));
+  const [notifications, setNotifications] = useState(() => syncingRemoteData ? [] : readDemo('careerfit_notifications', []));
+  const [programs, setPrograms] = useState(() => restoreProgramStore(readDemo('careerfit_program_store', null), initialPrograms));
+  const [programRecommendations, setProgramRecommendations] = useState(() => restoreProgramRecommendationStore(readDemo('careerfit_program_recommendation_store', null), initialProgramRecommendations));
   const [toast, setToast] = useState('');
   const [draftForm, setDraftForm] = useState(null);
   const [dataLoading, setDataLoading] = useState(syncingRemoteData);
 
+  useEffect(() => {
+    if (syncingRemoteData || localStorage.getItem(DEMO_DATA_VERSION_KEY) === DEMO_DATA_VERSION) return;
+    setUsers(initialUsers);
+    setStudentRegistrations(initialStudentRegistrations);
+    setStudents(initialStudents.map(student => student.appointment && !student.appointmentDate ? { ...student, appointmentDate: toDateKey() } : student));
+    setConsultations(initialConsultations);
+    setConsultationSummaries(initialConsultationSummaries);
+    setConsultationNotes([]);
+    setConsultationDrafts([]);
+    setFollowUps(initialFollowUps.map(followUp => ({ ...followUp, status: resolveFollowUpStatus(followUp) })));
+    setAppointments(initialAppointments);
+    setCounselorAvailability(initialCounselorAvailability);
+    setNotifications([]);
+    setPrograms(initialPrograms);
+    setProgramRecommendations(initialProgramRecommendations);
+    localStorage.setItem(DEMO_DATA_VERSION_KEY, DEMO_DATA_VERSION);
+  }, [syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_students', JSON.stringify(students)); }, [students, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_consultations', JSON.stringify(consultations)); }, [consultations, syncingRemoteData]);
   useEffect(() => { if (!syncingRemoteData) localStorage.setItem('careerfit_consultation_summaries', JSON.stringify(consultationSummaries)); }, [consultationSummaries, syncingRemoteData]);
@@ -169,6 +189,7 @@ function AppProvider({ children }) {
   };
 
   const resetDemoData = () => {
+    localStorage.setItem(DEMO_DATA_VERSION_KEY, DEMO_DATA_VERSION);
     setUsers(initialUsers);
     setStudentRegistrations(initialStudentRegistrations);
     setStudents(initialStudents.map(student => student.appointment && !student.appointmentDate ? { ...student, appointmentDate: toDateKey() } : student));

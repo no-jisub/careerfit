@@ -2,9 +2,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../App';
 import Icon from '../components/Icon';
-import { EmptyState, PageIntro, StatusBadge } from '../components/UI';
+import { EmptyState, PageIntro, StatusBadge, StatusTabs } from '../components/UI';
 import { addDays, resolveFollowUpStatus, toDateKey } from '../utils/date';
 import { validateFollowUpInput } from '../utils/validation';
+
+const followUpStatusOptions = [
+  { value: 'all', label: '전체', description: '모든 후속 조치', icon: 'layers' },
+  { value: 'scheduled', label: '예정', description: '시작 전', icon: 'calendar' },
+  { value: 'inProgress', label: '진행 중', description: '현재 처리 중', icon: 'clock' },
+  { value: 'complete', label: '완료', description: '처리 완료', icon: 'check' },
+  { value: 'overdue', label: '기한 초과', description: '우선 확인 필요', icon: 'alert' },
+];
 
 export default function FollowUpsPage() {
   const { students, followUps, setFollowUps, persistDocument, notify } = useApp();
@@ -15,6 +23,10 @@ export default function FollowUpsPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [form, setForm] = useState(() => ({ studentId: students[0]?.id || '', content: '', owner: '학생', dueDate: addDays(toDateKey(), 7) }));
+  const statusCounts = followUps.reduce((counts, followUp) => {
+    counts[followUp.status] = (counts[followUp.status] || 0) + 1;
+    return counts;
+  }, {});
   const items = useMemo(() => followUps.filter(f => {
     const student = students.find(item => item.id === f.studentId);
     const keyword = query.trim().toLowerCase();
@@ -75,7 +87,19 @@ export default function FollowUpsPage() {
 
   return <>
     <PageIntro eyebrow="후속 조치 관리" title="다음 행동을 놓치지 않도록" description="모든 학생의 후속 조치를 기한과 담당자별로 모아 확인하세요." action={<button className="button primary" onClick={() => setShowAdd(true)}><Icon name="plus" size={18} />후속 조치 추가</button>} />
-    <section className="task-filter-bar"><label className="search-field"><span className="sr-only">후속 조치 검색</span><Icon name="search" size={18} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="학생, 학번, 후속 조치 검색" /></label><div className="segmented" aria-label="상태 필터">{[['all','전체'],['scheduled','예정'],['inProgress','진행 중'],['complete','완료'],['overdue','기한 초과']].map(([key,label]) => <button className={filter === key ? 'active' : ''} key={key} onClick={() => setFilter(key)}>{label}<span>{key === 'all' ? followUps.length : followUps.filter(f => f.status === key).length}</span></button>)}</div><select aria-label="행동 담당자" value={owner} onChange={e => setOwner(e.target.value)}><option value="all">전체 담당자</option><option value="학생">학생 담당</option><option value="교직원">교직원 담당</option></select></section>
+    <section className="card task-filter-panel">
+      <StatusTabs
+        className="task-status-tabs compact-status-tabs"
+        label="후속 조치 상태"
+        options={followUpStatusOptions.map(option => ({ ...option, count: option.value === 'all' ? followUps.length : statusCounts[option.value] || 0 }))}
+        value={filter}
+        onChange={setFilter}
+      />
+      <div className="task-filter-tools">
+        <label className="search-field"><span className="sr-only">후속 조치 검색</span><Icon name="search" size={18} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="학생 이름, 학번 또는 후속 조치 내용 검색" /></label>
+        <select aria-label="행동 담당자" value={owner} onChange={e => setOwner(e.target.value)}><option value="all">전체 담당자</option><option value="학생">학생 담당</option><option value="교직원">교직원 담당</option></select>
+      </div>
+    </section>
     <section className="card task-table-card">
       <div className="list-toolbar"><div><h2>후속 조치 목록 <span>{items.length}</span></h2><p>기한 초과 항목이 먼저 표시됩니다.</p></div></div>
       {items.length ? <>

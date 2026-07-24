@@ -33,6 +33,40 @@ export function PageIntro({ eyebrow, title, description, action }) {
   return <div className="page-intro"><div>{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h1>{title}</h1>{description && <p>{description}</p>}</div>{action}</div>;
 }
 
+export function StatusTabs({ label, options, value, onChange, className = '' }) {
+  const moveFocus = event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const currentIndex = options.findIndex(option => option.value === value);
+    const nextIndex = event.key === 'Home'
+      ? 0
+      : event.key === 'End'
+        ? options.length - 1
+        : (currentIndex + (event.key === 'ArrowRight' ? 1 : -1) + options.length) % options.length;
+    const nextValue = options[nextIndex].value;
+    onChange(nextValue);
+    event.currentTarget.parentElement.querySelector(`[data-tab-value="${nextValue}"]`)?.focus();
+  };
+
+  return <div className={`workflow-status-tabs ${className}`.trim()} role="tablist" aria-label={label}>
+    {options.map(option => <button
+      type="button"
+      role="tab"
+      aria-selected={value === option.value}
+      tabIndex={value === option.value ? 0 : -1}
+      data-tab-value={option.value}
+      className={value === option.value ? 'active' : ''}
+      key={option.value}
+      onClick={() => onChange(option.value)}
+      onKeyDown={moveFocus}
+    >
+      <span className="workflow-status-tab-icon"><Icon name={option.icon} size={18} /></span>
+      <span><strong>{option.label}</strong>{option.description && <small>{option.description}</small>}</span>
+      <em>{option.count}</em>
+    </button>)}
+  </div>;
+}
+
 export function IconButton({ label, icon, className = '', ...props }) {
   return <button className={`icon-button ${className}`.trim()} aria-label={label} title={label} {...props}><Icon name={icon} /></button>;
 }
