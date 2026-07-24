@@ -31,7 +31,8 @@ export function generateLocalConsultationDraft(input) {
     reviewMeta: {
       model: 'local-demo',
       generatedAt: new Date().toISOString(),
-      identifiersRedacted: true,
+      identifiersRedacted: false,
+      mode: 'local-demo',
     },
   };
 }
@@ -79,20 +80,23 @@ function normalizeDraftForPreview(draft, input) {
 
 export async function generateConsultationDraft(input) {
   if (!input.rawMemo?.trim()) throw new Error('상담 메모를 입력해 주세요.');
-  if (!auth?.currentUser) return generateLocalConsultationDraft(input);
+  const currentUser = auth?.currentUser;
+  if (!currentUser) return generateLocalConsultationDraft(input);
   if (!functions) throw new Error('AI 서비스를 사용할 수 있도록 Firebase 설정을 확인해 주세요.');
 
   try {
+    const demoSession = currentUser.isAnonymous;
+    const functionName = demoSession ? 'generateDemoConsultationDraft' : 'generateConsultationDraft';
     const isFirebaseHosting = typeof window !== 'undefined'
       && (window.location.hostname.endsWith('.web.app')
         || window.location.hostname.endsWith('.firebaseapp.com'));
     const callable = isFirebaseHosting
       ? httpsCallableFromURL(
         functions,
-        `${window.location.origin}/api/generateConsultationDraft`,
+        `${window.location.origin}/api/${functionName}`,
         { timeout: 65000 },
       )
-      : httpsCallable(functions, 'generateConsultationDraft', { timeout: 65000 });
+      : httpsCallable(functions, functionName, { timeout: 65000 });
     const result = await callable(input);
     if (!result.data?.draft) throw new Error('AI 초안 응답 형식이 올바르지 않습니다.');
     return {
@@ -101,9 +105,18 @@ export async function generateConsultationDraft(input) {
         model: result.data.model || 'unknown',
         generatedAt: result.data.generatedAt || new Date().toISOString(),
         identifiersRedacted: true,
+        mode: demoSession ? 'vertex-demo' : 'authenticated',
       },
     };
   } catch (error) {
+    const demoFallbackCodes = new Set([
+      'functions/not-found',
+      'functions/unimplemented',
+      'functions/unavailable',
+    ]);
+    if (currentUser.isAnonymous && demoFallbackCodes.has(error?.code)) {
+      return generateLocalConsultationDraft(input);
+    }
     throw new Error(errorMessages[error.code] || error.message || 'AI 초안을 만들지 못했습니다.');
   }
 }

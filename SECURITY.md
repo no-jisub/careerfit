@@ -9,7 +9,10 @@
 ## Deployment checklist
 
 - 실제 운영에서는 Firebase Authentication과 Firestore 동기화를 함께 검증한 후 활성화합니다.
-- 실제 사용자 운영 배포는 `VITE_DEMO_MODE_ENABLED=false`를 강제합니다. 현재 실제 사용자가 없는 공개 데모 기간에는 Auth와 Firestore 동기화를 함께 끄고 가상 데이터를 브라우저에만 저장합니다.
+- 실제 사용자 운영 배포는 `VITE_DEMO_MODE_ENABLED=false`를 강제합니다. 현재 하이브리드 공개 데모에서는 실계정만 Firestore와 동기화하고, 데모 역할의 업무 데이터는 브라우저에만 저장합니다. 데모에서 생성되는 익명 Firebase Auth 자격은 제한된 AI 호출에만 사용합니다.
+- 공개 데모의 Vertex AI는 Firebase 익명 인증 세션만 허용하는 별도 Function을 사용하고,
+  세션당 하루 15회와 전체 하루 100회 제한을 적용합니다. 익명 세션에는 Firestore 업무
+  데이터 접근 권한을 부여하지 않습니다.
 - Firebase 웹 API 키는 클라이언트 식별자이지만 Google Cloud에서 허용 도메인과 API를 제한하고, App Check 및 예산 알림을 설정합니다.
 - 서비스 계정 키, 개인 키, 토큰과 비밀번호는 `VITE_` 변수나 Git 이력에 저장하지 않습니다.
 - `firestore.rules`와 인덱스를 애플리케이션 배포 전에 별도로 검증하고 배포합니다.

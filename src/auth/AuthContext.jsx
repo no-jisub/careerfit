@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { createUserWithEmailAndPassword, deleteUser, onAuthStateChanged, reload, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, deleteUser, onAuthStateChanged, reload, sendEmailVerification, sendPasswordResetEmail, signInAnonymously, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { auth, db, demoModeEnabled, firebaseAuthEnabled } from '../lib/firebase';
 
@@ -85,11 +85,20 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!firebaseAuthEnabled) return undefined;
     return onAuthStateChanged(auth, async nextUser => {
+      const savedDemoRole = localStorage.getItem('careerfit_role');
+      if (nextUser?.isAnonymous) {
+        setUser(null);
+        setProfile(demoModeEnabled ? demoProfiles[savedDemoRole] || null : null);
+        setRole(demoModeEnabled && demoProfiles[savedDemoRole] ? savedDemoRole : null);
+        setAccountStatus(demoModeEnabled && demoProfiles[savedDemoRole] ? 'approved' : null);
+        setLoading(false);
+        return;
+      }
       setUser(nextUser);
       if (!nextUser) {
-        setRole(demoModeEnabled ? localStorage.getItem('careerfit_role') : null);
-        setProfile(demoProfiles[localStorage.getItem('careerfit_role')] || null);
-        setAccountStatus(demoModeEnabled && localStorage.getItem('careerfit_role') ? 'approved' : null);
+        setRole(demoModeEnabled ? savedDemoRole : null);
+        setProfile(demoProfiles[savedDemoRole] || null);
+        setAccountStatus(demoModeEnabled && savedDemoRole ? 'approved' : null);
         setLoading(false);
         return;
       }
@@ -109,8 +118,8 @@ export function AuthProvider({ children }) {
 
   const loginWithEmail = async (email, password) => {
     if (!firebaseAuthEnabled) throw new Error('Firebase 로그인이 아직 활성화되지 않았습니다.');
-    const credential = await signInWithEmailAndPassword(auth, email, password);
     localStorage.removeItem('careerfit_role');
+    const credential = await signInWithEmailAndPassword(auth, email, password);
     return applyFirebaseSession(credential.user);
   };
 
@@ -187,8 +196,16 @@ export function AuthProvider({ children }) {
     if (!demoModeEnabled || !Object.hasOwn(demoProfiles, nextRole)) {
       throw new Error('데모 로그인이 허용되지 않았습니다.');
     }
-    if (auth?.currentUser) await signOut(auth);
     localStorage.setItem('careerfit_role', nextRole);
+    if (firebaseAuthEnabled && auth && !auth.currentUser?.isAnonymous) {
+      if (auth.currentUser) await signOut(auth);
+      try {
+        await signInAnonymously(auth);
+      } catch {
+        // Anonymous Auth may not be enabled yet. Keep the browser demo usable
+        // with the local draft fallback until Firebase is configured.
+      }
+    }
     setUser(null);
     setProfile(demoProfiles[nextRole]);
     setRole(nextRole);
@@ -231,7 +248,9 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    if (user && auth) await signOut(auth);
+    // Keep the anonymous credential for the lifetime of this browser so role
+    // switching cannot reset the per-session demo AI quota.
+    if (auth?.currentUser && !auth.currentUser.isAnonymous) await signOut(auth);
     localStorage.removeItem('careerfit_role');
     setUser(null);
     setProfile(null);

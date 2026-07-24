@@ -20,6 +20,13 @@ import {
   validateSensitivePin,
   verifyPinCredential,
 } from './sensitiveAccess.js';
+import {
+  DEMO_AI_GLOBAL_DAILY_LIMIT,
+  DEMO_AI_SESSION_DAILY_LIMIT,
+  getDemoQuotaDocumentIds,
+  isAllowedDemoOrigin,
+  isAnonymousFirebaseAuth,
+} from './demoAiAccess.js';
 
 initializeApp();
 
@@ -253,6 +260,138 @@ async function consumeDailyQuota(uid) {
   });
 }
 
+async function consumeDemoDailyQuota(uid) {
+  const dateKey = new Date().toISOString().slice(0, 10);
+  const ids = getDemoQuotaDocumentIds(uid, dateKey);
+  const database = getFirestore();
+  const sessionRef = database.doc(`demoAiUsage/${ids.session}`);
+  const globalRef = database.doc(`demoAiUsage/${ids.global}`);
+  await database.runTransaction(async transaction => {
+    const [sessionSnapshot, globalSnapshot] = await Promise.all([
+      transaction.get(sessionRef),
+      transaction.get(globalRef),
+    ]);
+    const sessionCount = sessionSnapshot.data()?.count || 0;
+    const globalCount = globalSnapshot.data()?.count || 0;
+    if (sessionCount >= DEMO_AI_SESSION_DAILY_LIMIT) {
+      throw new HttpsError(
+        'resource-exhausted',
+        `데모 AI는 하루 ${DEMO_AI_SESSION_DAILY_LIMIT}회까지 사용할 수 있습니다.`,
+      );
+    }
+    if (globalCount >= DEMO_AI_GLOBAL_DAILY_LIMIT) {
+      throw new HttpsError(
+        'resource-exhausted',
+        '오늘 준비된 전체 데모 AI 사용량을 모두 사용했습니다.',
+      );
+    }
+    const usage = {
+      dateKey,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    transaction.set(sessionRef, {
+      ...usage,
+      uid,
+      count: sessionCount + 1,
+    }, { merge: true });
+    transaction.set(globalRef, {
+      ...usage,
+      count: globalCount + 1,
+    }, { merge: true });
+  });
+}
+
+async function createVertexConsultationDraft(input) {
+  const ai = new GoogleGenAI({
+    vertexai: true,
+    project: process.env.GCLOUD_PROJECT,
+    location: 'global',
+  });
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: buildConsultationPrompt(input),
+    config: {
+      systemInstruction: CONSULTATION_SYSTEM_INSTRUCTION,
+      temperature: 0.2,
+      maxOutputTokens: 4096,
+      thinkingConfig: {
+        thinkingBudget: 0,
+      },
+      responseMimeType: 'application/json',
+      responseJsonSchema: consultationDraftSchema,
+    },
+  });
+  const responseText = response.text;
+  if (typeof responseText !== 'string' || !responseText.trim()) {
+    logger.warn('Consultation draft response was empty', {
+      finishReason: response.candidates?.[0]?.finishReason || 'unknown',
+      modelVersion: response.modelVersion || MODEL,
+    });
+  }
+  return parseConsultationDraft(responseText);
+}
+
+function throwConsultationAiError(error, stage, flow) {
+  if (error instanceof HttpsError) throw error;
+  const reason = classifyAiError(error);
+  logger.error('Consultation draft generation failed', {
+    code: error?.code || 'unknown',
+    name: error?.name || 'Error',
+    reason,
+    stage,
+    flow,
+  });
+  if (reason === 'VERTEX_PERMISSION_DENIED') {
+    throw new HttpsError('permission-denied', 'AI 서버 권한 설정을 확인해 주세요.', { reason });
+  }
+  if (reason === 'VERTEX_QUOTA_EXCEEDED') {
+    throw new HttpsError('resource-exhausted', 'AI 사용량이 일시적으로 초과되었습니다.', { reason });
+  }
+  if (['VERTEX_TIMEOUT', 'VERTEX_MODEL_NOT_FOUND'].includes(reason)) {
+    throw new HttpsError('unavailable', 'AI 모델에 일시적으로 연결할 수 없습니다.', { reason });
+  }
+  throw new HttpsError('internal', 'AI 초안을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.', { reason });
+}
+
+export const generateDemoConsultationDraft = onCall({
+  region: REGION,
+  timeoutSeconds: 60,
+  memory: '512MiB',
+  maxInstances: 2,
+  cors: true,
+}, async request => {
+  let stage = 'authentication';
+  try {
+    if (!request.auth?.uid || !isAnonymousFirebaseAuth(request.auth)) {
+      throw new HttpsError('unauthenticated', '데모 세션을 다시 시작해 주세요.');
+    }
+    stage = 'origin-validation';
+    const origin = request.rawRequest?.get?.('origin') || '';
+    if (!isAllowedDemoOrigin(origin)) {
+      throw new HttpsError('permission-denied', '허용된 커리어핏 데모에서만 이용할 수 있습니다.');
+    }
+    stage = 'input-validation';
+    let input;
+    try {
+      input = sanitizeConsultationInput(request.data);
+    } catch (error) {
+      throw new HttpsError('invalid-argument', error.message);
+    }
+    stage = 'quota';
+    await consumeDemoDailyQuota(request.auth.uid);
+    stage = 'vertex-ai';
+    const draft = await createVertexConsultationDraft(input);
+    return {
+      draft,
+      model: MODEL,
+      generatedAt: new Date().toISOString(),
+      demo: true,
+    };
+  } catch (error) {
+    throwConsultationAiError(error, stage, 'demo');
+  }
+});
+
 export const generateConsultationDraft = onCall({
   region: REGION,
   timeoutSeconds: 60,
@@ -284,56 +423,13 @@ export const generateConsultationDraft = onCall({
     await consumeDailyQuota(request.auth.uid);
 
     stage = 'vertex-ai';
-    const ai = new GoogleGenAI({
-      vertexai: true,
-      project: process.env.GCLOUD_PROJECT,
-      location: 'global',
-    });
-    const response = await ai.models.generateContent({
-      model: MODEL,
-      contents: buildConsultationPrompt(input),
-      config: {
-        systemInstruction: CONSULTATION_SYSTEM_INSTRUCTION,
-        temperature: 0.2,
-        maxOutputTokens: 4096,
-        thinkingConfig: {
-          thinkingBudget: 0,
-        },
-        responseMimeType: 'application/json',
-        responseJsonSchema: consultationDraftSchema,
-      },
-    });
-    stage = 'response-validation';
-    const responseText = response.text;
-    if (typeof responseText !== 'string' || !responseText.trim()) {
-      logger.warn('Consultation draft response was empty', {
-        finishReason: response.candidates?.[0]?.finishReason || 'unknown',
-        modelVersion: response.modelVersion || MODEL,
-      });
-    }
+    const draft = await createVertexConsultationDraft(input);
     return {
-      draft: parseConsultationDraft(responseText),
+      draft,
       model: MODEL,
       generatedAt: new Date().toISOString(),
     };
   } catch (error) {
-    if (error instanceof HttpsError) throw error;
-    const reason = classifyAiError(error);
-    logger.error('Consultation draft generation failed', {
-      code: error?.code || 'unknown',
-      name: error?.name || 'Error',
-      reason,
-      stage,
-    });
-    if (reason === 'VERTEX_PERMISSION_DENIED') {
-      throw new HttpsError('permission-denied', 'AI 서버 권한 설정을 확인해 주세요.', { reason });
-    }
-    if (reason === 'VERTEX_QUOTA_EXCEEDED') {
-      throw new HttpsError('resource-exhausted', 'AI 사용량이 일시적으로 초과되었습니다.', { reason });
-    }
-    if (['VERTEX_TIMEOUT', 'VERTEX_MODEL_NOT_FOUND'].includes(reason)) {
-      throw new HttpsError('unavailable', 'AI 모델에 일시적으로 연결할 수 없습니다.', { reason });
-    }
-    throw new HttpsError('internal', 'AI 초안을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.', { reason });
+    throwConsultationAiError(error, stage, 'authenticated');
   }
 });
