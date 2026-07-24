@@ -5,6 +5,7 @@ import { PageIntro } from '../components/UI';
 import { useAuth } from '../auth/AuthContext';
 import { buildEventNotification } from '../utils/notifications';
 import { validateAccountInput } from '../utils/validation';
+import { maskPhone, maskStudentNo } from '../utils/sensitiveData';
 
 const emptyAccount = { role: 'counselor', displayName: '', email: '', password: '' };
 const emptyStudent = { studentNo: '', department: '', grade: '1학년', phone: '', goal: '', concern: '', interests: '', counselorUid: '' };
@@ -175,10 +176,10 @@ export default function AdminUsersPage() {
       counselorUid: currentCounselorUid,
       counselor: counselorName,
       name: registration.displayName,
-      studentNo: registration.studentNo,
+      studentNo: useRemoteAdmin ? maskStudentNo(registration.studentNo) : registration.studentNo,
       department: registration.department,
       grade: registration.grade,
-      phone: registration.phone || '',
+      phone: useRemoteAdmin ? maskPhone(registration.phone || '') : registration.phone || '',
       interests: registration.interests || [],
       goal: registration.goal || '',
       concern: registration.concern || '',
@@ -190,11 +191,28 @@ export default function AdminUsersPage() {
       createdAt: now,
       updatedAt: now,
     }));
-    const approvedRegistrations = selected.map(item => ({ ...item, status: 'approved', counselorUid: currentCounselorUid, assignedAt: now, updatedAt: now }));
+    const sensitiveProfiles = selected.map(registration => ({
+      id: `student-${registration.uid}`,
+      studentId: `student-${registration.uid}`,
+      studentUid: registration.uid,
+      studentNo: registration.studentNo,
+      phone: registration.phone || '',
+      createdAt: now,
+      updatedAt: now,
+    }));
+    const approvedRegistrations = selected.map(item => ({
+      ...item,
+      ...(useRemoteAdmin ? { studentNo: maskStudentNo(item.studentNo), phone: maskPhone(item.phone || '') } : {}),
+      status: 'approved',
+      counselorUid: currentCounselorUid,
+      assignedAt: now,
+      updatedAt: now,
+    }));
     const approvedUsers = selected.map(item => ({ id: item.uid, active: true, approvalStatus: 'approved', updatedAt: now }));
     try {
       await persistDocumentGroup([
         ...assignedStudents.map(record => ({ name: 'students', record })),
+        ...(useRemoteAdmin ? sensitiveProfiles.map(record => ({ name: 'studentSensitiveProfiles', record })) : []),
         ...approvedRegistrations.map(record => ({ name: 'studentRegistrations', record })),
         ...approvedUsers.map(record => ({ name: 'users', record })),
       ]);
@@ -224,7 +242,7 @@ export default function AdminUsersPage() {
       {pendingRegistrations.length ? <div className="pending-registration-list">
         {pendingRegistrations.map(item => <article key={item.id} className={selectedRegistrationIds.includes(item.id) ? 'selected' : ''}>
           <label className="pending-registration-select"><input type="checkbox" checked={selectedRegistrationIds.includes(item.id)} disabled={item.emailVerified === false} onChange={() => toggleRegistration(item.id)} /><span className="sr-only">{item.displayName} 선택</span></label>
-          <div><strong>{item.displayName}</strong><span>{item.studentNo} · {item.department} · {item.grade}</span><small>{item.email}</small></div>
+          <div><strong>{item.displayName}</strong><span>{maskStudentNo(item.studentNo)} · {item.department} · {item.grade}</span><small>{item.email}</small></div>
           <span className={`verification-badge ${item.emailVerified === false ? 'waiting' : ''}`}>{item.emailVerified === false ? '이메일 인증 대기' : '이메일 인증 완료'}</span>
         </article>)}
       </div> : <p className="empty-assignment">현재 배정 대기 중인 학생이 없습니다.</p>}
@@ -258,7 +276,7 @@ export default function AdminUsersPage() {
     </div>
     <section className="card assignment-card">
       <div className="section-header"><div><span className="eyebrow">담당 배정</span><h2>학생별 담당 상담사</h2></div></div>
-      {students.length ? <div className="assignment-list">{students.map(item => <article key={item.id}><div><strong>{item.name}</strong><span>{item.studentNo} · {item.department} · 상담 기록 {consultations.filter(record => record.studentId === item.id).length}건</span></div><label><span className="sr-only">{item.name} 담당 상담사</span><select value={item.counselorUid || ''} onChange={event => assignCounselor(item, event.target.value)}><option value="">미배정</option>{counselors.map(counselor => <option key={counselor.id} value={counselor.id}>{counselor.displayName}</option>)}</select></label></article>)}</div> : <p>등록된 학생이 없습니다.</p>}
+      {students.length ? <div className="assignment-list">{students.map(item => <article key={item.id}><div><strong>{item.name}</strong><span>{maskStudentNo(item.studentNo)} · {item.department} · 상담 기록 {consultations.filter(record => record.studentId === item.id).length}건</span></div><label><span className="sr-only">{item.name} 담당 상담사</span><select value={item.counselorUid || ''} onChange={event => assignCounselor(item, event.target.value)}><option value="">미배정</option>{counselors.map(counselor => <option key={counselor.id} value={counselor.id}>{counselor.displayName}</option>)}</select></label></article>)}</div> : <p>등록된 학생이 없습니다.</p>}
     </section>
   </>;
 }

@@ -7,7 +7,7 @@ export const initialStudentRegistrations = [
     studentNo: '20261307',
     department: '경영학과',
     grade: '1학년',
-    phone: '010-31**-77**',
+    phone: '010-3184-7712',
     interests: ['마케팅', '창업'],
     goal: '브랜드 마케터',
     concern: '대학생활 동안 준비할 경험의 우선순위를 정하고 싶어요.',

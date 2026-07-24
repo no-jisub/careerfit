@@ -7,18 +7,19 @@ import { IconButton } from './UI';
 import { useAuth } from '../auth/AuthContext';
 import { buildOperationalNotifications } from '../utils/operations';
 import { isAdministrator } from '../utils/roles';
+import { maskStudentNo } from '../utils/sensitiveData';
 
 const navGroups = [
   {
-    label: '오늘과 운영',
+    label: '오늘',
     items: [
       { to: '/dashboard', label: '대시보드', shortLabel: '홈', icon: 'dashboard' },
-      { to: '/appointments', label: '상담 일정', shortLabel: '일정', icon: 'calendar' },
     ],
   },
   {
     label: '상담 관리',
     items: [
+      { to: '/appointments', label: '상담 일정', shortLabel: '일정', icon: 'calendar' },
       { to: '/students', label: '학생 관리', shortLabel: '학생', icon: 'students' },
       { to: '/follow-ups', label: '상담 후 할 일', shortLabel: '할 일', icon: 'check' },
     ],
@@ -67,7 +68,7 @@ export default function AppLayout({ logout }) {
   const searchResults = useMemo(() => {
     const query = deferredSearch.trim().toLowerCase();
     if (!query) return [];
-    const studentResults = students.filter(student => [student.name, student.studentNo, student.department, student.goal].some(value => value?.toLowerCase().includes(query))).slice(0, 4).map(student => ({ id: `student-${student.id}`, title: student.name, description: `${student.department} · ${student.studentNo}`, to: `/students/${student.id}`, type: '학생' }));
+    const studentResults = students.filter(student => [student.name, student.studentNo, student.department, student.goal].some(value => value?.toLowerCase().includes(query))).slice(0, 4).map(student => ({ id: `student-${student.id}`, title: student.name, description: `${student.department} · ${maskStudentNo(student.studentNo)}`, to: `/students/${student.id}`, type: '학생' }));
     const consultationResults = consultations.filter(item => [item.purpose, item.summary, item.type].some(value => value?.toLowerCase().includes(query))).slice(0, 3).map(item => { const student = students.find(candidate => candidate.id === item.studentId); return { id: `consultation-${item.id}`, title: item.purpose, description: `${student?.name || '학생'} · ${item.date}`, to: `/students/${item.studentId}`, type: '상담' }; });
     return [...studentResults, ...consultationResults];
   }, [deferredSearch, students, consultations]);

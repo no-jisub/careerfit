@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useApp } from '../App';
 import Icon from '../components/Icon';
+import TaskOwnerCards from '../components/TaskOwnerCards';
+import SensitiveStudentInfo from '../components/SensitiveStudentInfo';
 import { EmptyState, StatusBadge } from '../components/UI';
 import { addDays, toDateKey } from '../utils/date';
 import { useAuth } from '../auth/AuthContext';
 import { buildConsultationSummary, consultationEvidenceFieldOptions, consultationPublicFieldOptions, defaultConsultationVisibility } from '../utils/consultations';
 import { openAttachment } from '../services/attachmentService';
+import { maskStudentNo } from '../utils/sensitiveData';
 
 const studentTagOptions = ['면접 준비', '포트폴리오', '진로 미정', '공공기관 희망'];
 const fullDateFormatter = new Intl.DateTimeFormat('ko-KR', {
@@ -16,6 +19,10 @@ const fullDateFormatter = new Intl.DateTimeFormat('ko-KR', {
   weekday: 'short',
 });
 const weekdayFormatter = new Intl.DateTimeFormat('ko-KR', { weekday: 'short' });
+const taskOwnerFormOptions = [
+  { value: '학생', label: '학생 담당', description: '학생의 ‘나의 할 일’에 바로 표시됩니다.', icon: 'students', tone: 'student' },
+  { value: '교직원', label: '상담사 담당', description: '상담사가 직접 처리할 지원 업무입니다.', icon: 'briefcase', tone: 'counselor' },
+];
 
 function getConsultationDateLabel(date) {
   const [, month, day] = date.split('-').map(Number);
@@ -29,7 +36,7 @@ function getConsultationDateLabel(date) {
 
 export default function StudentDetailPage() {
   const { studentId } = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { students, setStudents, consultations, setConsultations, consultationSummaries, setConsultationSummaries, consultationNotes, followUps, setFollowUps, appointments, persistDocument, persistDocumentGroup, notify } = useApp();
   const { user, profile } = useAuth();
   const student = students.find(s => s.id === studentId);
@@ -50,7 +57,12 @@ export default function StudentDetailPage() {
     if (!requestedConsultationId || !history.some(item => item.id === requestedConsultationId)) return undefined;
     setSelectedConsultationId(requestedConsultationId);
     const frame = window.requestAnimationFrame(() => {
-      document.getElementById('student-consultation-records')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const panel = document.getElementById('student-consultation-panel');
+      panel?.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'start',
+      });
+      panel?.focus({ preventScroll: true });
     });
     return () => window.cancelAnimationFrame(frame);
   }, [requestedConsultationId, consultations]);
@@ -78,6 +90,20 @@ export default function StudentDetailPage() {
     : `${student.name} 학생의 진로 목표는 ${student.goal}입니다. 현재 ${student.concern}에 대한 첫 상담이 필요합니다.`;
   const briefingCaution = latestConsultation?.concern || student.concern;
   const briefingNextStep = latestConsultation?.nextCheckItems || '첫 상담에서 현재 상황과 기대하는 지원을 확인해 주세요.';
+  const openConsultationRecord = recordId => {
+    setSelectedConsultationId(recordId);
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.set('consultation', recordId);
+    setSearchParams(nextSearchParams, { replace: true });
+    window.requestAnimationFrame(() => {
+      const panel = document.getElementById('student-consultation-panel');
+      panel?.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'start',
+      });
+      panel?.focus({ preventScroll: true });
+    });
+  };
   const handleConsultationTabKeyDown = (event, index) => {
     const keyOffsets = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 };
     let nextIndex;
@@ -92,11 +118,6 @@ export default function StudentDetailPage() {
   };
   const openEdit = () => {
     setEditForm({
-      name: student.name,
-      studentNo: student.studentNo,
-      department: student.department,
-      grade: student.grade,
-      phone: student.phone,
       interests: student.interests.join(', '),
       goal: student.goal,
       concern: student.concern,
@@ -115,10 +136,6 @@ export default function StudentDetailPage() {
     const updated = {
       ...student,
       ...editForm,
-      name: editForm.name.trim(),
-      studentNo: editForm.studentNo.trim(),
-      department: editForm.department.trim(),
-      phone: editForm.phone.trim(),
       goal: editForm.goal.trim(),
       concern: editForm.concern.trim(),
       interests: editForm.interests.split(',').map(item => item.trim()).filter(Boolean),
@@ -182,9 +199,9 @@ export default function StudentDetailPage() {
   return <>
     <nav className="breadcrumb" aria-label="현재 위치"><Link to="/students">학생 관리</Link><Icon name="chevron" size={14} /><span>{student.name}</span></nav>
     <section className="profile-hero student-case-hero">
-      <div className="profile-main"><span className="profile-avatar-large" aria-hidden="true">{student.name.slice(1, 3)}</span><div><span className="eyebrow">학생 케이스</span><div className="profile-name"><h1>{student.name}</h1><StatusBadge status={student.status} /></div><p>{student.studentNo} · {student.department} · {student.grade}</p><div className="tag-row">{student.interests.map(x => <span className="tag" key={x}>{x}</span>)}</div></div></div>
+      <div className="profile-main"><span className="profile-avatar-large" aria-hidden="true">{student.name.slice(1, 3)}</span><div><span className="eyebrow">학생 케이스</span><div className="profile-name"><h1>{student.name}</h1><StatusBadge status={student.status} /></div><p>{maskStudentNo(student.studentNo)} · {student.department} · {student.grade}</p><div className="tag-row">{student.interests.map(x => <span className="tag" key={x}>{x}</span>)}</div></div></div>
       <div className="profile-operational-summary" aria-label="학생 상담 현황"><div><span>누적 상담</span><strong>{history.length}<small>회</small></strong></div><div className={overdueTaskCount ? 'attention' : ''}><span>기한 초과</span><strong>{overdueTaskCount}<small>건</small></strong></div><div><span>최근 상담</span><strong>{student.lastConsultation?.slice(5).replace('-', '.')}</strong></div></div>
-      <div className="profile-actions"><Link to={`/students/${student.id}/consultation/new`} className="button primary"><Icon name="note" size={18} />새 상담 시작</Link><Link to={`/programs?student=${student.id}`} className="button secondary"><Icon name="spark" size={17} />프로그램 추천</Link><button className="button secondary" onClick={() => setShowAdd(true)}><Icon name="plus" size={18} />할 일 추가</button><button className="button ghost" onClick={openEdit}>학생 정보 수정</button></div>
+      <div className="profile-actions"><Link to={`/students/${student.id}/consultation/new`} className="button primary"><Icon name="note" size={18} />새 상담 시작</Link><Link to={`/programs?student=${student.id}`} className="button secondary"><Icon name="spark" size={17} />프로그램 추천</Link><button className="button secondary" onClick={() => setShowAdd(true)}><Icon name="plus" size={18} />할 일 추가</button><button className="button ghost" onClick={openEdit}>상담 맥락 수정</button></div>
     </section>
     <div className="detail-grid">
       <div className="detail-main">
@@ -204,7 +221,7 @@ export default function StudentDetailPage() {
           </div>
         </section>
         <section className="card student-consultation-records" id="student-consultation-records">
-          <div className="section-header"><div><span className="eyebrow">상담 히스토리</span><h2>날짜별 상담 기록</h2><p>상담 날짜를 선택해 회차별 맥락과 후속 내용을 확인하세요.</p></div><div className="student-consultation-header-actions"><span className="student-record-count">총 {history.length}회</span><Link className="text-link" to={`/students/${student.id}/consultation/new`}>기록 작성 <Icon name="plus" size={15} /></Link></div></div>
+          <div className="section-header"><div><span className="eyebrow">상담 히스토리</span><h2>날짜별 상담 기록</h2><p>상담 날짜를 누르면 해당 회차의 상세 상담일지로 바로 이동합니다.</p></div><div className="student-consultation-header-actions"><span className="student-record-count">총 {history.length}회</span><Link className="text-link" to={`/students/${student.id}/consultation/new`}>기록 작성 <Icon name="plus" size={15} /></Link></div></div>
           {history.length && selectedConsultation ? <>
             <div className="consultation-date-navigation">
               <div><span>상담 날짜 선택</span><small>최신순</small></div>
@@ -212,12 +229,12 @@ export default function StudentDetailPage() {
                 {history.map((record, index) => {
                   const date = getConsultationDateLabel(record.date);
                   const active = record.id === selectedConsultation.id;
-                  return <button id={`student-consultation-tab-${record.id}`} type="button" role="tab" aria-selected={active} aria-controls="student-consultation-panel" tabIndex={active ? 0 : -1} className={active ? 'active' : ''} onClick={() => setSelectedConsultationId(record.id)} onKeyDown={event => handleConsultationTabKeyDown(event, index)} key={record.id}><time dateTime={record.date}><strong>{date.short}</strong><span>{date.weekday}</span></time><small>{record.type}</small></button>;
+                  return <button id={`student-consultation-tab-${record.id}`} type="button" role="tab" aria-label={`${date.full} ${record.type} 상세 상담일지 보기`} aria-selected={active} aria-controls="student-consultation-panel" tabIndex={active ? 0 : -1} className={active ? 'active' : ''} onClick={() => openConsultationRecord(record.id)} onKeyDown={event => handleConsultationTabKeyDown(event, index)} key={record.id}><time dateTime={record.date}><strong>{date.short}</strong><span>{date.weekday}</span></time><span className="consultation-date-entry"><small>{record.type}</small><span>{active ? '상세 일지 열림' : '상세 일지 보기'}<Icon name="chevron" size={13} /></span></span></button>;
                 })}
               </div>
             </div>
-            <section className="consultation-record-preview" id="student-consultation-panel" role="tabpanel" aria-labelledby={`student-consultation-tab-${selectedConsultation.id}`}>
-              <div className="consultation-record-preview-head"><div><time dateTime={selectedConsultation.date}>{selectedConsultationDate.full}</time><div><span className="tag">{selectedConsultation.type}</span><span className={`visibility-tag ${selectedConsultation.studentVisible === false ? 'private' : ''}`}>{selectedConsultation.studentVisible === false ? '학생 비공개' : '학생 공개'}</span>{selectedConsultation.aiReview && <span className="ai-reviewed-tag"><Icon name="shield" size={12} />AI 근거 검토 완료</span>}</div></div></div>
+            <section className="consultation-record-preview" id="student-consultation-panel" role="tabpanel" tabIndex="-1" aria-labelledby={`student-consultation-tab-${selectedConsultation.id}`}>
+              <div className="consultation-record-preview-head"><div><span className="consultation-detail-eyebrow"><Icon name="note" size={15} />상세 상담일지</span><time dateTime={selectedConsultation.date}>{selectedConsultationDate.full}</time><div><span className="tag">{selectedConsultation.type}</span><span className={`visibility-tag ${selectedConsultation.studentVisible === false ? 'private' : ''}`}>{selectedConsultation.studentVisible === false ? '학생 비공개' : '학생 공개'}</span>{selectedConsultation.aiReview && <span className="ai-reviewed-tag"><Icon name="shield" size={12} />AI 근거 검토 완료</span>}</div></div></div>
               <h3>{selectedConsultation.purpose}</h3>
               <p className="consultation-record-summary">{selectedConsultation.summary}</p>
               <div className="timeline-body student-consultation-detail">
@@ -233,14 +250,14 @@ export default function StudentDetailPage() {
       </div>
       <aside className="detail-aside">
         {appointments.some(item => item.studentId === student.id && item.attachments?.length) && <section className="card info-card"><span className="eyebrow">상담 준비자료</span><h2>학생 첨부파일</h2><div className="attachment-list">{appointments.filter(item => item.studentId === student.id).flatMap(item => item.attachments || []).map(file => <button type="button" className="text-button" key={file.id} onClick={() => openAttachment(file)}>{file.fileName}</button>)}</div></section>}
-        <section className="card info-card"><span className="eyebrow">학생 기본 정보</span><h2>프로필</h2><dl><div><dt>연락처</dt><dd>{student.phone}</dd></div><div><dt>진로 목표</dt><dd>{student.goal}</dd></div><div><dt>담당 상담자</dt><dd>{student.counselor}</dd></div><div><dt>최근 상담일</dt><dd>{student.lastConsultation}</dd></div></dl></section>
+        <section className="card info-card"><span className="eyebrow">학생 기본 정보</span><h2>프로필</h2><SensitiveStudentInfo student={student} /><dl className="student-profile-facts"><div><dt>진로 목표</dt><dd>{student.goal}</dd></div><div><dt>담당 상담자</dt><dd>{student.counselor}</dd></div><div><dt>최근 상담일</dt><dd>{student.lastConsultation}</dd></div></dl></section>
         <section className="card"><div className="section-header compact"><div><span className="eyebrow">상담 후 할 일</span><h2>미완료 할 일 <em>{tasks.length}</em></h2></div><button className="icon-button" aria-label="할 일 추가" onClick={() => setShowAdd(true)}><Icon name="plus" /></button></div>
           <div className="aside-tasks">{tasks.map(t => <article className={t.status === 'overdue' ? 'overdue' : ''} key={t.id}><div><StatusBadge status={t.status} context="followUp" /><span>{t.owner === '교직원' ? '상담사' : t.owner} 담당</span></div><strong>{t.content}</strong><small><Icon name="calendar" size={14} />{t.dueDate}까지</small></article>)}{!tasks.length && <EmptyState title="등록된 할 일이 없습니다" />}</div>
         </section>
       </aside>
     </div>
-    {showAdd && <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && setShowAdd(false)}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="task-modal-title"><button className="modal-close" aria-label="닫기" onClick={() => setShowAdd(false)}><Icon name="close" size={19} /></button><span className="eyebrow">새로운 다음 행동</span><h2 id="task-modal-title">상담 후 할 일 추가</h2><form onSubmit={addTask}><label>할 일 내용<input autoFocus value={taskText} onChange={e => setTaskText(e.target.value)} placeholder="학생이 해야 할 다음 행동" required /></label><div className="form-row"><label>행동 담당자<select value={taskOwner} onChange={e => setTaskOwner(e.target.value)}><option value="학생">학생</option><option value="교직원">상담사</option></select></label><label>완료 기한<input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required /></label></div><div className="modal-actions"><button type="button" className="button secondary" onClick={() => setShowAdd(false)}>취소</button><button className="button primary">할 일 추가</button></div></form></section></div>}
-    {showEdit && <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && !savingStudent && setShowEdit(false)}><section className="modal student-edit-modal" role="dialog" aria-modal="true" aria-labelledby="student-edit-title"><button className="modal-close" aria-label="닫기" disabled={savingStudent} onClick={() => setShowEdit(false)}><Icon name="close" size={19} /></button><span className="eyebrow">학생 기본 정보</span><h2 id="student-edit-title">학생 정보 수정</h2><form onSubmit={saveStudent}><div className="form-row"><label>이름<input autoFocus value={editForm.name || ''} onChange={e => updateStudentField('name', e.target.value)} required /></label><label>학번<input value={editForm.studentNo || ''} onChange={e => updateStudentField('studentNo', e.target.value)} required /></label><label>학과<input value={editForm.department || ''} onChange={e => updateStudentField('department', e.target.value)} required /></label><label>학년<select value={editForm.grade || ''} onChange={e => updateStudentField('grade', e.target.value)}>{['1학년','2학년','3학년','4학년','졸업생'].map(grade => <option key={grade}>{grade}</option>)}</select></label></div><label>연락처<input value={editForm.phone || ''} onChange={e => updateStudentField('phone', e.target.value)} required /></label><label>관심 분야 / 학생 태그 <small className="field-hint">상담 태그를 누르거나 쉼표로 직접 입력해 주세요.</small><div className="tag-picker">{studentTagOptions.map(tag => <button type="button" key={tag} className={(editForm.interests || '').split(',').map(item => item.trim()).includes(tag) ? 'active' : ''} onClick={() => toggleStudentTag(tag)}>{tag}</button>)}</div><input value={editForm.interests || ''} onChange={e => updateStudentField('interests', e.target.value)} /></label><label>진로 목표<input value={editForm.goal || ''} onChange={e => updateStudentField('goal', e.target.value)} required /></label><label>현재 고민<textarea rows="4" value={editForm.concern || ''} onChange={e => updateStudentField('concern', e.target.value)} required /></label><div className="modal-actions"><button type="button" className="button secondary" disabled={savingStudent} onClick={() => setShowEdit(false)}>취소</button><button className="button primary" disabled={savingStudent}>{savingStudent ? '저장 중...' : '수정 내용 저장'}</button></div></form></section></div>}
+    {showAdd && <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && setShowAdd(false)}><section className="modal followup-add-modal" role="dialog" aria-modal="true" aria-labelledby="task-modal-title"><button className="modal-close" aria-label="닫기" onClick={() => setShowAdd(false)}><Icon name="close" size={19} /></button><span className="eyebrow">새로운 다음 행동</span><h2 id="task-modal-title">상담 후 할 일 추가</h2><form onSubmit={addTask}><label>할 일 내용<input autoFocus value={taskText} onChange={e => setTaskText(e.target.value)} placeholder="학생 또는 상담사가 해야 할 다음 행동" required /></label><TaskOwnerCards className="task-owner-form-cards" label="누가 담당하나요?" name="student-detail-task-owner" value={taskOwner} onChange={setTaskOwner} options={taskOwnerFormOptions} /><label>완료 기한<input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required /></label><div className="modal-actions"><button type="button" className="button secondary" onClick={() => setShowAdd(false)}>취소</button><button className="button primary">할 일 추가</button></div></form></section></div>}
+    {showEdit && <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && !savingStudent && setShowEdit(false)}><section className="modal student-edit-modal" role="dialog" aria-modal="true" aria-labelledby="student-edit-title"><button className="modal-close" aria-label="닫기" disabled={savingStudent} onClick={() => setShowEdit(false)}><Icon name="close" size={19} /></button><span className="eyebrow">상담 맥락</span><h2 id="student-edit-title">학생 이해 정보 수정</h2><p className="field-hint">이름·학번·연락처 같은 식별정보는 개인정보 보호를 위해 이 화면에서 수정하지 않습니다.</p><form onSubmit={saveStudent}><label>관심 분야 <small className="field-hint">상담 태그를 누르거나 쉼표로 직접 입력해 주세요.</small><div className="tag-picker">{studentTagOptions.map(tag => <button type="button" key={tag} className={(editForm.interests || '').split(',').map(item => item.trim()).includes(tag) ? 'active' : ''} onClick={() => toggleStudentTag(tag)}>{tag}</button>)}</div><input autoFocus value={editForm.interests || ''} onChange={e => updateStudentField('interests', e.target.value)} /></label><label>진로 목표<input value={editForm.goal || ''} onChange={e => updateStudentField('goal', e.target.value)} required /></label><label>현재 고민<textarea rows="4" value={editForm.concern || ''} onChange={e => updateStudentField('concern', e.target.value)} required /></label><div className="modal-actions"><button type="button" className="button secondary" disabled={savingStudent} onClick={() => setShowEdit(false)}>취소</button><button className="button primary" disabled={savingStudent}>{savingStudent ? '저장 중...' : '상담 맥락 저장'}</button></div></form></section></div>}
     {editingConsultation && <div className="modal-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && !savingConsultation && setEditingConsultation(null)}><section className="modal consultation-edit-modal" role="dialog" aria-modal="true" aria-labelledby="consultation-edit-title"><button className="modal-close" aria-label="닫기" disabled={savingConsultation} onClick={() => setEditingConsultation(null)}><Icon name="close" size={19} /></button><span className="eyebrow">완료된 상담 기록</span><h2 id="consultation-edit-title">상담 기록 수정</h2><form onSubmit={saveConsultationEdit}><label>상담 목적<input value={editingConsultation.purpose || ''} onChange={event => updateConsultationField('purpose', event.target.value)} required /></label><label>상담 요약<textarea rows="4" value={editingConsultation.summary || ''} onChange={event => updateConsultationField('summary', event.target.value)} required /></label><label>학생의 강점<textarea rows="3" value={editingConsultation.strengths || ''} onChange={event => updateConsultationField('strengths', event.target.value)} /></label><label>개선 또는 고민 사항<textarea rows="3" value={editingConsultation.concern || ''} onChange={event => updateConsultationField('concern', event.target.value)} /></label><label>안내 내용<textarea rows="3" value={editingConsultation.guidance || ''} onChange={event => updateConsultationField('guidance', event.target.value)} /></label><label>추천 프로그램<input value={editingConsultation.programsText || ''} onChange={event => updateConsultationField('programsText', event.target.value)} placeholder="쉼표로 구분" /></label><label>학생의 할 일<textarea rows="3" value={editingConsultation.studentActions || ''} onChange={event => updateConsultationField('studentActions', event.target.value)} /></label><label>다음 상담 계획<textarea rows="3" value={editingConsultation.nextCheckItems || ''} onChange={event => updateConsultationField('nextCheckItems', event.target.value)} /></label><fieldset className="publication-fieldset"><legend>학생에게 공개할 내용</legend><div>{consultationPublicFieldOptions.map(item => <label key={item.key}><input type="checkbox" checked={editingConsultation.publication?.[item.key] ?? false} onChange={event => updateConsultationField('publication', { ...editingConsultation.publication, [item.key]: event.target.checked })} /><span>{item.label}</span></label>)}</div></fieldset><div className="modal-actions"><button type="button" className="button secondary" onClick={() => setEditingConsultation(null)}>취소</button><button className="button primary" disabled={savingConsultation}>{savingConsultation ? '저장 중...' : '수정 내용 저장'}</button></div></form></section></div>}
   </>;
 }

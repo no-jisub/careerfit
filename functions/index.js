@@ -3,6 +3,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { logger } from 'firebase-functions';
+import { defineSecret } from 'firebase-functions/params';
 import {
   buildConsultationPrompt,
   classifyAiError,
@@ -11,12 +12,22 @@ import {
   parseConsultationDraft,
   sanitizeConsultationInput,
 } from './consultationDraft.js';
+import {
+  createPinCredential,
+  getAttemptDecision,
+  maskPhoneForStorage,
+  REVEAL_SECONDS,
+  validateSensitivePin,
+  verifyPinCredential,
+} from './sensitiveAccess.js';
 
 initializeApp();
 
 const REGION = 'asia-northeast3';
 const MODEL = 'gemini-2.5-flash';
 const DAILY_LIMIT = 50;
+const SENSITIVE_PIN_PEPPER = defineSecret('SENSITIVE_PIN_PEPPER');
+const RECENT_AUTH_SECONDS = 5 * 60;
 
 async function assertApprovedCounselor(uid) {
   const snapshot = await getFirestore().doc(`users/${uid}`).get();
@@ -27,7 +38,7 @@ async function assertApprovedCounselor(uid) {
     && profile.approvalStatus !== 'pending'
     && profile.approvalStatus !== 'rejected';
   if (!approved) {
-    throw new HttpsError('permission-denied', '승인된 상담 담당자만 AI 초안을 만들 수 있습니다.');
+    throw new HttpsError('permission-denied', '승인된 상담 담당자만 이 기능을 이용할 수 있습니다.');
   }
   return profile;
 }
@@ -39,6 +50,190 @@ async function assertCounselorStudentAccess(uid, profile, studentId) {
     throw new HttpsError('permission-denied', '담당 학생의 상담 기록만 AI 초안으로 만들 수 있습니다.');
   }
 }
+
+function assertRecentAuthentication(auth) {
+  const authTime = Number(auth?.token?.auth_time || 0);
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (!authTime || nowSeconds - authTime > RECENT_AUTH_SECONDS) {
+    throw new HttpsError('unauthenticated', 'PIN 설정 전 현재 계정 비밀번호를 다시 확인해 주세요.');
+  }
+}
+
+function sanitizeStudentId(value) {
+  const studentId = typeof value === 'string' ? value.trim() : '';
+  if (!studentId || studentId.length > 128 || !/^[\w-]+$/.test(studentId)) {
+    throw new HttpsError('invalid-argument', '학생 정보가 올바르지 않습니다.');
+  }
+  return studentId;
+}
+
+async function consumeSensitiveAccessAttempt(uid, pin, pepper) {
+  const database = getFirestore();
+  const credentialRef = database.doc(`sensitiveAccessCredentials/${uid}`);
+  const attemptRef = database.doc(`sensitiveAccessAttempts/${uid}`);
+  const nowMillis = Date.now();
+
+  return database.runTransaction(async transaction => {
+    const [credentialSnapshot, attemptSnapshot] = await Promise.all([
+      transaction.get(credentialRef),
+      transaction.get(attemptRef),
+    ]);
+    if (!credentialSnapshot.exists) return { configured: false };
+
+    const verified = verifyPinCredential(pin, credentialSnapshot.data(), pepper);
+    const decision = getAttemptDecision(attemptSnapshot.data(), verified, nowMillis);
+    transaction.set(attemptRef, {
+      uid,
+      failureCount: decision.failureCount,
+      lockUntilMillis: decision.lockUntilMillis,
+      lastAttemptAt: FieldValue.serverTimestamp(),
+      ...(decision.allowed ? { lastSuccessAt: FieldValue.serverTimestamp() } : {}),
+    }, { merge: true });
+    return { configured: true, ...decision };
+  });
+}
+
+export const configureSensitiveAccessPin = onCall({
+  region: REGION,
+  timeoutSeconds: 30,
+  memory: '256MiB',
+  maxInstances: 5,
+  cors: true,
+  secrets: [SENSITIVE_PIN_PEPPER],
+}, async request => {
+  if (!request.auth?.uid) throw new HttpsError('unauthenticated', '로그인 후 이용해 주세요.');
+  await assertApprovedCounselor(request.auth.uid);
+  assertRecentAuthentication(request.auth);
+  let pin;
+  try {
+    pin = validateSensitivePin(request.data?.pin);
+  } catch (error) {
+    throw new HttpsError('invalid-argument', error.message);
+  }
+  let credential;
+  try {
+    credential = createPinCredential(pin, SENSITIVE_PIN_PEPPER.value());
+  } catch {
+    throw new HttpsError('failed-precondition', '민감정보 PIN 보안 설정을 확인해 주세요.');
+  }
+  const database = getFirestore();
+  await database.doc(`sensitiveAccessCredentials/${request.auth.uid}`).set({
+    uid: request.auth.uid,
+    ...credential,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+  await database.doc(`sensitiveAccessAttempts/${request.auth.uid}`).set({
+    uid: request.auth.uid,
+    failureCount: 0,
+    lockUntilMillis: 0,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  logger.info('Sensitive access PIN configured', { uid: request.auth.uid });
+  return { configured: true };
+});
+
+export const revealStudentSensitiveData = onCall({
+  region: REGION,
+  timeoutSeconds: 30,
+  memory: '256MiB',
+  maxInstances: 10,
+  cors: true,
+  secrets: [SENSITIVE_PIN_PEPPER],
+}, async request => {
+  if (!request.auth?.uid) throw new HttpsError('unauthenticated', '로그인 후 이용해 주세요.');
+  const profile = await assertApprovedCounselor(request.auth.uid);
+  const studentId = sanitizeStudentId(request.data?.studentId);
+  let pin;
+  try {
+    pin = validateSensitivePin(request.data?.pin);
+  } catch (error) {
+    throw new HttpsError('invalid-argument', error.message);
+  }
+  await assertCounselorStudentAccess(request.auth.uid, profile, studentId);
+
+  const attempt = await consumeSensitiveAccessAttempt(request.auth.uid, pin, SENSITIVE_PIN_PEPPER.value());
+  if (!attempt.configured) {
+    throw new HttpsError('failed-precondition', '설정에서 민감정보 열람 PIN을 먼저 등록해 주세요.');
+  }
+  if (!attempt.allowed) {
+    await getFirestore().collection('sensitiveAccessAudit').add({
+      actorUid: request.auth.uid,
+      actorRole: profile.role,
+      studentId,
+      fields: ['phone', 'studentNo'],
+      outcome: attempt.locked ? 'locked' : 'denied',
+      accessedAt: FieldValue.serverTimestamp(),
+    });
+    const message = attempt.locked ? 'PIN 인증 시도가 잠시 제한되었습니다.' : 'PIN이 일치하지 않습니다.';
+    throw new HttpsError(attempt.locked ? 'resource-exhausted' : 'permission-denied', message, {
+      retryAfterSeconds: attempt.retryAfterSeconds,
+    });
+  }
+
+  const database = getFirestore();
+  const [sensitiveSnapshot, studentSnapshot] = await Promise.all([
+    database.doc(`studentSensitiveProfiles/${studentId}`).get(),
+    database.doc(`students/${studentId}`).get(),
+  ]);
+  if (!studentSnapshot.exists) throw new HttpsError('not-found', '학생 정보를 찾을 수 없습니다.');
+  const sensitive = sensitiveSnapshot.exists ? sensitiveSnapshot.data() : studentSnapshot.data();
+  const values = {
+    phone: typeof sensitive?.phone === 'string' ? sensitive.phone : '',
+    studentNo: typeof sensitive?.studentNo === 'string' ? sensitive.studentNo : '',
+  };
+
+  await database.collection('sensitiveAccessAudit').add({
+    actorUid: request.auth.uid,
+    actorRole: profile.role,
+    studentId,
+    fields: ['phone', 'studentNo'],
+    outcome: 'granted',
+    accessedAt: FieldValue.serverTimestamp(),
+  });
+  logger.info('Sensitive student data revealed', {
+    actorUid: request.auth.uid,
+    studentId,
+    fields: ['phone', 'studentNo'],
+  });
+  return { sensitive: values, expiresInSeconds: REVEAL_SECONDS };
+});
+
+export const updateOwnSensitivePhone = onCall({
+  region: REGION,
+  timeoutSeconds: 30,
+  memory: '256MiB',
+  maxInstances: 10,
+  cors: true,
+}, async request => {
+  if (!request.auth?.uid) throw new HttpsError('unauthenticated', '로그인 후 이용해 주세요.');
+  const phone = typeof request.data?.phone === 'string' ? request.data.phone.trim() : '';
+  let maskedPhone;
+  try {
+    maskedPhone = maskPhoneForStorage(phone);
+  } catch (error) {
+    throw new HttpsError('invalid-argument', error.message);
+  }
+  const database = getFirestore();
+  const studentQuery = await database.collection('students').where('uid', '==', request.auth.uid).limit(1).get();
+  if (studentQuery.empty) throw new HttpsError('not-found', '연결된 학생 정보를 찾을 수 없습니다.');
+  const studentSnapshot = studentQuery.docs[0];
+  const sensitiveRef = database.doc(`studentSensitiveProfiles/${studentSnapshot.id}`);
+  const sensitiveSnapshot = await sensitiveRef.get();
+  const now = FieldValue.serverTimestamp();
+  const batch = database.batch();
+  batch.set(sensitiveRef, {
+    ...(!sensitiveSnapshot.exists ? {
+      studentId: studentSnapshot.id,
+      studentUid: request.auth.uid,
+      studentNo: studentSnapshot.data().studentNo,
+    } : {}),
+    phone,
+    updatedAt: now,
+  }, { merge: true });
+  batch.set(studentSnapshot.ref, { phone: maskedPhone, updatedAt: now }, { merge: true });
+  await batch.commit();
+  return { phone: maskedPhone };
+});
 
 async function consumeDailyQuota(uid) {
   const dateKey = new Date().toISOString().slice(0, 10);

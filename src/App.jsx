@@ -40,7 +40,7 @@ const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const InsightsPage = lazy(() => import('./pages/InsightsPage'));
 
 const AppContext = createContext(null);
-const DEMO_DATA_VERSION = '2026-07-24-presentation-v3';
+const DEMO_DATA_VERSION = '2026-07-24-sensitive-access-v4';
 const DEMO_DATA_VERSION_KEY = 'careerfit_demo_data_version';
 const read = (key, fallback) => {
   try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../App';
 import Icon from '../components/Icon';
+import TaskOwnerCards from '../components/TaskOwnerCards';
 import { EmptyState, PageIntro, StatusBadge, StatusTabs } from '../components/UI';
 import { addDays, resolveFollowUpStatus, toDateKey } from '../utils/date';
 import { validateFollowUpInput } from '../utils/validation';
@@ -13,6 +14,19 @@ const followUpStatusOptions = [
   { value: 'complete', label: '완료', description: '처리 완료', icon: 'check' },
   { value: 'overdue', label: '기한 초과', description: '우선 확인 필요', icon: 'alert' },
 ];
+
+const taskOwnerOptions = [
+  { value: 'all', label: '전체 담당자', description: '학생과 상담사 할 일을 함께 확인', icon: 'layers', tone: 'all' },
+  { value: '학생', label: '학생 담당', description: '학생 화면에도 공개되는 실행 항목', icon: 'students', tone: 'student' },
+  { value: '교직원', label: '상담사 담당', description: '상담사가 직접 처리할 지원 업무', icon: 'briefcase', tone: 'counselor' },
+];
+
+const taskOwnerFormOptions = taskOwnerOptions.slice(1).map(option => ({
+  ...option,
+  description: option.value === '학생'
+    ? '등록 즉시 해당 학생의 ‘나의 할 일’에 표시됩니다.'
+    : '상담사 내부 할 일 목록에만 표시됩니다.',
+}));
 
 export default function FollowUpsPage() {
   const { students, followUps, setFollowUps, persistDocument, notify } = useApp();
@@ -27,6 +41,13 @@ export default function FollowUpsPage() {
     counts[followUp.status] = (counts[followUp.status] || 0) + 1;
     return counts;
   }, {});
+  const ownerCounts = followUps
+    .filter(followUp => filter === 'all' || followUp.status === filter)
+    .reduce((counts, followUp) => ({
+      ...counts,
+      all: counts.all + 1,
+      [followUp.owner]: (counts[followUp.owner] || 0) + 1,
+    }), { all: 0, 학생: 0, 교직원: 0 });
   const items = useMemo(() => followUps.filter(f => {
     const student = students.find(item => item.id === f.studentId);
     const keyword = query.trim().toLowerCase();
@@ -95,9 +116,16 @@ export default function FollowUpsPage() {
         value={filter}
         onChange={setFilter}
       />
+      <TaskOwnerCards
+        className="task-owner-filter-cards"
+        label="담당자별 할 일 보기"
+        name="task-owner-filter"
+        value={owner}
+        onChange={setOwner}
+        options={taskOwnerOptions.map(option => ({ ...option, count: ownerCounts[option.value] || 0 }))}
+      />
       <div className="task-filter-tools">
         <label className="search-field"><span className="sr-only">상담 후 할 일 검색</span><Icon name="search" size={18} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="학생 이름, 학번 또는 할 일 내용 검색" /></label>
-        <select aria-label="행동 담당자" value={owner} onChange={e => setOwner(e.target.value)}><option value="all">전체 담당자</option><option value="학생">학생 담당</option><option value="교직원">상담사 담당</option></select>
       </div>
     </section>
     <section className="card task-table-card">
@@ -116,6 +144,6 @@ export default function FollowUpsPage() {
         })}</div>
       </> : <EmptyState title="등록된 할 일이 없습니다" description="상단의 추가 버튼으로 다음 행동을 등록해 보세요." />}
     </section>
-    {showAdd && <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && !saving && setShowAdd(false)}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="followup-add-title"><button className="modal-close" aria-label="닫기" disabled={saving} onClick={() => setShowAdd(false)}><Icon name="close" size={19} /></button><span className="eyebrow">새로운 다음 행동</span><h2 id="followup-add-title">상담 후 할 일 추가</h2><form onSubmit={addTask}><label>학생<select autoFocus value={form.studentId} onChange={e => setForm(prev => ({ ...prev, studentId: e.target.value }))} required><option value="">학생을 선택하세요</option>{students.map(student => <option key={student.id} value={student.id}>{student.name} · {student.department}</option>)}</select></label><label>할 일 내용<input maxLength="300" value={form.content} onChange={e => setForm(prev => ({ ...prev, content: e.target.value }))} placeholder="학생 또는 상담사가 해야 할 행동" required /></label><div className="form-row"><label>행동 담당자<select value={form.owner} onChange={e => setForm(prev => ({ ...prev, owner: e.target.value }))}><option value="학생">학생</option><option value="교직원">상담사</option></select></label><label>완료 기한<input type="date" value={form.dueDate} onChange={e => setForm(prev => ({ ...prev, dueDate: e.target.value }))} required /></label></div>{formError && <p className="field-error" role="alert">{formError}</p>}<div className="modal-actions"><button type="button" className="button secondary" disabled={saving} onClick={() => setShowAdd(false)}>취소</button><button className="button primary" disabled={saving}>{saving ? '저장 중...' : '할 일 추가'}</button></div></form></section></div>}
+    {showAdd && <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && !saving && setShowAdd(false)}><section className="modal followup-add-modal" role="dialog" aria-modal="true" aria-labelledby="followup-add-title"><button className="modal-close" aria-label="닫기" disabled={saving} onClick={() => setShowAdd(false)}><Icon name="close" size={19} /></button><span className="eyebrow">새로운 다음 행동</span><h2 id="followup-add-title">상담 후 할 일 추가</h2><form onSubmit={addTask}><label>학생<select autoFocus value={form.studentId} onChange={e => setForm(prev => ({ ...prev, studentId: e.target.value }))} required><option value="">학생을 선택하세요</option>{students.map(student => <option key={student.id} value={student.id}>{student.name} · {student.department}</option>)}</select></label><label>할 일 내용<input maxLength="300" value={form.content} onChange={e => setForm(prev => ({ ...prev, content: e.target.value }))} placeholder="학생 또는 상담사가 해야 할 행동" required /></label><TaskOwnerCards className="task-owner-form-cards" label="누가 담당하나요?" name="new-task-owner" value={form.owner} onChange={nextOwner => setForm(prev => ({ ...prev, owner: nextOwner }))} options={taskOwnerFormOptions} /><label>완료 기한<input type="date" value={form.dueDate} onChange={e => setForm(prev => ({ ...prev, dueDate: e.target.value }))} required /></label>{formError && <p className="field-error" role="alert">{formError}</p>}<div className="modal-actions"><button type="button" className="button secondary" disabled={saving} onClick={() => setShowAdd(false)}>취소</button><button className="button primary" disabled={saving}>{saving ? '저장 중...' : '할 일 추가'}</button></div></form></section></div>}
   </>;
 }

@@ -66,6 +66,13 @@ service cloud.firestore {
         && data.status in ['scheduled', 'inProgress', 'writing', 'complete'];
     }
 
+    function validStudentSensitiveProfile(data) {
+      return validText(data.studentId, 128)
+        && validText(data.studentUid, 128)
+        && validText(data.studentNo, 40)
+        && validOptionalText(data, 'phone', 40);
+    }
+
     function validOptionalAiReview(data) {
       return !('aiReview' in data)
         || (data.aiReview is map
@@ -324,14 +331,40 @@ service cloud.firestore {
         || (isCounselor()
           && resource.data.counselorUid == request.auth.uid
           && request.resource.data.counselorUid == resource.data.counselorUid
-          && request.resource.data.uid == resource.data.uid)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['interests', 'goal', 'concern', 'status', 'appointmentDate',
+              'appointment', 'lastConsultation', 'updatedAt']))
         || (isStudent()
           && resource.data.uid == request.auth.uid
           && request.resource.data.uid == resource.data.uid
           && request.resource.data.counselorUid == resource.data.counselorUid
           && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['phone', 'interests', 'goal', 'concern', 'updatedAt'])));
+            .hasOnly(['interests', 'goal', 'concern', 'updatedAt'])));
       allow delete: if isAdmin();
+    }
+
+    // Full student identifiers are never readable from the client. They are
+    // returned only by the callable function after assignment + PIN checks.
+    match /studentSensitiveProfiles/{studentId} {
+      allow read: if false;
+      allow create, update: if isAdmin()
+        && validStudentSensitiveProfile(request.resource.data)
+        && request.resource.data.studentId == studentId;
+      allow delete: if isAdmin();
+    }
+
+    // PIN hashes, throttling state, and reveal audit records are Admin SDK only.
+    match /sensitiveAccessCredentials/{userId} {
+      allow read, write: if false;
+    }
+
+    match /sensitiveAccessAttempts/{userId} {
+      allow read, write: if false;
+    }
+
+    match /sensitiveAccessAudit/{auditId} {
+      allow read, write: if false;
     }
 
     match /consultations/{consultationId} {

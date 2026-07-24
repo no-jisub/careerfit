@@ -23,3 +23,21 @@ test('private drafts remain counselor-owned and carry a TTL field', () => {
   assert.match(rules, /match \/consultationDrafts\/\{draftId\} \{[\s\S]*resource\.data\.counselorUid == request\.auth\.uid/);
   assert.match(rules, /data\.expiresAt is timestamp/);
 });
+
+test('student follow-up subscriptions expose only tasks assigned to that account', () => {
+  assert.match(dataService, /return \[where\('assigneeUid', '==', session\.user\.uid\)\]/);
+  assert.match(rules, /isStudent\(\) && resource\.data\.assigneeUid == request\.auth\.uid/);
+  assert.match(rules, /isStudent\(\)[\s\S]*resource\.data\.assigneeUid == request\.auth\.uid[\s\S]*isValidStudentCompletion\(\)/);
+});
+
+test('sensitive identifiers, PIN state, and access audits are blocked from direct reads', () => {
+  assert.match(rules, /match \/studentSensitiveProfiles\/\{studentId\} \{[\s\S]*allow read: if false/);
+  assert.match(rules, /match \/sensitiveAccessCredentials\/\{userId\} \{[\s\S]*allow read, write: if false/);
+  assert.match(rules, /match \/sensitiveAccessAttempts\/\{userId\} \{[\s\S]*allow read, write: if false/);
+  assert.match(rules, /match \/sensitiveAccessAudit\/\{auditId\} \{[\s\S]*allow read, write: if false/);
+});
+
+test('counselors and students cannot directly overwrite identity fields', () => {
+  assert.match(rules, /hasOnly\(\['interests', 'goal', 'concern', 'status', 'appointmentDate',[\s\S]*'lastConsultation', 'updatedAt'\]\)/);
+  assert.match(rules, /hasOnly\(\['interests', 'goal', 'concern', 'updatedAt'\]\)/);
+});

@@ -2,6 +2,7 @@ import { createUserWithEmailAndPassword, getAuth, sendEmailVerification, signOut
 import { getApps, initializeApp } from 'firebase/app';
 import { doc, writeBatch } from 'firebase/firestore';
 import { db, firebaseApp, firebaseConfig } from '../lib/firebase';
+import { maskPhone, maskStudentNo } from '../utils/sensitiveData';
 
 const provisioningAppName = 'careerfit-user-provisioning';
 
@@ -36,14 +37,25 @@ export async function createManagedUser({ account, student }) {
     });
 
     if (account.role === 'student') {
+      const { phone, studentNo, ...studentProfile } = student;
       batch.set(doc(db, 'students', student.id), {
-        ...student,
+        ...studentProfile,
+        phone: maskPhone(phone),
+        studentNo: maskStudentNo(studentNo),
         uid: credential.user.uid,
         status: student.status || 'scheduled',
         interests: student.interests || [],
         appointmentDate: '',
         appointment: '',
         lastConsultation: '',
+        createdAt: now,
+        updatedAt: now,
+      });
+      batch.set(doc(db, 'studentSensitiveProfiles', student.id), {
+        studentId: student.id,
+        studentUid: credential.user.uid,
+        phone,
+        studentNo,
         createdAt: now,
         updatedAt: now,
       });
