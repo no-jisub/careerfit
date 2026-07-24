@@ -331,6 +331,23 @@ async function createVertexConsultationDraft(input) {
   return parseConsultationDraft(responseText);
 }
 
+function validateConsultationDraftRequest(data) {
+  try {
+    return sanitizeConsultationInput(data);
+  } catch (error) {
+    throw new HttpsError('invalid-argument', error.message);
+  }
+}
+
+function buildConsultationDraftResult(draft, extra = {}) {
+  return {
+    draft,
+    model: MODEL,
+    generatedAt: new Date().toISOString(),
+    ...extra,
+  };
+}
+
 function throwConsultationAiError(error, stage, flow) {
   if (error instanceof HttpsError) throw error;
   const reason = classifyAiError(error);
@@ -371,22 +388,12 @@ export const generateDemoConsultationDraft = onCall({
       throw new HttpsError('permission-denied', '허용된 커리어핏 데모에서만 이용할 수 있습니다.');
     }
     stage = 'input-validation';
-    let input;
-    try {
-      input = sanitizeConsultationInput(request.data);
-    } catch (error) {
-      throw new HttpsError('invalid-argument', error.message);
-    }
+    const input = validateConsultationDraftRequest(request.data);
     stage = 'quota';
     await consumeDemoDailyQuota(request.auth.uid);
     stage = 'vertex-ai';
     const draft = await createVertexConsultationDraft(input);
-    return {
-      draft,
-      model: MODEL,
-      generatedAt: new Date().toISOString(),
-      demo: true,
-    };
+    return buildConsultationDraftResult(draft, { demo: true });
   } catch (error) {
     throwConsultationAiError(error, stage, 'demo');
   }
@@ -409,12 +416,7 @@ export const generateConsultationDraft = onCall({
     const profile = await assertApprovedCounselor(request.auth.uid);
 
     stage = 'input-validation';
-    let input;
-    try {
-      input = sanitizeConsultationInput(request.data);
-    } catch (error) {
-      throw new HttpsError('invalid-argument', error.message);
-    }
+    const input = validateConsultationDraftRequest(request.data);
 
     stage = 'student-authorization';
     await assertCounselorStudentAccess(request.auth.uid, profile, input.studentId);
@@ -424,11 +426,7 @@ export const generateConsultationDraft = onCall({
 
     stage = 'vertex-ai';
     const draft = await createVertexConsultationDraft(input);
-    return {
-      draft,
-      model: MODEL,
-      generatedAt: new Date().toISOString(),
-    };
+    return buildConsultationDraftResult(draft);
   } catch (error) {
     throwConsultationAiError(error, stage, 'authenticated');
   }
