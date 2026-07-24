@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Icon from '../components/Icon';
+import { DatePicker } from '../components/DateTimePicker';
 import { EmptyState, PageIntro, StatusTabs } from '../components/UI';
 import { recommendPrograms } from '../utils/programRecommendations';
 import { useAuth } from '../auth/AuthContext';
@@ -83,10 +84,10 @@ function ProgramFormModal({ program, onClose, onSave }) {
           <fieldset className="span-2 program-grade-field"><legend>참여 대상 학년</legend><div>{gradeOptions.map(grade => <label key={grade}><input type="checkbox" checked={form.grades.includes(grade)} onChange={() => toggleGrade(grade)} />{grade}</label>)}</div>{errors.grades && <small className="field-error">{errors.grades}</small>}</fieldset>
           <label><span className="program-field-label">대상 설명</span><input value={form.target} onChange={event => update('target', event.target.value)} placeholder="전 학과 2~4학년" /></label>
           <label><span className="program-field-label">대상 학과 <small>(비워 두면 전 학과입니다.)</small></span><input value={form.targetDepartments} onChange={event => update('targetDepartments', event.target.value)} placeholder="경영학과, 경제학과" /></label>
-          <label>모집 시작일<input type="date" value={form.recruitmentStartDate} onChange={event => update('recruitmentStartDate', event.target.value)} /></label>
-          <label>모집 종료일<input type="date" value={form.recruitmentEndDate} onChange={event => update('recruitmentEndDate', event.target.value)} />{errors.recruitmentDates && <small className="field-error">{errors.recruitmentDates}</small>}</label>
-          <label>운영 시작일<input type="date" value={form.programStartDate} onChange={event => update('programStartDate', event.target.value)} /></label>
-          <label>운영 종료일<input type="date" value={form.programEndDate} onChange={event => update('programEndDate', event.target.value)} />{errors.programDates && <small className="field-error">{errors.programDates}</small>}</label>
+          <label>모집 시작일<DatePicker ariaLabel="모집 시작일" value={form.recruitmentStartDate} onChange={value => update('recruitmentStartDate', value)} /></label>
+          <label>모집 종료일<DatePicker ariaLabel="모집 종료일" value={form.recruitmentEndDate} min={form.recruitmentStartDate} onChange={value => update('recruitmentEndDate', value)} />{errors.recruitmentDates && <small className="field-error">{errors.recruitmentDates}</small>}</label>
+          <label>운영 시작일<DatePicker ariaLabel="운영 시작일" value={form.programStartDate} onChange={value => update('programStartDate', value)} /></label>
+          <label>운영 종료일<DatePicker ariaLabel="운영 종료일" value={form.programEndDate} min={form.programStartDate} onChange={value => update('programEndDate', value)} />{errors.programDates && <small className="field-error">{errors.programDates}</small>}</label>
           <label>세부 일정<input value={form.schedule} onChange={event => update('schedule', event.target.value)} placeholder="금 14:00–17:00" /></label>
           <label>장소<input value={form.location} onChange={event => update('location', event.target.value)} /></label>
           <label>정원<input type="number" min="0" value={form.capacity} onChange={event => update('capacity', event.target.value)} /></label>

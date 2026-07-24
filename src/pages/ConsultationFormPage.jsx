@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Icon from '../components/Icon';
+import { DatePicker } from '../components/DateTimePicker';
 import { EmptyState, StatusBadge } from '../components/UI';
 import { generateConsultationDraft } from '../services/consultationAiService';
 import { addDays, toDateKey } from '../utils/date';
@@ -343,7 +344,7 @@ export default function ConsultationFormPage() {
     <div className="consultation-layout">
       <section className="card consultation-form-card">
         <div className="form-section-title" id="consultation-basic"><span>1</span><div><h2>상담 기본 정보</h2><p>상담의 목적과 유형을 선택해 주세요.</p></div></div>
-        <div className="form-grid"><label>상담 날짜<input type="date" value={form.date} onChange={e => update('date', e.target.value)} /></label><label>상담 유형<select value={form.type} onChange={e => update('type', e.target.value)}>{['진로 탐색', '취업 준비', '자기소개서', '면접', '비교과 활동', '포트폴리오', '기타'].map(x => <option key={x}>{x}</option>)}</select></label><label className="full">상담 목적 <span className="required">필수</span><input value={form.purpose} onChange={e => update('purpose', e.target.value)} /></label></div>
+        <div className="form-grid"><label>상담 날짜<DatePicker ariaLabel="상담 날짜" value={form.date} onChange={value => update('date', value)} /></label><label>상담 유형<select value={form.type} onChange={e => update('type', e.target.value)}>{['진로 탐색', '취업 준비', '자기소개서', '면접', '비교과 활동', '포트폴리오', '기타'].map(x => <option key={x}>{x}</option>)}</select></label><label className="full">상담 목적 <span className="required">필수</span><input value={form.purpose} onChange={e => update('purpose', e.target.value)} /></label></div>
         <div className="form-divider" />
         <div className="form-section-title" id="consultation-note"><span>2</span><div><h2>상담 메모</h2><p>완성된 문장보다 중요한 키워드와 맥락을 편하게 남겨 주세요.</p></div></div>
         <label>학생의 현재 고민<textarea rows="3" value={form.currentConcern} onChange={e => update('currentConcern', e.target.value)} /></label>
@@ -386,7 +387,7 @@ export default function ConsultationFormPage() {
                   {ownerRows.map((row, index) => <div className="consultation-task-row" key={row.id}>
                     <span className="task-row-index" aria-hidden="true">{index + 1}</span>
                     <label className="task-row-field task-row-content"><span>할 일 내용</span><input type="text" maxLength="500" value={row.content} onChange={event => updateTaskRow(row.id, 'content', event.target.value)} placeholder={group.placeholder} /></label>
-                    <label className="task-row-field task-row-due"><span><Icon name="calendar" size={14} />완료 기한</span><input type="date" value={row.dueDate} onChange={event => updateTaskRow(row.id, 'dueDate', event.target.value)} /></label>
+                    <label className="task-row-field task-row-due"><span><Icon name="calendar" size={14} />완료 기한</span><DatePicker ariaLabel={`${row.content || '할 일'} 완료 기한`} value={row.dueDate} onChange={value => updateTaskRow(row.id, 'dueDate', value)} /></label>
                     {ownerRows.length > 1 && <button type="button" className="task-row-remove" aria-label={`${group.label} ${index + 1}행 삭제`} onClick={() => removeTaskRow(row.id)}><Icon name="close" size={16} /></button>}
                   </div>)}
                 </div>

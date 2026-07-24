@@ -1538,7 +1538,10 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .recurring-weekdays { display: flex; gap: 8px; flex-wrap: wrap; }
 .recurring-weekdays button { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #d6dde7; background: white; }
 .recurring-weekdays button.selected { background: #2358d8; color: white; border-color: #2358d8; }
-.recurring-availability-form fieldset > .button { margin-top: 8px; }
+.recurring-availability-form fieldset > .button { margin-top: 14px; }
+.recurring-exclusion-row > span { flex: 0 0 auto; align-self: center; white-space: nowrap; }
+.recurring-exclusion-row .ui-picker, .recurring-excluded-date-input .ui-picker { min-width: 0; flex: 1; }
+.recurring-excluded-date-input > .button { flex: 0 0 auto; white-space: nowrap; }
 .recurring-preview { background: #f5f8ff; border-radius: 12px; padding: 12px 14px; }
 .recurring-preview dl { margin: 8px 0 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
 .recurring-preview dl div { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; }
@@ -1549,7 +1552,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 @media (max-width: 700px) {
   .recurring-availability-form { grid-template-columns: 1fr; }
   .recurring-availability-form > * { grid-column: 1; }
-  .recurring-availability-form header, .recurring-period-fields, .recurring-time-fields, .recurring-exclusion-row { align-items: stretch; flex-direction: column; }
+  .recurring-availability-form header, .recurring-period-fields, .recurring-time-fields { align-items: stretch; flex-direction: column; }
   .recurring-preview dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
@@ -7896,5 +7899,268 @@ textarea {
 
   .student-profile-form-actions .button {
     width: 100%;
+  }
+}
+
+/* Shared CareerFit date and time pickers */
+.ui-picker {
+  width: 100%;
+  position: relative;
+}
+
+label > .ui-picker {
+  margin-top: 7px;
+}
+
+.ui-picker-field {
+  position: relative;
+}
+
+.ui-picker-field input {
+  width: 100%;
+  padding-right: 42px;
+  cursor: pointer;
+}
+
+.ui-picker-field > svg {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  color: var(--muted);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.ui-picker-field.open input {
+  border-color: var(--primary-border);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px var(--primary-muted) !important;
+}
+
+.ui-picker-field.open > svg {
+  color: var(--blue);
+}
+
+.ui-picker-popover {
+  z-index: 500;
+  position: fixed;
+  padding: 13px;
+  overflow: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 15px;
+  color: var(--navy);
+  background: var(--surface);
+  box-shadow: 0 18px 44px rgba(22, 43, 74, .18) !important;
+}
+
+.ui-picker-toolbar {
+  min-height: 38px;
+  margin-bottom: 10px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 7px;
+}
+
+.ui-picker-toolbar strong {
+  font-size: 14px;
+  text-align: center;
+}
+
+.ui-picker-toolbar button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.ui-picker-toolbar button:hover {
+  border-color: var(--primary-border);
+  color: var(--blue);
+  background: var(--primary-soft);
+}
+
+.ui-picker-toolbar button:first-child svg {
+  transform: rotate(180deg);
+}
+
+.ui-date-weekdays,
+.ui-date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.ui-date-weekdays {
+  margin-bottom: 5px;
+}
+
+.ui-date-weekdays span {
+  padding: 4px 0;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+}
+
+.ui-date-grid button {
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  position: relative;
+  color: var(--navy);
+  background: var(--surface-subtle);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.ui-date-grid button:hover:not(:disabled) {
+  border-color: var(--primary-border);
+  color: var(--blue);
+  background: var(--primary-soft);
+}
+
+.ui-date-grid button.outside {
+  color: var(--muted);
+  opacity: .48;
+}
+
+.ui-date-grid button.today::after {
+  content: '';
+  width: 4px;
+  height: 4px;
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  border-radius: 50%;
+  background: var(--blue);
+  transform: translateX(-50%);
+}
+
+.ui-date-grid button.selected {
+  border-color: var(--blue);
+  color: #fff;
+  background: var(--blue);
+}
+
+.ui-date-grid button.selected::after {
+  background: #fff;
+}
+
+.ui-date-grid button:disabled {
+  color: #aab3bf;
+  background: #f3f5f7;
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.ui-picker-footer {
+  min-height: 32px;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ui-picker-footer > span {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.ui-time-picker-heading {
+  min-height: 38px;
+  padding: 0 3px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ui-time-picker {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ui-time-picker-heading svg {
+  color: var(--blue);
+}
+
+.ui-time-picker-heading strong {
+  font-size: 13px;
+}
+
+.ui-time-picker-heading span {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.ui-time-options {
+  min-height: 0;
+  flex: 1 1 auto;
+  max-height: 260px;
+  padding: 10px 2px 2px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  overflow-y: auto;
+}
+
+.ui-time-options button {
+  min-width: 0;
+  min-height: 48px;
+  padding: 7px 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: grid;
+  gap: 2px;
+  color: var(--navy);
+  background: var(--surface);
+}
+
+.ui-time-options button small {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.ui-time-options button span {
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.ui-time-options button:hover {
+  border-color: var(--primary-border);
+  color: var(--blue);
+  background: var(--primary-soft);
+}
+
+.ui-time-options button.selected {
+  border-color: var(--blue);
+  color: #fff;
+  background: var(--blue);
+}
+
+.ui-time-options button.selected small {
+  color: rgba(255, 255, 255, .72);
+}
+
+@media (max-width: 520px) {
+  .ui-picker-popover {
+    border-radius: 13px;
+  }
+
+  .ui-time-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

@@ -3,6 +3,7 @@ import {
   buildRecurringAvailabilityPreview,
   createDefaultRecurringAvailabilityRule,
 } from '../utils/recurringAvailability.js';
+import { DatePicker, TimePicker } from './DateTimePicker.jsx';
 
 const weekdayOptions = [
   { value: 1, label: '월' }, { value: 2, label: '화' }, { value: 3, label: '수' },
@@ -54,24 +55,24 @@ export default function RecurringAvailabilityForm({
       <p>최대 12주 동안 선택한 요일에 1시간 단위 상담 시간을 만듭니다.</p>
     </header>
     <div className="recurring-period-fields">
-      <label>시작일<input type="date" value={rule.startDate} onChange={event => update('startDate', event.target.value)} required /></label>
-      <label>종료일<input type="date" value={rule.endDate} onChange={event => update('endDate', event.target.value)} required /></label>
+      <label>시작일<DatePicker ariaLabel="반복 시작일" value={rule.startDate} onChange={value => update('startDate', value)} required /></label>
+      <label>종료일<DatePicker ariaLabel="반복 종료일" value={rule.endDate} min={rule.startDate} onChange={value => update('endDate', value)} required /></label>
     </div>
     <fieldset><legend>반복 요일</legend><div className="recurring-weekdays">{weekdayOptions.map(option => <button
       key={option.value} type="button" className={rule.weekdays.includes(option.value) ? 'selected' : ''}
       aria-pressed={rule.weekdays.includes(option.value)} onClick={() => toggleWeekday(option.value)}
     >{option.label}</button>)}</div></fieldset>
     <div className="recurring-time-fields">
-      <label>시작 시간<input type="time" step="3600" value={rule.startTime} onChange={event => update('startTime', event.target.value)} required /></label>
-      <label>종료 시간<input type="time" step="3600" value={rule.endTime} onChange={event => update('endTime', event.target.value)} required /></label>
+      <label>시작 시간<TimePicker ariaLabel="반복 시작 시간" step={3600} value={rule.startTime} onChange={value => update('startTime', value)} required /></label>
+      <label>종료 시간<TimePicker ariaLabel="반복 종료 시간" step={3600} value={rule.endTime} onChange={value => update('endTime', value)} required /></label>
       <label>상담 장소<input value={rule.location} onChange={event => update('location', event.target.value)} required /></label>
     </div>
     <fieldset><legend>제외 시간</legend>{rule.exclusions.map((item, index) => <div className="recurring-exclusion-row" key={`${index}-${item.startTime}`}>
-      <input aria-label={`제외 시간 ${index + 1} 시작`} type="time" value={item.startTime} onChange={event => updateExclusion(index, 'startTime', event.target.value)} />
-      <span>부터</span><input aria-label={`제외 시간 ${index + 1} 종료`} type="time" value={item.endTime} onChange={event => updateExclusion(index, 'endTime', event.target.value)} />
+      <TimePicker ariaLabel={`제외 시간 ${index + 1} 시작`} value={item.startTime} onChange={value => updateExclusion(index, 'startTime', value)} />
+      <span>부터</span><TimePicker ariaLabel={`제외 시간 ${index + 1} 종료`} value={item.endTime} onChange={value => updateExclusion(index, 'endTime', value)} />
       <button type="button" className="text-button danger" onClick={() => update('exclusions', rule.exclusions.filter((_, itemIndex) => itemIndex !== index))}>삭제</button>
     </div>)}<button type="button" className="button secondary small" onClick={() => update('exclusions', [...rule.exclusions, { startTime: '12:00', endTime: '13:00' }])}>제외 시간 추가</button></fieldset>
-    <fieldset><legend>제외 날짜</legend><div className="recurring-excluded-date-input"><input type="date" value={excludedDate} min={rule.startDate} max={rule.endDate} onChange={event => setExcludedDate(event.target.value)} /><button type="button" className="button secondary small" onClick={addExcludedDate}>날짜 제외</button></div>
+    <fieldset><legend>제외 날짜</legend><div className="recurring-excluded-date-input"><DatePicker ariaLabel="제외 날짜" value={excludedDate} min={rule.startDate} max={rule.endDate} onChange={setExcludedDate} /><button type="button" className="button secondary small" onClick={addExcludedDate}>날짜 제외</button></div>
       {rule.excludedDates.length > 0 && <ul className="recurring-excluded-dates">{rule.excludedDates.map(date => <li key={date}><span>{date}</span><button type="button" aria-label={`${date} 제외 취소`} onClick={() => update('excludedDates', rule.excludedDates.filter(item => item !== date))}>×</button></li>)}</ul>}
     </fieldset>
     <section className="recurring-preview" aria-live="polite"><strong>생성 미리보기</strong><dl>

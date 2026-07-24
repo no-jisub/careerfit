@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Icon from '../components/Icon';
 import TaskOwnerCards from '../components/TaskOwnerCards';
+import { DatePicker } from '../components/DateTimePicker';
 import { EmptyState, PageIntro, StatusBadge, StatusTabs } from '../components/UI';
 import { addDays, resolveFollowUpStatus, toDateKey } from '../utils/date';
 import { validateFollowUpInput } from '../utils/validation';
@@ -175,12 +176,25 @@ export default function FollowUpsPage() {
             <div className="task-student"><div><Link to={`/students/${student.id}`}>{student.name}</Link><span>{student.department}</span></div></div>
             <div className="task-content"><StatusBadge status={f.status} context="followUp" /><strong>{f.content}</strong><small>관련 상담 {f.consultationDate}</small></div>
             <div className="task-owner"><span className="task-cell-label">담당자</span><strong>{f.owner === '교직원' ? '상담사' : f.owner}</strong></div>
-            <div className="task-due"><label><span className="task-cell-label">완료 기한</span><input aria-label={`${student.name} 할 일 완료 기한`} type="date" value={f.dueDate} onChange={e => updateTask(f.id, { dueDate: e.target.value }, '완료 기한을 변경했습니다.')} /></label></div>
+            <div className="task-due"><label><span className="task-cell-label">완료 기한</span><DatePicker ariaLabel={`${student.name} 할 일 완료 기한`} value={f.dueDate} onChange={value => updateTask(f.id, { dueDate: value }, '완료 기한을 변경했습니다.')} /></label></div>
             <div className="task-actions"><label><span className="sr-only">상태 변경</span><select aria-label={`${student.name} 할 일 상태`} value={f.status} onChange={e => updateStatus(f.id, e.target.value)}><option value="scheduled">예정</option><option value="inProgress">진행 중</option><option value="complete">완료</option><option value="overdue">기한 초과</option></select></label>{f.status !== 'complete' && <button className="button secondary small" onClick={() => updateStatus(f.id, 'complete')}>완료 처리</button>}</div>
           </article>;
         })}</div>
       </> : <EmptyState title="등록된 할 일이 없습니다" description="상단의 추가 버튼으로 다음 행동을 등록해 보세요." />}
     </section>
-    {showAdd && <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && !saving && setShowAdd(false)}><section className="modal followup-add-modal" role="dialog" aria-modal="true" aria-labelledby="followup-add-title"><button className="modal-close" aria-label="닫기" disabled={saving} onClick={() => setShowAdd(false)}><Icon name="close" size={19} /></button><span className="eyebrow">새로운 다음 행동</span><h2 id="followup-add-title">상담 후 할 일 추가</h2><form onSubmit={addTask}><label>학생<select autoFocus value={form.studentId} onChange={e => setForm(prev => ({ ...prev, studentId: e.target.value }))} required><option value="">학생을 선택하세요</option>{students.map(student => <option key={student.id} value={student.id}>{student.name} · {student.department}</option>)}</select></label><label>할 일 내용<input maxLength="300" value={form.content} onChange={e => setForm(prev => ({ ...prev, content: e.target.value }))} placeholder="학생 또는 상담사가 해야 할 행동" required /></label><TaskOwnerCards className="task-owner-form-cards" label="누가 담당하나요?" name="new-task-owner" value={form.owner} onChange={nextOwner => setForm(prev => ({ ...prev, owner: nextOwner }))} options={taskOwnerFormOptions} /><label>완료 기한<input type="date" value={form.dueDate} onChange={e => setForm(prev => ({ ...prev, dueDate: e.target.value }))} required /></label>{formError && <p className="field-error" role="alert">{formError}</p>}<div className="modal-actions"><button type="button" className="button secondary" disabled={saving} onClick={() => setShowAdd(false)}>취소</button><button className="button primary" disabled={saving}>{saving ? '저장 중...' : '할 일 추가'}</button></div></form></section></div>}
+    {showAdd && <div className="modal-backdrop" role="presentation" onMouseDown={e => e.target === e.currentTarget && !saving && setShowAdd(false)}>
+      <section className="modal followup-add-modal" role="dialog" aria-modal="true" aria-labelledby="followup-add-title">
+        <button className="modal-close" aria-label="닫기" disabled={saving} onClick={() => setShowAdd(false)}><Icon name="close" size={19} /></button>
+        <span className="eyebrow">새로운 다음 행동</span><h2 id="followup-add-title">상담 후 할 일 추가</h2>
+        <form onSubmit={addTask}>
+          <label>학생<select autoFocus value={form.studentId} onChange={e => setForm(prev => ({ ...prev, studentId: e.target.value }))} required><option value="">학생을 선택하세요</option>{students.map(student => <option key={student.id} value={student.id}>{student.name} · {student.department}</option>)}</select></label>
+          <label>할 일 내용<input maxLength="300" value={form.content} onChange={e => setForm(prev => ({ ...prev, content: e.target.value }))} placeholder="학생 또는 상담사가 해야 할 행동" required /></label>
+          <TaskOwnerCards className="task-owner-form-cards" label="누가 담당하나요?" name="new-task-owner" value={form.owner} onChange={nextOwner => setForm(prev => ({ ...prev, owner: nextOwner }))} options={taskOwnerFormOptions} />
+          <label>완료 기한<DatePicker ariaLabel="새 할 일 완료 기한" value={form.dueDate} onChange={value => setForm(prev => ({ ...prev, dueDate: value }))} required /></label>
+          {formError && <p className="field-error" role="alert">{formError}</p>}
+          <div className="modal-actions"><button type="button" className="button secondary" disabled={saving} onClick={() => setShowAdd(false)}>취소</button><button className="button primary" disabled={saving}>{saving ? '저장 중...' : '할 일 추가'}</button></div>
+        </form>
+      </section>
+    </div>}
   </>;
 }
