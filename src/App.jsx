@@ -35,6 +35,10 @@ const FollowUpsPage = lazy(() => import('./pages/FollowUpsPage'));
 const ProgramsPage = lazy(() => import('./pages/ProgramsPage'));
 const StudentMyPage = lazy(() => import('./pages/StudentMyPage'));
 const StudentLayout = lazy(() => import('./components/StudentLayout'));
+const StudentTasksPage = lazy(() => import('./pages/StudentTasksPage'));
+const StudentRecordsPage = lazy(() => import('./pages/StudentRecordsPage'));
+const StudentProgramsPage = lazy(() => import('./pages/StudentProgramsPage'));
+const StudentProfilePage = lazy(() => import('./pages/StudentProfilePage'));
 const StudentWithdrawalPage = lazy(() => import('./pages/StudentWithdrawalPage'));
 const StudentAppointmentSlotsPage = lazy(() => import('./pages/StudentAppointmentSlotsPage'));
 const StudentAppointmentRequestPage = lazy(() => import('./pages/StudentAppointmentRequestPage'));
@@ -262,6 +266,10 @@ export default function App() {
     <Route path="/account-status" element={<AccountStatusPage />} />
     <Route path="/student" element={role === 'student' ? <StudentLayout /> : <Navigate to="/login" replace />}>
       <Route index element={<StudentMyPage />} />
+      <Route path="tasks" element={<StudentTasksPage />} />
+      <Route path="records" element={<StudentRecordsPage />} />
+      <Route path="programs" element={<StudentProgramsPage />} />
+      <Route path="profile" element={<StudentProfilePage />} />
       <Route path="withdrawal" element={<StudentWithdrawalPage />} />
       <Route path="appointments" element={<StudentAppointmentSlotsPage />} />
       <Route path="appointments/request/:availabilityId" element={<StudentAppointmentRequestPage />} />

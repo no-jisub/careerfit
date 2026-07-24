@@ -11,7 +11,7 @@ export default function StudentProgramDetailPage() {
   const effectiveStatus = program ? resolveProgramStatus(program) : '';
 
   return <div className="student-page student-program-detail-page">
-      <Link className="student-program-back" to="/student?view=programs"><Icon name="arrow" size={16} />프로그램 목록으로</Link>
+      <Link className="student-program-back" to="/student/programs"><Icon name="arrow" size={16} />프로그램 목록으로</Link>
       {!program ? <EmptyState title="프로그램을 찾을 수 없습니다" description="프로그램 목록이 갱신되었거나 더 이상 제공되지 않는 정보입니다." action={<Link className="button primary" to="/student">학생 홈으로 돌아가기</Link>} /> : <>
         <section className="student-program-detail-hero">
           <div className="student-program-detail-heading">
