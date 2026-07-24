@@ -10,7 +10,6 @@ import { validateNewStudentInput } from '../utils/validation';
 
 const studentStatusOptions = [
   { value: 'all', label: '전체', description: '모든 학생', icon: 'layers' },
-  { value: 'registered', label: '신규 등록', description: '상담 전', icon: 'students' },
   { value: 'scheduled', label: '상담 예정', description: '일정 확정', icon: 'calendar' },
   { value: 'inProgress', label: '진행 중', description: '상담 진행', icon: 'clock' },
   { value: 'writing', label: '기록 필요', description: '기록 작성 전', icon: 'note' },
@@ -269,7 +268,7 @@ export default function StudentsPage({ selectionMode = '' }) {
       setShowAddStudent(false);
       setQuery('');
       setGrade('all');
-      setStatus('registered');
+      setStatus('all');
       notify(`${student.name} 학생을 추가했습니다.`);
     } catch (error) {
       setStudentFormError(error?.message || '학생을 추가하지 못했습니다. 잠시 후 다시 시도해 주세요.');

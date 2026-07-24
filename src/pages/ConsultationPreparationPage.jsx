@@ -103,7 +103,6 @@ export default function ConsultationPreparationPage() {
           <div className="briefing-focus-list">
             <article className="briefing-focus caution"><span className="prep-icon blue"><Icon name="alert" /></span><div><small>2 · 주의해서 볼 점</small><strong>{briefingCaution}</strong></div></article>
             <article className="briefing-focus next"><span className="prep-icon blue"><Icon name="target" /></span><div><small>3 · 이번 상담에서 확인할 질문</small><strong>{briefingNextStep}</strong></div></article>
-            {overdueTaskCount > 0 && <Link className="briefing-task-alert" to="/follow-ups"><Icon name="alert" size={14} /><span><strong>기한이 지난 할 일 {overdueTaskCount}건</strong>을 상담 전에 확인하세요.</span><Icon name="chevron" size={14} /></Link>}
           </div>
         </div>
       </section>

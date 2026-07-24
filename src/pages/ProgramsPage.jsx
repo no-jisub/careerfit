@@ -101,7 +101,7 @@ function ProgramFormModal({ program, onClose, onSave }) {
 }
 
 function ProgramManagementPage() {
-  const { students, programs, setPrograms, programRecommendations, notify } = useApp();
+  const { programs, setPrograms, notify } = useApp();
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('recruiting');
   const [type, setType] = useState('전체');
@@ -118,19 +118,6 @@ function ProgramManagementPage() {
     recruiting: statusCounts.recruiting || 0,
     completed: (statusCounts.closed || 0) + (statusCounts.completed || 0) + (statusCounts.archived || 0),
   };
-  const activePrograms = programs.filter(program => ['scheduled', 'recruiting'].includes(resolveProgramStatus(program, today)));
-  const matchCandidates = programs.filter(program => !['archived', 'completed', 'draft'].includes(resolveProgramStatus(program, today)));
-  const matchQueue = students.map(student => {
-    const eligible = matchCandidates.filter(program => isProgramEligibleForStudent(program, student));
-    const program = recommendPrograms(eligible, student, 1)[0];
-    const profileText = [...student.interests, student.goal, student.concern].join(' ').toLowerCase().replace(/\s+/g, '');
-    const signalCount = program?.tags.filter(tag => {
-      const normalized = tag.toLowerCase().replace(/\s+/g, '');
-      return profileText.includes(normalized) || normalized.includes(profileText);
-    }).length || 0;
-    return { student, program, eligibleCount: eligible.length, signalCount };
-  }).filter(item => item.program).sort((left, right) => right.signalCount - left.signalCount || right.program.score - left.program.score);
-  const respondedRecommendations = programRecommendations.filter(item => ['interested', 'applied'].includes(item.status)).length;
   const visiblePrograms = useMemo(() => programs
     .filter(program => {
       const effectiveStatus = resolveProgramStatus(program, today);
@@ -154,26 +141,6 @@ function ProgramManagementPage() {
   };
   return <>
     <PageIntro icon="layers" eyebrow="운영 관리" title="비교과 프로그램 관리" description="상담에 활용할 프로그램을 등록하고 모집 상태와 학생 추천 정보를 관리합니다." action={<button className="button primary" onClick={() => setCreating(true)}><Icon name="plus" size={17} />새 프로그램 등록</button>} />
-    <section className="program-intelligence-hero">
-      <div className="program-intelligence-copy">
-        <span className="program-live-label"><i /> Student × Opportunity intelligence</span>
-        <span className="eyebrow">학생 성장기회 매칭</span>
-        <h2>프로그램을 관리하는 데서 끝나지 않고<br />필요한 학생에게 먼저 연결합니다</h2>
-        <p>상담 맥락의 관심 분야·학년과 실제 모집 가능한 프로그램을 비교해 상담사가 설명 가능한 추천을 완성합니다.</p>
-        <div className="program-intelligence-metrics"><div><small>매칭 대기 학생</small><strong>{matchQueue.length}<em>명</em></strong></div><div><small>추천 가능 기회</small><strong>{activePrograms.length}<em>개</em></strong></div><div><small>학생 반응</small><strong>{respondedRecommendations}<em>건</em></strong></div></div>
-      </div>
-      <div className="program-match-queue">
-        <div className="program-match-heading"><span><Icon name="target" size={16} />추천 우선순위</span><small>상담 맥락 기반</small></div>
-        {matchQueue.slice(0, 3).map(({ student, program, eligibleCount, signalCount }, index) => <Link to={`/programs?student=${student.id}`} key={student.id}>
-          <span className="match-rank">0{index + 1}</span>
-          <span className="match-avatar">{student.name.slice(1, 3)}</span>
-          <span><strong>{student.name} · {student.goal}</strong><small>{program.name}</small></span>
-          <span className="match-count">{signalCount ? `근거 ${signalCount}` : `후보 ${eligibleCount}`}</span>
-          <Icon name="arrow" size={16} />
-        </Link>)}
-        <Link className="program-match-all" to="/students">담당 학생 전체에서 추천 시작 <Icon name="arrow" size={16} /></Link>
-      </div>
-    </section>
     <section className="card program-management-card">
       <div className="program-management-head"><div><span className="eyebrow">Opportunity catalog</span><h2>프로그램 운영 목록</h2><p>현재 조건에 맞는 프로그램 <strong>{visiblePrograms.length}개</strong></p></div><span className="program-data-sync"><i />최신 데이터 동기화됨</span></div>
       <StatusTabs
