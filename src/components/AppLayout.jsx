@@ -20,7 +20,6 @@ const navGroups = [
     label: '상담 관리',
     items: [
       { to: '/students', label: '학생 관리', shortLabel: '학생', icon: 'students' },
-      { to: '/consultations', label: '상담 기록', icon: 'note' },
       { to: '/follow-ups', label: '상담 후 할 일', shortLabel: '할 일', icon: 'check' },
     ],
   },
@@ -39,7 +38,6 @@ const pageMeta = {
   dashboard: { title: '대시보드', description: '오늘의 상담 운영 현황' },
   students: { title: '학생 관리', description: '학생별 상담 맥락과 진행 상태' },
   appointments: { title: '상담 일정', description: '예약과 상담 가능 시간 관리' },
-  consultations: { title: '상담 기록', description: '상담 이력과 공개 요약' },
   'follow-ups': { title: '상담 후 할 일', description: '학생과 상담사의 다음 행동' },
   programs: { title: '비교과 프로그램', description: '학생 맞춤 성장 기회' },
   insights: { title: '운영 통계', description: '상담 운영 데이터와 인사이트' },
@@ -50,7 +48,7 @@ const pageMeta = {
 
 const demoTourSteps = [
   { number: '01', time: '30초', icon: 'dashboard', title: '오늘의 운영 우선순위', description: '상담 일정과 기한 초과 업무를 한 화면에서 판단합니다.', to: '/dashboard', action: '대시보드 보기' },
-  { number: '02', time: '45초', icon: 'students', title: '학생 360° 상담 맥락', description: '고민·이전 상담·다음 행동을 연결해 상담 준비 시간을 줄입니다.', to: '/students/s1', action: '김하늘 학생 보기' },
+  { number: '02', time: '45초', icon: 'students', title: '학생 360° 상담 맥락', description: '한 학생의 여러 상담을 날짜별로 비교하며 맥락을 이어갑니다.', to: '/students/s2', action: '이서준 학생 보기' },
   { number: '03', time: '60초', icon: 'spark', title: '근거 기반 AI 상담일지', description: '개인정보를 마스킹하고 항목별 근거를 사람이 승인합니다.', to: '/students/s1/consultation/new', action: 'AI 상담 흐름 보기' },
 ];
 

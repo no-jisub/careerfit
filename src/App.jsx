@@ -26,7 +26,6 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const StudentsPage = lazy(() => import('./pages/StudentsPage'));
 const StudentDetailPage = lazy(() => import('./pages/StudentDetailPage'));
 const ConsultationFormPage = lazy(() => import('./pages/ConsultationFormPage'));
-const ConsultationsPage = lazy(() => import('./pages/ConsultationsPage'));
 const FollowUpsPage = lazy(() => import('./pages/FollowUpsPage'));
 const ProgramsPage = lazy(() => import('./pages/ProgramsPage'));
 const StudentMyPage = lazy(() => import('./pages/StudentMyPage'));
@@ -41,7 +40,7 @@ const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const InsightsPage = lazy(() => import('./pages/InsightsPage'));
 
 const AppContext = createContext(null);
-const DEMO_DATA_VERSION = '2026-07-24-presentation-v2';
+const DEMO_DATA_VERSION = '2026-07-24-presentation-v3';
 const DEMO_DATA_VERSION_KEY = 'careerfit_demo_data_version';
 const read = (key, fallback) => {
   try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; }
@@ -219,7 +218,7 @@ function CounselorRoutes() {
       <Route path="students" element={<StudentsPage />} />
       <Route path="students/:studentId" element={<StudentDetailPage />} />
       <Route path="students/:studentId/consultation/new" element={<ConsultationFormPage />} />
-      <Route path="consultations" element={<ConsultationsPage />} />
+      <Route path="consultations" element={<Navigate to="/students" replace />} />
       <Route path="follow-ups" element={<FollowUpsPage />} />
       <Route path="appointments" element={<AppointmentsPage />} />
       <Route path="notifications" element={<NotificationsPage />} />

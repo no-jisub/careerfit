@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { initialConsultations } from '../src/data/consultations.js';
 import { buildConsultationSummary, defaultConsultationVisibility } from '../src/utils/consultations.js';
 import { hasCounselorAppointmentConflict, isAvailabilityBookable } from '../src/utils/appointments.js';
 import { validateCounselorRegistrationInput } from '../src/utils/validation.js';
@@ -11,6 +12,16 @@ const consultation = {
   guidance: '상담사만 보는 상세 안내', counselorActions: '내부 후속 조치', studentVisible: true,
   createdAt: '2026-07-22T00:00:00.000Z', updatedAt: '2026-07-22T00:00:00.000Z',
 };
+
+test('demo data includes a multi-session consultation journey for one student', () => {
+  const studentHistory = initialConsultations.filter(item => item.studentId === 's2');
+  assert.equal(studentHistory.length, 3);
+  assert.deepEqual(
+    studentHistory.map(item => item.date).sort(),
+    ['2026-06-12', '2026-07-03', '2026-07-17'],
+  );
+  assert.equal(studentHistory.some(item => item.studentVisible === false), true);
+});
 
 test('student summary contains only counselor-selected public fields', () => {
   const summary = buildConsultationSummary(consultation, { ...defaultConsultationVisibility, concern: false, programs: false });

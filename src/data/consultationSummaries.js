@@ -6,7 +6,7 @@ export const initialConsultationSummaries = initialConsultations.map(consultatio
   studentUid: consultation.studentId === 's1' ? 'demo-student-s1' : `demo-student-${consultation.studentId}`,
   counselorUid: 'demo-counselor',
   strengths: consultation.type === '진로 탐색' ? '새로운 역할을 탐색하고 비교하려는 태도가 좋음.' : '경험을 구체적인 행동으로 정리할 수 있음.',
-  studentVisible: true,
+  studentVisible: consultation.studentVisible !== false,
   createdAt: `${consultation.date}T09:00:00.000Z`,
   updatedAt: `${consultation.date}T09:00:00.000Z`,
 }, defaultConsultationVisibility));

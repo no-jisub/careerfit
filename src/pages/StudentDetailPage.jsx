@@ -9,6 +9,23 @@ import { buildConsultationSummary, consultationEvidenceFieldOptions, consultatio
 import { openAttachment } from '../services/attachmentService';
 
 const studentTagOptions = ['면접 준비', '포트폴리오', '진로 미정', '공공기관 희망'];
+const fullDateFormatter = new Intl.DateTimeFormat('ko-KR', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  weekday: 'short',
+});
+const weekdayFormatter = new Intl.DateTimeFormat('ko-KR', { weekday: 'short' });
+
+function getConsultationDateLabel(date) {
+  const [, month, day] = date.split('-').map(Number);
+  const parsed = new Date(`${date}T00:00:00`);
+  return {
+    short: `${month}.${day}`,
+    weekday: weekdayFormatter.format(parsed),
+    full: fullDateFormatter.format(parsed),
+  };
+}
 
 export default function StudentDetailPage() {
   const { studentId } = useParams();
@@ -19,7 +36,7 @@ export default function StudentDetailPage() {
   const history = student ? consultations.filter(c => c.studentId === student.id).sort((a, b) => b.date.localeCompare(a.date)) : [];
   const tasks = student ? followUps.filter(f => f.studentId === student.id && f.status !== 'complete') : [];
   const requestedConsultationId = searchParams.get('consultation');
-  const [expanded, setExpanded] = useState(requestedConsultationId || history[0]?.id);
+  const [selectedConsultationId, setSelectedConsultationId] = useState(requestedConsultationId || history[0]?.id);
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [savingStudent, setSavingStudent] = useState(false);
@@ -31,9 +48,9 @@ export default function StudentDetailPage() {
   const [savingConsultation, setSavingConsultation] = useState(false);
   useEffect(() => {
     if (!requestedConsultationId || !history.some(item => item.id === requestedConsultationId)) return undefined;
-    setExpanded(requestedConsultationId);
+    setSelectedConsultationId(requestedConsultationId);
     const frame = window.requestAnimationFrame(() => {
-      document.getElementById(`consultation-${requestedConsultationId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById('student-consultation-records')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
     return () => window.cancelAnimationFrame(frame);
   }, [requestedConsultationId, consultations]);
@@ -48,6 +65,31 @@ export default function StudentDetailPage() {
     return () => window.removeEventListener('keydown', closeModal);
   }, [showAdd, showEdit, savingStudent]);
   if (!student) return <section className="card"><EmptyState title="담당 학생을 찾을 수 없습니다" description="배정이 해제되었거나 현재 계정에서 조회할 수 없는 학생입니다." action={<Link className="button secondary" to="/students">담당 학생 목록으로</Link>} /></section>;
+  const selectedConsultation = history.find(item => item.id === selectedConsultationId) || history[0];
+  const selectedConsultationDate = selectedConsultation ? getConsultationDateLabel(selectedConsultation.date) : null;
+  const selectedInternalNote = selectedConsultation ? consultationNotes.find(note => note.consultationId === selectedConsultation.id) : null;
+  const overdueTaskCount = tasks.filter(task => task.status === 'overdue').length;
+  const briefingHistory = history.slice(0, 3).reverse();
+  const latestConsultation = history[0];
+  const briefingSummary = latestConsultation
+    ? `${student.name} 학생의 진로 목표는 ${student.goal}입니다. ${briefingHistory.length > 1
+      ? `최근 ${briefingHistory.length}회의 상담에서 ${briefingHistory.map(item => item.purpose).join(' → ')} 순으로 준비를 구체화했습니다.`
+      : `최근 상담에서는 ${latestConsultation.summary}`}`
+    : `${student.name} 학생의 진로 목표는 ${student.goal}입니다. 현재 ${student.concern}에 대한 첫 상담이 필요합니다.`;
+  const briefingCaution = latestConsultation?.concern || student.concern;
+  const briefingNextStep = latestConsultation?.nextCheckItems || '첫 상담에서 현재 상황과 기대하는 지원을 확인해 주세요.';
+  const handleConsultationTabKeyDown = (event, index) => {
+    const keyOffsets = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 };
+    let nextIndex;
+    if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = history.length - 1;
+    else if (event.key in keyOffsets) nextIndex = (index + keyOffsets[event.key] + history.length) % history.length;
+    else return;
+    event.preventDefault();
+    const nextRecord = history[nextIndex];
+    setSelectedConsultationId(nextRecord.id);
+    window.requestAnimationFrame(() => document.getElementById(`student-consultation-tab-${nextRecord.id}`)?.focus());
+  };
   const openEdit = () => {
     setEditForm({
       name: student.name,
@@ -139,17 +181,54 @@ export default function StudentDetailPage() {
   };
   return <>
     <nav className="breadcrumb" aria-label="현재 위치"><Link to="/students">학생 관리</Link><Icon name="chevron" size={14} /><span>{student.name}</span></nav>
-    <section className="profile-hero">
-      <div className="profile-main"><div><div className="profile-name"><h1>{student.name}</h1><StatusBadge status={student.status} /></div><p>{student.studentNo} · {student.department} · {student.grade}</p><div className="tag-row">{student.interests.map(x => <span className="tag" key={x}>{x}</span>)}</div></div></div>
-      <div className="profile-actions"><button className="button secondary" onClick={openEdit}>학생 정보 수정</button><button className="button secondary" onClick={() => setShowAdd(true)}><Icon name="plus" size={18} />할 일 추가</button><Link to={`/programs?student=${student.id}`} className="button secondary"><Icon name="spark" size={17} />프로그램 추천</Link><Link to={`/students/${student.id}/consultation/new`} className="button primary"><Icon name="note" size={18} />상담 시작</Link></div>
+    <section className="profile-hero student-case-hero">
+      <div className="profile-main"><span className="profile-avatar-large" aria-hidden="true">{student.name.slice(1, 3)}</span><div><span className="eyebrow">학생 케이스</span><div className="profile-name"><h1>{student.name}</h1><StatusBadge status={student.status} /></div><p>{student.studentNo} · {student.department} · {student.grade}</p><div className="tag-row">{student.interests.map(x => <span className="tag" key={x}>{x}</span>)}</div></div></div>
+      <div className="profile-operational-summary" aria-label="학생 상담 현황"><div><span>누적 상담</span><strong>{history.length}<small>회</small></strong></div><div className={overdueTaskCount ? 'attention' : ''}><span>기한 초과</span><strong>{overdueTaskCount}<small>건</small></strong></div><div><span>최근 상담</span><strong>{student.lastConsultation?.slice(5).replace('-', '.')}</strong></div></div>
+      <div className="profile-actions"><Link to={`/students/${student.id}/consultation/new`} className="button primary"><Icon name="note" size={18} />새 상담 시작</Link><Link to={`/programs?student=${student.id}`} className="button secondary"><Icon name="spark" size={17} />프로그램 추천</Link><button className="button secondary" onClick={() => setShowAdd(true)}><Icon name="plus" size={18} />할 일 추가</button><button className="button ghost" onClick={openEdit}>학생 정보 수정</button></div>
     </section>
     <div className="detail-grid">
       <div className="detail-main">
-        <section className="card prep-card"><div className="section-header"><div><span className="eyebrow">상담 준비 요약</span><h2>상담 전, 이것만 확인하세요</h2></div><span className="updated-label"><Icon name="clock" size={14} />최근 상담 {student.lastConsultation}</span></div>
-          <div className="prep-grid"><article><span className="prep-icon blue"><Icon name="note" /></span><div><strong>최근 상담 핵심 내용</strong><p>{history[0]?.summary || '아직 작성된 상담 기록이 없습니다.'}</p></div></article><article><span className="prep-icon orange"><Icon name="alert" /></span><div><strong>학생이 말한 주요 고민</strong><p>{student.concern}</p></div></article><article><span className="prep-icon green"><Icon name="check" /></span><div><strong>이전 상담에서 안내한 사항</strong><p>{history[0]?.guidance || '안내한 사항이 없습니다.'}</p></div></article><article><span className="prep-icon purple"><Icon name="target" /></span><div><strong>다음 상담에서 확인할 내용</strong><p>{history[0]?.nextCheckItems || '확인할 내용을 등록해 주세요.'}</p></div></article></div>
+        <section className="card prep-card"><div className="section-header"><div><span className="eyebrow">이전 상담 기반 브리핑</span><h2>{student.name} 학생, 이렇게 이해하면 됩니다</h2></div><span className="updated-label"><Icon name="clock" size={14} />{latestConsultation ? `최근 상담 ${latestConsultation.date}` : '이전 상담 기록 없음'}</span></div>
+          <div className="student-briefing">
+            <article className="briefing-overview">
+              <div className="briefing-title"><span className="prep-icon blue"><Icon name="note" /></span><div><small>학생 이해</small><strong>상담 흐름을 한눈에 확인하세요</strong></div></div>
+              <p>{briefingSummary}</p>
+              {briefingHistory.length > 0 && <ol className="briefing-journey" aria-label="최근 상담 흐름">{briefingHistory.map(item => <li key={item.id}><time dateTime={item.date}>{item.date.slice(5).replace('-', '.')}</time><span>{item.purpose}</span></li>)}</ol>}
+              <small className="briefing-source"><Icon name="shield" size={13} />{latestConsultation ? '최근 상담 기록의 목적·고민·확인 항목을 바탕으로 정리했습니다.' : '이전 상담 기록이 없어 학생 기본 정보의 진로 목표·현재 고민을 바탕으로 정리했습니다.'}</small>
+            </article>
+            <div className="briefing-focus-list">
+              <article className="briefing-focus caution"><span className="prep-icon orange"><Icon name="alert" /></span><div><small>상담 시 주의</small><strong>{briefingCaution}</strong></div></article>
+              <article className="briefing-focus next"><span className="prep-icon purple"><Icon name="target" /></span><div><small>이번에 이어갈 질문</small><strong>{briefingNextStep}</strong></div></article>
+              {overdueTaskCount > 0 && <p className="briefing-task-alert"><Icon name="calendar" size={14} /><strong>기한이 지난 할 일 {overdueTaskCount}건</strong>도 함께 확인해 주세요.</p>}
+            </div>
+          </div>
         </section>
-        <section className="card"><div className="section-header"><div><span className="eyebrow">상담 히스토리</span><h2>상담 기록 타임라인</h2></div><Link className="text-link" to={`/students/${student.id}/consultation/new`}>기록 작성 <Icon name="plus" size={15} /></Link></div>
-          {history.length ? <div className="timeline">{history.map(c => { const internalNote = consultationNotes.find(note => note.consultationId === c.id); return <article id={`consultation-${c.id}`} key={c.id} className={`timeline-item ${expanded === c.id ? 'open' : ''}`}><span className="timeline-dot" /><button aria-expanded={expanded === c.id} onClick={() => setExpanded(expanded === c.id ? '' : c.id)}><div><time>{c.date}</time><span className="tag">{c.type}</span><h3>{c.purpose}</h3></div><Icon name="chevron" /></button>{expanded === c.id && <div className="timeline-body">{internalNote?.note && <div className="internal-note"><strong><Icon name="lock" size={15} />상담 담당자 내부 메모</strong><p>{internalNote.note}</p></div>}{c.aiReview && <details className="consultation-evidence-panel" open={requestedConsultationId === c.id}><summary><span><Icon name="shield" size={17} />AI 요약 근거 및 상담사 검토</span><small>{c.aiReview.reviewedAt?.slice(0, 10)} · {c.aiReview.reviewedBy}</small></summary><div><p>AI 초안의 각 항목을 작성할 때 사용한 근거입니다. 원문 메모는 학생에게 공개되지 않습니다.</p>{consultationEvidenceFieldOptions.map(({ key, label }) => <section key={key}><strong>{label}</strong><ul>{(c.aiReview.evidence?.[key] || ['근거 부족']).map((evidence, index) => <li key={`${key}-${index}`}>{evidence}</li>)}</ul></section>)}{c.aiReview.needsConfirmation?.length > 0 && <section className="needs-confirmation"><strong>추가 확인 필요</strong><ul>{c.aiReview.needsConfirmation.map((item, index) => <li key={`confirm-${index}`}>{item}</li>)}</ul></section>}</div></details>}<dl><div><dt>학생 공개 요약</dt><dd>{c.summary}</dd></div><div><dt>학생의 강점</dt><dd>{c.strengths || '-'}</dd></div><div><dt>안내한 내용</dt><dd>{c.guidance}</dd></div><div><dt>학생의 다음 행동</dt><dd>{c.studentActions}</dd></div><div><dt>담당자의 다음 행동</dt><dd>{c.counselorActions}</dd></div><div><dt>다음 상담 확인 사항</dt><dd>{c.nextCheckItems}</dd></div></dl>{c.programs?.length > 0 && <div className="program-inline"><Icon name="spark" size={17} /><span>추천 프로그램</span><strong>{c.programs.join(', ')}</strong></div>}<div className="consultation-record-footer"><p className="counselor-line">{c.studentVisible === false ? '학생 비공개 · ' : '선택 항목 공개 · '}{c.aiReview ? 'AI 보조·상담사 근거 검토 완료 · ' : '상담사 직접 작성 · '}상담 담당자 {c.counselor}{c.modifiedAt ? ` · 마지막 수정 ${c.modifiedAt.slice(0, 10)} ${c.modifiedByName}` : ''}</p><button className="button secondary small" onClick={() => openConsultationEdit(c)}>기록 수정</button></div></div>}</article>; })}</div> : <EmptyState title="아직 작성된 상담 기록이 없습니다" description="첫 상담을 시작하고 학생의 목표와 다음 행동을 기록해 보세요." />}
+        <section className="card student-consultation-records" id="student-consultation-records">
+          <div className="section-header"><div><span className="eyebrow">상담 히스토리</span><h2>날짜별 상담 기록</h2><p>상담 날짜를 선택해 회차별 맥락과 후속 내용을 확인하세요.</p></div><div className="student-consultation-header-actions"><span className="student-record-count">총 {history.length}회</span><Link className="text-link" to={`/students/${student.id}/consultation/new`}>기록 작성 <Icon name="plus" size={15} /></Link></div></div>
+          {history.length && selectedConsultation ? <>
+            <div className="consultation-date-navigation">
+              <div><span>상담 날짜 선택</span><small>최신순</small></div>
+              <div role="tablist" aria-label={`${student.name} 학생 상담 날짜`}>
+                {history.map((record, index) => {
+                  const date = getConsultationDateLabel(record.date);
+                  const active = record.id === selectedConsultation.id;
+                  return <button id={`student-consultation-tab-${record.id}`} type="button" role="tab" aria-selected={active} aria-controls="student-consultation-panel" tabIndex={active ? 0 : -1} className={active ? 'active' : ''} onClick={() => setSelectedConsultationId(record.id)} onKeyDown={event => handleConsultationTabKeyDown(event, index)} key={record.id}><time dateTime={record.date}><strong>{date.short}</strong><span>{date.weekday}</span></time><small>{record.type}</small></button>;
+                })}
+              </div>
+            </div>
+            <section className="consultation-record-preview" id="student-consultation-panel" role="tabpanel" aria-labelledby={`student-consultation-tab-${selectedConsultation.id}`}>
+              <div className="consultation-record-preview-head"><div><time dateTime={selectedConsultation.date}>{selectedConsultationDate.full}</time><div><span className="tag">{selectedConsultation.type}</span><span className={`visibility-tag ${selectedConsultation.studentVisible === false ? 'private' : ''}`}>{selectedConsultation.studentVisible === false ? '학생 비공개' : '학생 공개'}</span>{selectedConsultation.aiReview && <span className="ai-reviewed-tag"><Icon name="shield" size={12} />AI 근거 검토 완료</span>}</div></div></div>
+              <h3>{selectedConsultation.purpose}</h3>
+              <p className="consultation-record-summary">{selectedConsultation.summary}</p>
+              <div className="timeline-body student-consultation-detail">
+                {selectedInternalNote?.note && <div className="internal-note"><strong><Icon name="lock" size={15} />상담 담당자 내부 메모</strong><p>{selectedInternalNote.note}</p></div>}
+                {selectedConsultation.aiReview && <details className="consultation-evidence-panel" open={requestedConsultationId === selectedConsultation.id}><summary><span><Icon name="shield" size={17} />AI 요약 근거 및 상담사 검토</span><small>{selectedConsultation.aiReview.reviewedAt?.slice(0, 10)} · {selectedConsultation.aiReview.reviewedBy}</small></summary><div><p>AI 초안의 각 항목을 작성할 때 사용한 근거입니다. 원문 메모는 학생에게 공개되지 않습니다.</p>{consultationEvidenceFieldOptions.map(({ key, label }) => <section key={key}><strong>{label}</strong><ul>{(selectedConsultation.aiReview.evidence?.[key] || ['근거 부족']).map((evidence, index) => <li key={`${key}-${index}`}>{evidence}</li>)}</ul></section>)}{selectedConsultation.aiReview.needsConfirmation?.length > 0 && <section className="needs-confirmation"><strong>추가 확인 필요</strong><ul>{selectedConsultation.aiReview.needsConfirmation.map((item, index) => <li key={`confirm-${index}`}>{item}</li>)}</ul></section>}</div></details>}
+                <dl><div><dt>학생의 강점</dt><dd>{selectedConsultation.strengths || '-'}</dd></div><div><dt>안내한 내용</dt><dd>{selectedConsultation.guidance || '-'}</dd></div><div><dt>학생의 다음 행동</dt><dd>{selectedConsultation.studentActions || '-'}</dd></div><div><dt>담당자의 다음 행동</dt><dd>{selectedConsultation.counselorActions || '-'}</dd></div><div><dt>다음 상담 확인 사항</dt><dd>{selectedConsultation.nextCheckItems || '-'}</dd></div></dl>
+                {selectedConsultation.programs?.length > 0 && <div className="program-inline"><Icon name="spark" size={17} /><span>추천 프로그램</span><strong>{selectedConsultation.programs.join(', ')}</strong></div>}
+                <div className="consultation-record-footer"><p className="counselor-line">{selectedConsultation.studentVisible === false ? '학생 비공개 · ' : '선택 항목 공개 · '}{selectedConsultation.aiReview ? 'AI 보조·상담사 근거 검토 완료 · ' : '상담사 직접 작성 · '}상담 담당자 {selectedConsultation.counselor}{selectedConsultation.modifiedAt ? ` · 마지막 수정 ${selectedConsultation.modifiedAt.slice(0, 10)} ${selectedConsultation.modifiedByName}` : ''}</p><button className="button secondary small" onClick={() => openConsultationEdit(selectedConsultation)}>기록 수정</button></div>
+              </div>
+            </section>
+          </> : <EmptyState title="아직 작성된 상담 기록이 없습니다" description="첫 상담을 시작하고 학생의 목표와 다음 행동을 기록해 보세요." />}
         </section>
       </div>
       <aside className="detail-aside">
