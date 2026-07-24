@@ -11,6 +11,7 @@ const fullEvidence = {
 
 test('evidence coverage counts only fields with usable source evidence', () => {
   assert.equal(getEvidenceCoverage({ evidence: fullEvidence }), 100);
-  assert.equal(getEvidenceCoverage({ evidence: { ...fullEvidence, strengths: ['근거 부족'], guidance: [] } }), 50);
+  assert.equal(getEvidenceCoverage({ evidence: { ...fullEvidence, summary: ['근거 부족'] } }), 50);
+  assert.equal(getEvidenceCoverage({ evidence: { ...fullEvidence, concern: [] } }), 50);
   assert.equal(getEvidenceCoverage({ evidence: {} }), 0);
 });

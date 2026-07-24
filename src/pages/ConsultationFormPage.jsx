@@ -12,7 +12,7 @@ import { buildEventNotification } from '../utils/notifications';
 import { detectDirectIdentifiers } from '../utils/privacy';
 import { getEvidenceCoverage } from '../utils/trust';
 
-const createEmptyForm = () => { const today = toDateKey(); return { date: today, type: '진로 탐색', purpose: '관심 직무 구체화 및 경험 계획 수립', currentConcern: '', rawMemo: '', guidance: '', strengths: '', programs: [], studentActions: '', counselorActions: '', nextCheckItems: '', nextDate: addDays(today, 14), studentVisible: true, visibility: { ...defaultConsultationVisibility } }; };
+const createEmptyForm = () => { const today = toDateKey(); return { date: today, type: '진로 탐색', purpose: '관심 직무 구체화 및 경험 계획 수립', currentConcern: '', rawMemo: '', programs: [], nextDate: addDays(today, 14), studentVisible: true, visibility: { ...defaultConsultationVisibility } }; };
 const appendMissingDocuments = (current, additions) => [
   ...current,
   ...additions.filter(addition => !current.some(item => item.id === addition.id)),
@@ -20,6 +20,29 @@ const appendMissingDocuments = (current, additions) => [
 const cleanAiList = value => Array.isArray(value)
   ? value.map(item => cleanText(item, 500)).filter(Boolean).slice(0, 10)
   : [];
+let taskRowSequence = 0;
+const createTaskRow = (owner, dueDate, content = '') => ({
+  id: `consultation-task-${owner === '학생' ? 'student' : 'counselor'}-${Date.now()}-${taskRowSequence += 1}`,
+  owner,
+  content,
+  dueDate,
+});
+const restoreTaskRows = (source, dueDate) => {
+  if (Array.isArray(source?.taskRows) && source.taskRows.length) {
+    return source.taskRows.map(row => {
+      const restored = createTaskRow(row.owner === '학생' ? '학생' : '교직원', row.dueDate || dueDate, row.content || '');
+      return { ...restored, id: row.id || restored.id };
+    });
+  }
+  const restoreLegacyOwner = (owner, value) => {
+    const entries = String(value || '').split(/\n+/).map(item => item.trim()).filter(Boolean);
+    return (entries.length ? entries : ['']).map(content => createTaskRow(owner, dueDate, content));
+  };
+  return [
+    ...restoreLegacyOwner('학생', source?.studentTask),
+    ...restoreLegacyOwner('교직원', source?.counselorTask),
+  ];
+};
 
 export default function ConsultationFormPage() {
   const { studentId } = useParams();
@@ -41,13 +64,22 @@ export default function ConsultationFormPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [studentTask, setStudentTask] = useState('');
-  const [counselorTask, setCounselorTask] = useState('');
+  const [taskRows, setTaskRows] = useState(() => restoreTaskRows(
+    draftForm?.studentId === student?.id ? draftForm : null,
+    draftForm?.studentId === student?.id ? draftForm.form?.nextDate || createEmptyForm().nextDate : createEmptyForm().nextDate,
+  ));
   const [draftSavedAt, setDraftSavedAt] = useState('');
   const [draftRestored, setDraftRestored] = useState(false);
   const lastDraftPayload = useRef('');
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
-  const privacyPreflight = useMemo(() => detectDirectIdentifiers([form.rawMemo, form.currentConcern, form.guidance].join('\n')), [form.currentConcern, form.guidance, form.rawMemo]);
+  const privacyPreflight = useMemo(() => detectDirectIdentifiers([form.rawMemo, form.currentConcern].join('\n')), [form.currentConcern, form.rawMemo]);
+  const pendingTaskRows = taskRows.filter(row => row.content.trim());
+  const pendingTaskCount = pendingTaskRows.length;
+  const studentTask = pendingTaskRows.filter(row => row.owner === '학생').map(row => row.content.trim()).join('\n');
+  const counselorTask = pendingTaskRows.filter(row => row.owner === '교직원').map(row => row.content.trim()).join('\n');
+  const updateTaskRow = (id, key, value) => setTaskRows(rows => rows.map(row => row.id === id ? { ...row, [key]: value } : row));
+  const addTaskRow = owner => setTaskRows(rows => [...rows, createTaskRow(owner, form.nextDate)]);
+  const removeTaskRow = id => setTaskRows(rows => rows.filter(row => row.id !== id));
   const reviewedEvidenceCount = consultationEvidenceFieldOptions.filter(({ key }) => evidenceReviews[key]).length;
   const allEvidenceReviewed = reviewedEvidenceCount === consultationEvidenceFieldOptions.length;
   const reviewReady = Boolean(aiDraft)
@@ -69,25 +101,32 @@ export default function ConsultationFormPage() {
   useEffect(() => {
     if (draftRestored || !student) return;
     const saved = consultationDrafts.find(item => item.id === draftId);
-    if (saved?.form) {
+    if (draftForm?.studentId === student.id) {
+      const resumedPayload = {
+        form: draftForm.form,
+        taskRows,
+      };
+      lastDraftPayload.current = JSON.stringify(resumedPayload);
+      setDraftForm(null);
+    } else if (saved?.form) {
       setForm(saved.form);
-      setStudentTask(saved.studentTask || '');
-      setCounselorTask(saved.counselorTask || '');
+      const restoredTaskRows = restoreTaskRows(saved, saved.form.nextDate || form.nextDate);
+      setTaskRows(restoredTaskRows);
       setDraftSavedAt(saved.updatedAt || '');
-      lastDraftPayload.current = JSON.stringify({ form: saved.form, studentTask: saved.studentTask || '', counselorTask: saved.counselorTask || '' });
+      lastDraftPayload.current = JSON.stringify({ form: saved.form, taskRows: restoredTaskRows });
       notify('Firestore에 임시 저장된 상담 기록을 복구했습니다.');
     } else if (linkedAppointment) {
       setForm(current => ({ ...current, date: linkedAppointment.date, type: linkedAppointment.type || current.type, purpose: linkedAppointment.subject || current.purpose, currentConcern: linkedAppointment.requestMessage || current.currentConcern }));
     }
     setDraftRestored(true);
-  }, [consultationDrafts, draftId, draftRestored, linkedAppointment, notify, student]);
+  }, [consultationDrafts, draftForm, draftId, draftRestored, form.nextDate, linkedAppointment, notify, student, taskRows]);
   useEffect(() => {
     if (!draftRestored || !student || (!form.rawMemo.trim() && !studentTask.trim() && !counselorTask.trim())) return undefined;
-    const payload = JSON.stringify({ form, studentTask, counselorTask });
+    const payload = JSON.stringify({ form, taskRows });
     if (payload === lastDraftPayload.current) return undefined;
     const timer = setTimeout(async () => {
       const updatedAt = new Date().toISOString();
-      const record = { id: draftId, appointmentId, studentId: student.id, studentUid: student.uid || '', counselorUid, form, studentTask, counselorTask, updatedAt, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) };
+      const record = { id: draftId, appointmentId, studentId: student.id, studentUid: student.uid || '', counselorUid, form, taskRows, studentTask, counselorTask, updatedAt, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) };
       try {
         await persistDocument('consultationDrafts', record);
         setConsultationDrafts(items => items.some(item => item.id === draftId) ? items.map(item => item.id === draftId ? record : item) : [...items, record]);
@@ -96,17 +135,20 @@ export default function ConsultationFormPage() {
       } catch { /* 공통 저장 오류 메시지를 사용합니다. */ }
     }, 3000);
     return () => clearTimeout(timer);
-  }, [appointmentId, counselorTask, counselorUid, draftId, draftRestored, form, persistDocument, setConsultationDrafts, student, studentTask]);
+  }, [appointmentId, counselorTask, counselorUid, draftId, draftRestored, form, persistDocument, setConsultationDrafts, student, studentTask, taskRows]);
 
   if (!student) return <section className="card"><EmptyState title="상담을 작성할 학생을 찾을 수 없습니다" description="현재 계정에 배정된 학생인지 확인해 주세요." action={<Link className="button secondary" to="/students?select=consultation">담당 학생 선택</Link>} /></section>;
 
-  const openPrograms = () => { setDraftForm({ studentId: student.id, form }); navigate(`/programs?student=${student.id}&return=form`); };
+  const openPrograms = () => {
+    setDraftForm({ studentId: student.id, form, taskRows, studentTask, counselorTask });
+    navigate(`/programs?student=${student.id}&return=form`);
+  };
   const generate = async () => {
     setError('');
     if (!form.rawMemo.trim()) { setError('상담 메모를 입력하면 AI 초안을 생성할 수 있습니다.'); return; }
     setLoading(true);
     try {
-      setAiDraft(await generateConsultationDraft({ ...form, studentId: student.id }));
+      setAiDraft(await generateConsultationDraft({ ...form, studentId: student.id, studentActions: studentTask, counselorActions: counselorTask }));
       resetAiReview();
       notify('상담일지 초안을 생성했습니다.');
     } catch (e) {
@@ -131,12 +173,12 @@ export default function ConsultationFormPage() {
       purpose: cleanText(draft.purpose, 500),
       summary: cleanText(draft.summary, 5000),
       concern: cleanText(draft.concern, 5000),
-      strengths: cleanText(draft.strengths || form.strengths, 2000),
-      guidance: cleanText(draft.guidance, 5000),
+      strengths: '',
+      guidance: '',
       programs: safeForm.programs,
-      studentActions: cleanText(draft.studentActions, 2000),
-      counselorActions: cleanText(draft.counselorActions, 2000),
-      nextCheckItems: cleanText(draft.nextCheckItems, 2000),
+      studentActions: cleanText(studentTask, 2000),
+      counselorActions: cleanText(counselorTask, 2000),
+      nextCheckItems: '',
     };
     const aiReview = aiDraft ? {
       evidence: Object.fromEntries(consultationEvidenceFieldOptions.map(({ key }) => [
@@ -158,13 +200,24 @@ export default function ConsultationFormPage() {
     if (linkedAppointment && new Date(`${linkedAppointment.date}T${linkedAppointment.time}:00`) > new Date()) { setError('최종 상담 기록은 상담 시작 이후 저장할 수 있습니다. 지금은 임시 저장을 이용해 주세요.'); return; }
     if (linkedAppointment && consultations.some(item => item.appointmentId === linkedAppointment.id)) { setError('이 예약에는 이미 최종 상담 기록이 저장되어 있습니다.'); return; }
     const now = new Date().toISOString();
-    const publication = { ...defaultConsultationVisibility, ...(form.visibility || {}) };
+    const publication = Object.fromEntries(consultationPublicFieldOptions.map(({ key }) => [
+      key,
+      form.visibility?.[key] ?? defaultConsultationVisibility[key],
+    ]));
     const consultation = { id: linkedAppointment ? `consultation-${linkedAppointment.id}` : `c${Date.now()}`, appointmentId: linkedAppointment?.id || '', studentId: student.id, studentUid: student.uid || '', counselorUid, date: form.date, type: form.type, purpose: final.purpose, counselor: (profile?.displayName || user?.displayName || '상담 담당자').replace(/\s*상담사$/, ''), summary: final.summary, strengths: final.strengths, concern: final.concern, guidance: final.guidance, programs: final.programs, studentActions: final.studentActions, counselorActions: final.counselorActions, nextCheckItems: final.nextCheckItems, ...(aiReview ? { aiReview } : {}), publication, studentVisible: Object.values(publication).some(Boolean), createdAt: now, updatedAt: now };
     const publishedSummary = buildConsultationSummary(consultation, publication);
     const internalNote = { id: consultation.id, consultationId: consultation.id, studentId: student.id, note: safeForm.rawMemo, createdAt: now, updatedAt: now };
-    const newTasks = [];
-    if (studentTask.trim()) newTasks.push({ id: `f${Date.now()}a`, studentId: student.id, content: studentTask.trim(), owner: '학생', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date, createdAt: now, updatedAt: now });
-    if (counselorTask.trim()) newTasks.push({ id: `f${Date.now()}b`, studentId: student.id, content: counselorTask.trim(), owner: '교직원', dueDate: form.nextDate, status: 'scheduled', consultationDate: form.date, createdAt: now, updatedAt: now });
+    const newTasks = pendingTaskRows.map((task, index) => ({
+      id: `f${Date.now()}-${index + 1}`,
+      studentId: student.id,
+      content: task.content.trim(),
+      owner: task.owner,
+      dueDate: task.dueDate || form.nextDate,
+      status: 'scheduled',
+      consultationDate: form.date,
+      createdAt: now,
+      updatedAt: now,
+    }));
     const matchingAppointment = linkedAppointment || appointments.find(item => item.studentId === student.id && item.date === form.date && ['confirmed', 'scheduled'].includes(item.status));
     const completedAppointment = matchingAppointment ? { ...matchingAppointment, status: 'completed', completedAt: now, updatedAt: now } : null;
     const updatedStudent = {
@@ -212,7 +265,7 @@ export default function ConsultationFormPage() {
 
   return <>
     <nav className="breadcrumb" aria-label="현재 위치"><Link to={`/students/${student.id}`}>{student.name}</Link><Icon name="chevron" size={14} /><span>상담 기록 작성</span></nav>
-    <div className="form-page-header"><div><span className="eyebrow">상담 진행 중 · {form.date}</span><h1>상담 기록 작성</h1><p>{linkedAppointment ? `${linkedAppointment.time}–${linkedAppointment.endTime} 예약과 연결됨` : '상담 중에는 핵심만 메모하고, AI 초안으로 정리해 보세요.'}</p>{draftSavedAt && <small>마지막 임시 저장 {new Date(draftSavedAt).toLocaleString('ko-KR')}</small>}</div><div><button className="button secondary" disabled={saving} onClick={async () => { await removeDocument('consultationDrafts', draftId); setConsultationDrafts(items => items.filter(item => item.id !== draftId)); setDraftSavedAt(''); notify('임시 저장 내용을 삭제했습니다.'); }}>임시 기록 삭제</button><button className="button primary" disabled={saving} onClick={save}>{saving ? '저장 중...' : '상담 기록 저장'}</button></div></div>
+    <div className="form-page-header"><div><span className="eyebrow">상담 진행 중 · {form.date}</span><h1>상담 기록 작성</h1><p>{linkedAppointment ? `${linkedAppointment.time}–${linkedAppointment.endTime} 예약과 연결됨` : '상담 중에는 핵심만 메모하고, AI 초안으로 정리해 보세요.'}</p>{draftSavedAt && <small>마지막 임시 저장 {new Date(draftSavedAt).toLocaleString('ko-KR')}</small>}</div><div><button className="button secondary" disabled={saving} onClick={async () => { await removeDocument('consultationDrafts', draftId); setConsultationDrafts(items => items.filter(item => item.id !== draftId)); setDraftForm(null); setDraftSavedAt(''); notify('임시 저장 내용을 삭제했습니다.'); }}>임시 기록 삭제</button><button className="button primary" disabled={saving} onClick={save}>{saving ? '저장 중...' : '상담 기록 저장'}</button></div></div>
     <div className="consultation-layout">
       <section className="card consultation-form-card">
         <div className="form-section-title"><span>1</span><div><h2>상담 기본 정보</h2><p>상담의 목적과 유형을 선택해 주세요.</p></div></div>
@@ -221,13 +274,53 @@ export default function ConsultationFormPage() {
         <div className="form-section-title"><span>2</span><div><h2>상담 메모</h2><p>완성된 문장보다 중요한 키워드와 맥락을 편하게 남겨 주세요.</p></div></div>
         <label>학생의 현재 고민<textarea rows="3" value={form.currentConcern} onChange={e => update('currentConcern', e.target.value)} /></label>
         <label>상담 담당자 내부 메모 <span className="required">필수</span><textarea id="rawMemo" className="memo-area" rows="8" value={form.rawMemo} onChange={e => update('rawMemo', e.target.value)} placeholder="예: 개발 수업은 재미있었지만, 문제를 정의하고 사람들과 조율하는 역할에 더 흥미를 느낌..." /><small className="field-hint">원문 메모는 학생에게 공개되지 않으며 담당 상담사와 권한이 있는 관리자만 접근할 수 있습니다. AI 초안 생성 시 이메일·전화번호·주민등록번호 형식은 전송 전에 자동 마스킹됩니다.</small>{privacyPreflight.needsMasking && <span className="privacy-preflight" role="status"><Icon name="shield" size={16} /><span><strong>개인정보 사전 점검</strong>{privacyPreflight.findings.map(item => `${item.label} ${item.count}건`).join(' · ')} 감지 — AI 전송 전 서버에서 마스킹됩니다.</span></span>}{error && <span className="field-error" role="alert">{error}</span>}</label>
-        <label>학생의 강점<textarea rows="3" value={form.strengths} onChange={e => update('strengths', e.target.value)} placeholder="상담 중 확인한 학생의 강점이나 긍정적인 자원을 입력하세요." /></label>
         <fieldset className="publication-fieldset"><legend>학생에게 공개할 내용</legend><p>체크한 항목만 학생 화면에 표시됩니다. 상담사 내부 메모는 항상 비공개입니다.</p><div>{consultationPublicFieldOptions.map(item => <label key={item.key}><input type="checkbox" checked={form.visibility?.[item.key] ?? false} onChange={e => update('visibility', { ...form.visibility, [item.key]: e.target.checked })} /><span>{item.label}</span></label>)}</div></fieldset>
-        <label>담당자가 안내한 내용<textarea rows="4" value={form.guidance} onChange={e => update('guidance', e.target.value)} placeholder="상담 중 안내한 자료나 조언을 입력하세요." /></label>
-        <div className="selected-programs"><div><span className="eyebrow">안내 프로그램</span><h3>비교과 프로그램</h3></div><button className="button secondary small" onClick={openPrograms}><Icon name="spark" size={16} />추천 프로그램 찾기</button>{form.programs.length ? form.programs.map(p => <span className="selected-chip" key={p}>{p}<button aria-label={`${p} 삭제`} onClick={() => update('programs', form.programs.filter(x => x !== p))}><Icon name="close" size={14} /></button></span>) : <p>아직 추가한 프로그램이 없습니다.</p>}</div>
+        <section className={`selected-programs ${form.programs.length ? 'has-selection' : ''}`} aria-labelledby="program-picker-title">
+          <div className="selected-programs-header">
+            <span className="program-picker-icon"><Icon name="spark" size={20} /></span>
+            <div>
+              <span className="eyebrow">학생 맞춤 비교과 연결</span>
+              <h3 id="program-picker-title">추천 프로그램 찾기</h3>
+              <p>학생의 관심 분야와 목표를 바탕으로 적합한 프로그램을 골라 상담 기록에 연결하세요.</p>
+            </div>
+            <button type="button" className="button secondary small" onClick={openPrograms}><Icon name="search" size={16} />{form.programs.length ? '추천 다시 찾기' : '프로그램 찾아보기'}</button>
+          </div>
+          {form.programs.length ? <div className="selected-program-list" aria-label={`선택된 추천 프로그램 ${form.programs.length}개`}>
+            <strong>{form.programs.length}개 선택됨</strong>
+            {form.programs.map(p => <span className="selected-chip" key={p}>{p}<button type="button" aria-label={`${p} 추천에서 삭제`} onClick={() => update('programs', form.programs.filter(x => x !== p))}><Icon name="close" size={14} /></button></span>)}
+          </div> : <div className="selected-program-empty"><Icon name="target" size={17} /><span>아직 연결된 프로그램이 없습니다. 추천 결과에서 바로 선택할 수 있어요.</span></div>}
+        </section>
         <div className="form-divider" />
-        <div className="form-section-title"><span>3</span><div><h2>다음 행동</h2><p>상담 후 학생과 담당자가 할 일을 나누어 기록하세요.</p></div></div>
-        <div className="form-grid"><label>학생의 다음 행동<textarea rows="3" value={form.studentActions} onChange={e => update('studentActions', e.target.value)} /></label><label>담당자의 다음 행동<textarea rows="3" value={form.counselorActions} onChange={e => update('counselorActions', e.target.value)} /></label><label>다음 상담 확인 사항<textarea rows="3" value={form.nextCheckItems} onChange={e => update('nextCheckItems', e.target.value)} /></label><label>다음 상담 예정일<input type="date" value={form.nextDate} onChange={e => update('nextDate', e.target.value)} /></label></div>
+        <div className="form-section-title"><span>3</span><div><h2>상담 후 할 일</h2><p>상담이 끝난 뒤 실행할 일을 담당자와 기한까지 함께 등록하세요.</p></div></div>
+        <section className="consultation-task-builder" aria-labelledby="task-builder-title">
+          <div className="task-builder-heading">
+            <div><span className="task-builder-icon"><Icon name="check" size={19} /></span><div><h3 id="task-builder-title">저장과 동시에 할 일로 등록</h3><p>내용을 입력한 항목만 상담 후 할 일 목록과 담당자 화면에 추가됩니다.</p></div></div>
+            <span className={`task-ready-count ${pendingTaskCount ? 'active' : ''}`}>{pendingTaskCount ? `${pendingTaskCount}개 등록 예정` : '선택 입력'}</span>
+          </div>
+          <div className="task-builder-grid">
+            {[
+              { owner: '학생', label: '학생 할 일', description: '등록 후 학생의 ‘나의 할 일’에 바로 표시됩니다.', placeholder: '예: 관심 직무 2개의 역할과 필요 역량 비교하기' },
+              { owner: '교직원', label: '상담사 할 일', description: '담당 상담사의 할 일 목록에 함께 등록됩니다.', placeholder: '예: 포트폴리오 예시 자료 전달하기' },
+            ].map(group => {
+              const ownerRows = taskRows.filter(row => row.owner === group.owner);
+              return <section className="task-owner-group" aria-label={group.label} key={group.owner}>
+                <div className="task-owner-group-head">
+                  <div><span className={`task-owner-chip ${group.owner === '학생' ? 'student' : 'counselor'}`}>{group.owner === '학생' ? '학생' : '상담사'}</span><div><strong>{group.label}</strong><small>{group.description}</small></div></div>
+                  <span>{ownerRows.filter(row => row.content.trim()).length}개 작성</span>
+                </div>
+                <div className="task-row-list">
+                  {ownerRows.map((row, index) => <div className="consultation-task-row" key={row.id}>
+                    <span className="task-row-index" aria-hidden="true">{index + 1}</span>
+                    <label className="task-row-field task-row-content"><span>할 일 내용</span><input type="text" maxLength="500" value={row.content} onChange={event => updateTaskRow(row.id, 'content', event.target.value)} placeholder={group.placeholder} /></label>
+                    <label className="task-row-field task-row-due"><span><Icon name="calendar" size={14} />완료 기한</span><input type="date" value={row.dueDate} onChange={event => updateTaskRow(row.id, 'dueDate', event.target.value)} /></label>
+                    {ownerRows.length > 1 && <button type="button" className="task-row-remove" aria-label={`${group.label} ${index + 1}행 삭제`} onClick={() => removeTaskRow(row.id)}><Icon name="close" size={16} /></button>}
+                  </div>)}
+                </div>
+                <button type="button" className="task-add-row" onClick={() => addTaskRow(group.owner)}><Icon name="plus" size={16} />{group.label} 추가</button>
+              </section>;
+            })}
+          </div>
+        </section>
       </section>
       <aside className="consultation-aside">
         <section className="card student-context"><div className="context-head"><div><strong>{student.name}</strong><p>{student.department} · {student.grade}</p></div><StatusBadge status="inProgress" /></div><dl><div><dt>진로 목표</dt><dd>{student.goal}</dd></div><div><dt>최근 상담</dt><dd>{student.lastConsultation}</dd></div></dl></section>
@@ -248,7 +341,7 @@ export default function ConsultationFormPage() {
               <small>현재 근거 충족률 {getEvidenceCoverage(aiDraft)}%</small>
             </div>
             <div className="ai-fields">
-              {[['purpose', '상담 목적'], ['summary', '상담 주요 내용'], ['strengths', '학생의 강점'], ['concern', '학생의 고민과 목표'], ['guidance', '담당자의 안내 내용'], ['studentActions', '학생의 할 일'], ['counselorActions', '상담사의 할 일'], ['nextCheckItems', '다음 상담 확인 사항']].map(([key, label]) => <label key={key}>{label}<textarea rows={key === 'summary' ? 5 : 3} value={aiDraft[key]} onChange={e => {
+              {[['purpose', '상담 목적'], ['summary', '상담 주요 내용'], ['concern', '학생의 고민과 목표']].map(([key, label]) => <label key={key}>{label}<textarea rows={key === 'summary' ? 5 : 3} value={aiDraft[key] || ''} onChange={e => {
                 setAiDraft(prev => ({ ...prev, [key]: e.target.value }));
                 setAiReviewedAt('');
                 if (consultationEvidenceFieldOptions.some(item => item.key === key)) setEvidenceReviews(prev => ({ ...prev, [key]: false }));
@@ -293,7 +386,6 @@ export default function ConsultationFormPage() {
             </div>
           </>}
         </section>
-        <section className="card task-register"><span className="eyebrow">저장 시 함께 등록</span><h2>상담 후 할 일</h2><label>학생 할 일<input value={studentTask} onChange={e => setStudentTask(e.target.value)} /></label><label>상담사 할 일<input value={counselorTask} onChange={e => setCounselorTask(e.target.value)} /></label><small><Icon name="calendar" size={14} />기한 {form.nextDate}</small></section>
       </aside>
     </div>
     <div className="mobile-savebar"><button className="button secondary" disabled={saving} onClick={generate}>AI 초안</button><button className="button primary" disabled={saving} onClick={save}>{saving ? '저장 중...' : '상담 기록 저장'}</button></div>
