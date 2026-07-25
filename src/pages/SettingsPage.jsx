@@ -117,7 +117,7 @@ export default function SettingsPage() {
             <label className="notification-setting-row"><span><strong>할 일 기한 알림</strong><small>기한 전날과 당일에 알려드립니다.</small></span><span className="settings-switch"><input type="checkbox" role="switch" checked={notificationSettings.followUp} onChange={event => setNotificationSettings(current => ({ ...current, followUp: event.target.checked }))} /><i aria-hidden="true" /></span></label>
             {role === 'counselor' && <>
               <label className="notification-email-field">
-                <span><strong>이메일 알림 수신 주소</strong><small>학생의 상담 신청·취소 알림을 받을 이메일입니다.</small></span>
+                <span><strong>이메일 알림 수신 주소</strong><small>{demoMode ? '데모 학생의 상담 신청·취소도 이 주소로 실제 발송됩니다.' : '학생의 상담 신청·취소 알림을 받을 이메일입니다.'}</small></span>
                 <input type="email" autoComplete="email" value={notificationSettings.email} onChange={event => setNotificationSettings(current => ({ ...current, email: event.target.value }))} placeholder="name@example.com" required={notificationSettings.appointmentEmailEnabled} />
               </label>
               <label className="notification-setting-row"><span><strong>상담 이메일 알림</strong><small>학생이 상담을 신청하거나 취소하면 이메일로 알려드립니다.</small></span><span className="settings-switch"><input type="checkbox" role="switch" checked={notificationSettings.appointmentEmailEnabled} onChange={event => setNotificationSettings(current => ({ ...current, appointmentEmailEnabled: event.target.checked }))} /><i aria-hidden="true" /></span></label>

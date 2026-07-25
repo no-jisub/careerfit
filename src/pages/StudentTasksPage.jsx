@@ -62,11 +62,6 @@ export default function StudentTasksPage() {
 
   return <div className="student-page student-tasks-page">
     <PageIntro icon="check" title="나의 할 일" description="상담에서 정한 다음 행동을 기한순으로 확인하고 하나씩 완료해 보세요." />
-    <section className="student-page-summary" aria-label="나의 할 일 요약">
-      <article><span className="summary-icon pending"><Icon name="list" size={20} /></span><div><small>해야 할 일</small><strong>{counts.pending}</strong><p>지금 실행할 항목</p></div></article>
-      <article className={counts.overdue ? 'urgent' : ''}><span className="summary-icon overdue"><Icon name="alert" size={20} /></span><div><small>기한 초과</small><strong>{counts.overdue}</strong><p>{counts.overdue ? '먼저 확인해 주세요' : '밀린 일이 없어요'}</p></div></article>
-      <article><span className="summary-icon complete"><Icon name="check" size={20} /></span><div><small>완료</small><strong>{counts.complete}</strong><p>지금까지 마친 항목</p></div></article>
-    </section>
     <section className="student-page-panel card">
       <div className="student-page-panel-heading"><div><h2>할 일 목록</h2><p>완료한 항목은 기록으로 남고 담당 상담사에게도 전달됩니다.</p></div><span>{visibleTasks.length}개</span></div>
       <div className="student-page-tabs" role="tablist" aria-label="할 일 상태">

@@ -33,8 +33,15 @@ import {
   buildAppointmentEmailMessage,
   buildAppointmentMailId,
   getAppointmentEmailEvent,
+  getAppointmentEmailEventByKey,
   normalizeNotificationEmail,
 } from './appointmentEmail.js';
+import {
+  DEMO_EMAIL_GLOBAL_DAILY_LIMIT,
+  DEMO_EMAIL_SESSION_DAILY_LIMIT,
+  getDemoEmailQuotaDocumentIds,
+  sanitizeDemoEmailRequest,
+} from './demoEmailAccess.js';
 
 initializeApp();
 
@@ -128,6 +135,95 @@ export const sendAppointmentEmail = onDocumentWritten({
     }
     throw error;
   }
+});
+
+export const sendDemoAppointmentEmail = onCall({
+  region: REGION,
+  timeoutSeconds: 30,
+  memory: '256MiB',
+  maxInstances: 3,
+  cors: true,
+}, async request => {
+  if (!request.auth?.uid || !isAnonymousFirebaseAuth(request.auth)) {
+    throw new HttpsError('unauthenticated', '데모 세션을 다시 시작해 주세요.');
+  }
+  const origin = request.rawRequest?.get?.('origin') || '';
+  if (!isAllowedDemoOrigin(origin)) {
+    throw new HttpsError('permission-denied', '허용된 커리어핏 데모에서만 이메일을 보낼 수 있습니다.');
+  }
+
+  let input;
+  try {
+    input = sanitizeDemoEmailRequest(request.data);
+  } catch (error) {
+    throw new HttpsError('invalid-argument', error.message);
+  }
+
+  const emailEvent = getAppointmentEmailEventByKey(input.eventKey);
+  if (!emailEvent) throw new HttpsError('invalid-argument', '지원하지 않는 데모 상담 알림입니다.');
+
+  const database = getFirestore();
+  const dateKey = new Date().toISOString().slice(0, 10);
+  const quotaIds = getDemoEmailQuotaDocumentIds(request.auth.uid, dateKey);
+  const mailId = `demo-${buildAppointmentMailId(input.appointment.id, input.eventKey)}-${request.auth.uid}`;
+  const mailRef = database.collection('mail').doc(mailId);
+  const sessionRef = database.doc(`demoEmailUsage/${quotaIds.session}`);
+  const globalRef = database.doc(`demoEmailUsage/${quotaIds.global}`);
+  const baseMessage = buildAppointmentEmailMessage(emailEvent, input.appointment, input.studentName);
+  const message = {
+    ...baseMessage,
+    subject: `[데모] ${baseMessage.subject}`,
+    text: `커리어핏 데모에서 발송된 알림입니다.\n\n${baseMessage.text}`,
+  };
+
+  const queued = await database.runTransaction(async transaction => {
+    const [mailSnapshot, sessionSnapshot, globalSnapshot] = await Promise.all([
+      transaction.get(mailRef),
+      transaction.get(sessionRef),
+      transaction.get(globalRef),
+    ]);
+    if (mailSnapshot.exists) return false;
+
+    const sessionCount = sessionSnapshot.data()?.count || 0;
+    const globalCount = globalSnapshot.data()?.count || 0;
+    if (sessionCount >= DEMO_EMAIL_SESSION_DAILY_LIMIT) {
+      throw new HttpsError(
+        'resource-exhausted',
+        `데모 이메일은 세션당 하루 ${DEMO_EMAIL_SESSION_DAILY_LIMIT}회까지 보낼 수 있습니다.`,
+      );
+    }
+    if (globalCount >= DEMO_EMAIL_GLOBAL_DAILY_LIMIT) {
+      throw new HttpsError('resource-exhausted', '오늘 준비된 전체 데모 이메일 사용량을 모두 사용했습니다.');
+    }
+
+    const usage = { dateKey, updatedAt: FieldValue.serverTimestamp() };
+    transaction.create(mailRef, {
+      to: [input.recipientEmail],
+      message,
+      appointmentId: input.appointment.id,
+      eventKey: input.eventKey,
+      recipientUid: 'demo-recipient',
+      demo: true,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    transaction.set(sessionRef, {
+      ...usage,
+      uid: request.auth.uid,
+      count: sessionCount + 1,
+    }, { merge: true });
+    transaction.set(globalRef, {
+      ...usage,
+      count: globalCount + 1,
+    }, { merge: true });
+    return true;
+  });
+
+  logger.info(queued ? 'Demo appointment email queued' : 'Duplicate demo appointment email ignored', {
+    appointmentId: input.appointment.id,
+    eventKey: input.eventKey,
+    anonymousUid: request.auth.uid,
+  });
+  return { queued };
 });
 
 async function assertApprovedCounselor(uid) {

@@ -78,6 +78,13 @@
         }
       },
       {
+        "source": "/api/sendDemoAppointmentEmail",
+        "function": {
+          "functionId": "sendDemoAppointmentEmail",
+          "region": "asia-northeast3"
+        }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
