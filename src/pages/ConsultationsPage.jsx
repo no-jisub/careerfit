@@ -1,101 +1,190 @@
-import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Icon from '../components/Icon';
-import { EmptyState, PageIntro } from '../components/UI';
+import { PageIntro, StatusBadge } from '../components/UI';
+import { toDateKey } from '../utils/date';
 
-const fullDateFormatter = new Intl.DateTimeFormat('ko-KR', {
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-  weekday: 'short',
-});
-const weekdayFormatter = new Intl.DateTimeFormat('ko-KR', { weekday: 'short' });
+const workflowSteps = [
+  {
+    id: 'schedule',
+    number: '01',
+    title: '상담 일정',
+    description: '신청을 확인하고 일정을 확정해요.',
+    icon: 'calendar',
+    to: '/appointments',
+  },
+  {
+    id: 'preparation',
+    number: '02',
+    title: '상담 전 준비',
+    description: '학생 맥락과 확인 질문을 준비해요.',
+    icon: 'list',
+    to: '/consultation-prep',
+  },
+  {
+    id: 'writing',
+    number: '03',
+    title: '상담 기록 작성',
+    description: '상담 내용을 기록하고 공개 범위를 검토해요.',
+    icon: 'note',
+    to: '/consultation-write',
+  },
+  {
+    id: 'followUp',
+    number: '04',
+    title: '상담 후 할 일',
+    description: '학생과 상담사의 다음 행동을 이어가요.',
+    icon: 'check',
+    to: '/follow-ups',
+  },
+];
 
-function parseDate(date) {
-  return new Date(`${date}T00:00:00`);
-}
-
-function getDateTabLabel(date) {
-  const [, month, day] = date.split('-').map(Number);
-  return {
-    short: `${month}.${day}`,
-    weekday: weekdayFormatter.format(parseDate(date)),
-    full: fullDateFormatter.format(parseDate(date)),
-  };
+function StudentActionRow({ student, meta, status, statusContext = 'consultation', to, action }) {
+  return <Link className="consultation-action-row" to={to}>
+    <span className="consultation-action-avatar" aria-hidden="true">{student?.initials || student?.name?.slice(-2) || '학생'}</span>
+    <span className="consultation-action-copy">
+      <strong>{student?.name || '학생 정보 없음'}</strong>
+      <small>{student ? `${student.department} · ${student.grade}` : '배정 정보를 확인해 주세요'}</small>
+      <span>{meta}</span>
+    </span>
+    <span className="consultation-action-side">
+      <StatusBadge status={status} context={statusContext} />
+      <b>{action}<Icon name="chevron" size={14} /></b>
+    </span>
+  </Link>;
 }
 
 export default function ConsultationsPage() {
-  const { consultations, students } = useApp();
-  const [query, setQuery] = useState('');
-  const [type, setType] = useState('all');
-  const [visibility, setVisibility] = useState('all');
-  const [selectedByStudent, setSelectedByStudent] = useState({});
-  const types = [...new Set(consultations.map(item => item.type))];
-  const filtered = useMemo(() => consultations.filter(item => {
-    const student = students.find(candidate => candidate.id === item.studentId);
-    const keyword = query.trim().toLowerCase();
-    return (!keyword || [student?.name, student?.studentNo, item.purpose, item.summary, item.guidance].some(value => value?.toLowerCase().includes(keyword)))
-      && (type === 'all' || item.type === type)
-      && (visibility === 'all' || (visibility === 'public' ? item.studentVisible !== false : item.studentVisible === false));
-  }).sort((a, b) => b.date.localeCompare(a.date)), [consultations, students, query, type, visibility]);
-  const studentGroups = useMemo(() => {
-    const groups = new Map();
-    filtered.forEach(record => {
-      const student = students.find(item => item.id === record.studentId);
-      if (!student) return;
-      if (!groups.has(student.id)) groups.set(student.id, { student, records: [] });
-      groups.get(student.id).records.push(record);
-    });
-    return [...groups.values()].sort((a, b) => b.records[0].date.localeCompare(a.records[0].date));
-  }, [filtered, students]);
+  const { students, consultations, followUps, appointments } = useApp();
+  const today = toDateKey();
+  const studentById = id => students.find(student => student.id === id);
+  const activeAppointments = appointments
+    .filter(item => item.date >= today && ['pending', 'confirmed', 'scheduled'].includes(item.status))
+    .sort((left, right) => `${left.date} ${left.time}`.localeCompare(`${right.date} ${right.time}`));
+  const preparationAppointments = activeAppointments.filter(item => ['confirmed', 'scheduled'].includes(item.status));
+  const writingStudents = students.filter(student => ['inProgress', 'writing'].includes(student.status));
+  const pendingFollowUps = followUps.filter(item => item.status !== 'complete');
+  const pendingStudentIds = [...new Set(pendingFollowUps.map(item => item.studentId))];
+  const overdueCount = pendingFollowUps.filter(item => item.status === 'overdue').length;
+  const counts = {
+    schedule: activeAppointments.length,
+    preparation: preparationAppointments.length,
+    writing: writingStudents.length,
+    followUp: pendingFollowUps.length,
+  };
+  const attentionCount = appointments.filter(item => item.status === 'pending').length + writingStudents.length + overdueCount;
 
   return <>
-    <PageIntro icon="note" eyebrow="상담 기록" title="학생별 상담 흐름을 이어가세요" description="한 학생의 상담을 한곳에 모으고, 날짜를 선택해 회차별 기록과 검토 이력을 확인하세요." action={<Link className="button primary" to="/students?select=consultation"><Icon name="plus" size={18} />상담 기록 작성</Link>} />
-    <section className="filter-card" aria-label="상담 기록 검색 및 필터"><label className="search-field"><span className="sr-only">상담 기록 검색</span><Icon name="search" size={19} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="학생, 학번, 상담 내용 검색" /></label><label><span>상담 유형</span><select value={type} onChange={event => setType(event.target.value)}><option value="all">전체 유형</option>{types.map(item => <option key={item}>{item}</option>)}</select></label><label><span>학생 공개</span><select value={visibility} onChange={event => setVisibility(event.target.value)}><option value="all">전체</option><option value="public">공개</option><option value="private">비공개</option></select></label><button className="text-button" onClick={() => { setQuery(''); setType('all'); setVisibility('all'); }}>필터 초기화</button></section>
-    <section className="consultation-directory" aria-labelledby="consultation-directory-title">
-      <div className="card consultation-directory-heading">
-        <div><span className="eyebrow">Student record archive</span><h2 id="consultation-directory-title">학생별 상담 기록</h2><p>학생을 찾은 뒤 날짜만 바꾸면 이전 상담 맥락을 끊김 없이 비교할 수 있어요.</p></div>
-        <div className="consultation-directory-count"><span><strong>{studentGroups.length}</strong>명</span><i aria-hidden="true" /><span><strong>{filtered.length}</strong>건</span></div>
-      </div>
-      {studentGroups.length ? <div className="consultation-student-list">{studentGroups.map(({ student, records }) => {
-        const selected = records.find(record => record.id === selectedByStudent[student.id]) || records[0];
-        const selectedDate = getDateTabLabel(selected.date);
-        return <article className="card consultation-student-card" key={student.id}>
-          <header className="consultation-student-head">
-            <span className="consultation-student-avatar" aria-hidden="true">{student.name.slice(1, 3)}</span>
-            <div><h2>{student.name}</h2><p>{student.studentNo} · {student.department} · {student.grade}</p></div>
-            <dl><div><dt>누적 상담</dt><dd>{records.length}회</dd></div><div><dt>최근 상담</dt><dd>{getDateTabLabel(records[0].date).short}</dd></div></dl>
-            <Link className="button secondary small" to={`/students/${student.id}`}>학생 전체 기록 <Icon name="arrow" size={15} /></Link>
+    <PageIntro
+      icon="calendar"
+      title="상담은 네 단계로 이어집니다"
+      action={<Link className="button secondary" to="/students">전체 학생 보기<Icon name="chevron" size={16} /></Link>}
+    />
+
+    <section className="card consultation-workflow-overview" aria-labelledby="consultation-workflow-title">
+      <header className="consultation-workflow-heading">
+        <div>
+          <h2 id="consultation-workflow-title">상담 업무 흐름</h2>
+          <p>각 단계의 학생 수를 확인하고 바로 이어서 처리할 수 있습니다.</p>
+        </div>
+        <span className={attentionCount ? 'needs-attention' : ''}>
+          <Icon name={attentionCount ? 'alert' : 'check'} size={16} />
+          {attentionCount ? `우선 확인 ${attentionCount}건` : '지연된 업무 없음'}
+        </span>
+      </header>
+      <ol className="consultation-workflow-steps">
+        {workflowSteps.map(step => <li key={step.id}>
+          <Link to={step.to} aria-label={`${step.title} ${counts[step.id]}건 확인`}>
+            <span className="workflow-step-top"><b>{step.number}</b><Icon name="arrow" size={16} /></span>
+            <span className="workflow-step-icon"><Icon name={step.icon} size={21} /></span>
+            <strong>{step.title}</strong>
+            <p>{step.description}</p>
+            <span className="workflow-step-count"><em>{counts[step.id]}</em>건 확인</span>
+          </Link>
+        </li>)}
+      </ol>
+    </section>
+
+    <section className="consultation-action-section" aria-labelledby="consultation-action-title">
+      <header>
+        <div>
+          <h2 id="consultation-action-title">지금 이어서 처리할 학생</h2>
+          <p>학생이 현재 머물러 있는 단계와 다음 버튼만 모았습니다.</p>
+        </div>
+        <Link to="/students">학생별 전체 맥락 보기<Icon name="chevron" size={15} /></Link>
+      </header>
+      <div className="consultation-action-lanes">
+        <section className="card consultation-action-lane preparation">
+          <header>
+            <span className="consultation-lane-icon"><Icon name="list" size={20} /></span>
+            <div><small className="consultation-lane-step">2단계</small><h3>상담 전 준비</h3><p>확정된 일정의 학생</p></div>
+            <b className="consultation-lane-count"><strong>{preparationAppointments.length}</strong><small>명</small></b>
           </header>
-          <div className="consultation-date-navigation">
-            <div><span>상담 날짜 선택</span><small>최신순</small></div>
-            <div role="tablist" aria-label={`${student.name} 학생 상담 날짜`}>
-              {records.map(record => {
-                const date = getDateTabLabel(record.date);
-                const active = record.id === selected.id;
-                return <button id={`consultation-tab-${record.id}`} type="button" role="tab" aria-selected={active} aria-controls={`consultation-panel-${student.id}`} className={active ? 'active' : ''} onClick={() => setSelectedByStudent(current => ({ ...current, [student.id]: record.id }))} key={record.id}>
-                  <time dateTime={record.date}><strong>{date.short}</strong><span>{date.weekday}</span></time>
-                  <small>{record.type}</small>
-                </button>;
-              })}
-            </div>
+          <div>
+            {preparationAppointments.slice(0, 3).map(appointment => <StudentActionRow
+              key={appointment.id}
+              student={studentById(appointment.studentId)}
+              meta={`${appointment.date.slice(5).replace('-', '.')} ${appointment.time} · ${appointment.type}`}
+              status="scheduled"
+              to={`/students/${appointment.studentId}/preparation`}
+              action="브리핑"
+            />)}
+            {!preparationAppointments.length && <p className="consultation-lane-empty">준비할 상담이 없습니다.</p>}
           </div>
-          <section className="consultation-record-preview" id={`consultation-panel-${student.id}`} role="tabpanel" aria-labelledby={`consultation-tab-${selected.id}`}>
-            <div className="consultation-record-preview-head">
-              <div><time dateTime={selected.date}>{selectedDate.full}</time><div><span className="tag">{selected.type}</span><span className={`visibility-tag ${selected.studentVisible === false ? 'private' : ''}`}>{selected.studentVisible === false ? '학생 비공개' : '학생 공개'}</span>{selected.aiReview && <span className="ai-reviewed-tag"><Icon name="shield" size={12} />근거 검토 완료</span>}</div></div>
-              <Link className="button secondary small" to={`/students/${student.id}?consultation=${selected.id}`}>상세 기록 보기 <Icon name="chevron" size={15} /></Link>
-            </div>
-            <h3>{selected.purpose}</h3>
-            <p className="consultation-record-summary">{selected.summary}</p>
-            <div className="consultation-record-context">
-              {selected.concern && <div><span><Icon name="alert" size={15} />학생의 고민</span><p>{selected.concern}</p></div>}
-              <div><span><Icon name="target" size={15} />추천 프로그램</span>{selected.programs?.length ? <ul>{selected.programs.map(program => <li key={program}>{program}</li>)}</ul> : <p className="muted">연결된 프로그램이 없습니다.</p>}</div>
-            </div>
-            <footer><span>상담 담당자 {selected.counselor || student.counselor || '담당 상담사'}</span><span>{selected.aiReview ? '작성 도우미 활용 · 상담사 검토 완료' : '상담사 직접 작성'}</span></footer>
-          </section>
-        </article>;
-      })}</div> : <section className="card"><EmptyState title="조건에 맞는 상담 기록이 없습니다" description="검색어나 필터를 바꾸어 보세요." /></section>}
+          <Link className="consultation-lane-link" to="/consultation-prep">준비할 학생 전체 보기<Icon name="arrow" size={15} /></Link>
+        </section>
+
+        <section className="card consultation-action-lane writing">
+          <header>
+            <span className="consultation-lane-icon"><Icon name="note" size={20} /></span>
+            <div><small className="consultation-lane-step">3단계</small><h3>상담 기록 작성</h3><p>진행 중이거나 기록이 필요한 학생</p></div>
+            <b className="consultation-lane-count"><strong>{writingStudents.length}</strong><small>명</small></b>
+          </header>
+          <div>
+            {writingStudents.slice(0, 3).map(student => <StudentActionRow
+              key={student.id}
+              student={student}
+              meta={student.status === 'inProgress' ? '상담 진행 중 · 핵심 메모 작성' : '상담 완료 · 기록 마무리 필요'}
+              status={student.status}
+              to={`/students/${student.id}/consultation/new`}
+              action="기록"
+            />)}
+            {!writingStudents.length && <p className="consultation-lane-empty">작성할 상담 기록이 없습니다.</p>}
+          </div>
+          <Link className="consultation-lane-link" to="/consultation-write">기록할 학생 전체 보기<Icon name="arrow" size={15} /></Link>
+        </section>
+
+        <section className="card consultation-action-lane follow-up">
+          <header>
+            <span className="consultation-lane-icon"><Icon name="check" size={20} /></span>
+            <div><small className="consultation-lane-step">4단계</small><h3>상담 후 할 일</h3><p>미완료 행동이 있는 학생</p></div>
+            <b className="consultation-lane-count"><strong>{pendingFollowUps.length}</strong><small>건</small></b>
+          </header>
+          <div>
+            {pendingStudentIds.slice(0, 3).map(studentId => {
+              const tasks = pendingFollowUps.filter(item => item.studentId === studentId);
+              const urgent = tasks.filter(item => item.status === 'overdue').length;
+              return <StudentActionRow
+                key={studentId}
+                student={studentById(studentId)}
+                meta={`${tasks[0]?.content || '다음 행동 확인'}${tasks.length > 1 ? ` 외 ${tasks.length - 1}건` : ''}`}
+                status={urgent ? 'overdue' : 'inProgress'}
+                statusContext="followUp"
+                to={`/follow-ups?student=${studentId}`}
+                action={urgent ? `기한 초과 ${urgent}` : '할 일'}
+              />;
+            })}
+            {!pendingStudentIds.length && <p className="consultation-lane-empty">남은 후속 할 일이 없습니다.</p>}
+          </div>
+          <Link className="consultation-lane-link" to="/follow-ups">후속 할 일 전체 보기<Icon name="arrow" size={15} /></Link>
+        </section>
+      </div>
+    </section>
+
+    <section className="consultation-history-shortcut">
+      <div><span><Icon name="note" size={19} /></span><div><strong>이전 상담 기록은 학생 관리에서 확인합니다</strong><p>학생 한 명을 선택하면 상담 요약, 공개 범위, 추천 프로그램과 다음 행동이 시간순으로 이어집니다.</p></div></div>
+      <Link className="button secondary" to="/students">학생 기록 열기<Icon name="arrow" size={16} /></Link>
+      <small>누적 상담 {consultations.length}건</small>
     </section>
   </>;
 }

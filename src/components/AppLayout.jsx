@@ -5,7 +5,7 @@ import { toDateKey } from '../utils/date';
 import Icon from './Icon';
 import { IconButton } from './UI';
 import { useAuth } from '../auth/AuthContext';
-import { buildOperationalNotifications } from '../utils/operations';
+import { buildCounselorOperationalNotifications } from '../utils/operations';
 import { isAdministrator } from '../utils/roles';
 import { filterNotificationsForRecipient, getSessionActorUid } from '../utils/demoInteraction';
 import { isNotificationRead, mergeNotifications } from '../utils/notifications';
@@ -22,25 +22,19 @@ const navGroups = [
         icon: 'students',
         activeWhen: pathname => /^\/students\/[^/]+$/.test(pathname),
       },
-    ],
-  },
-  {
-    label: '상담 관리',
-    items: [
-      { to: '/appointments', label: '상담 일정', shortLabel: '일정', icon: 'calendar' },
       {
-        to: '/consultation-prep',
-        label: '상담 전 준비',
-        icon: 'list',
-        activeWhen: pathname => pathname === '/consultation-prep' || /^\/students\/[^/]+\/preparation$/.test(pathname),
+        to: '/consultations',
+        label: '상담 관리',
+        shortLabel: '상담',
+        icon: 'calendar',
+        activeWhen: pathname => [
+          '/appointments',
+          '/consultation-prep',
+          '/consultation-write',
+          '/follow-ups',
+        ].includes(pathname)
+          || /^\/students\/[^/]+\/(preparation|consultation\/new)$/.test(pathname),
       },
-      {
-        to: '/consultation-write',
-        label: '상담 기록 작성',
-        icon: 'note',
-        activeWhen: pathname => pathname === '/consultation-write' || /^\/students\/[^/]+\/consultation\/new$/.test(pathname),
-      },
-      { to: '/follow-ups', label: '상담 후 할 일', shortLabel: '할 일', icon: 'check' },
     ],
   },
   {
@@ -57,10 +51,11 @@ const mobileNavItems = navItems.filter(item => item.shortLabel);
 const pageMeta = {
   dashboard: { title: '메인 대시보드', description: '오늘의 상담 운영 현황' },
   students: { title: '학생 관리', description: '학생별 상담 맥락과 진행 상태' },
-  'consultation-prep': { title: '상담 전 준비', description: '이전 기록과 확인할 맥락 정리' },
-  'consultation-write': { title: '상담 기록 작성', description: '상담 내용을 빠르고 정확하게 기록' },
-  appointments: { title: '상담 일정', description: '예약과 상담 가능 시간 관리' },
-  'follow-ups': { title: '상담 후 할 일', description: '학생과 상담사의 다음 행동' },
+  consultations: { title: '상담 관리', description: '일정부터 후속 행동까지 한 흐름으로 관리' },
+  'consultation-prep': { title: '상담 전 준비', description: '이전 기록과 확인할 맥락 정리', parentTitle: '상담 관리', parentTo: '/consultations' },
+  'consultation-write': { title: '상담 기록 작성', description: '상담 내용을 빠르고 정확하게 기록', parentTitle: '상담 관리', parentTo: '/consultations' },
+  appointments: { title: '상담 일정', description: '예약과 상담 가능 시간 관리', parentTitle: '상담 관리', parentTo: '/consultations' },
+  'follow-ups': { title: '상담 후 할 일', description: '학생과 상담사의 다음 행동', parentTitle: '상담 관리', parentTo: '/consultations' },
   programs: { title: '비교과 프로그램', description: '학생 맞춤 성장 기회' },
   insights: { title: '운영 통계', description: '상담 운영 데이터와 인사이트' },
   notifications: { title: '알림 센터', description: '확인이 필요한 최신 변화' },
@@ -129,7 +124,10 @@ export default function AppLayout({ logout }) {
         : pageMeta[segment] || { title: '학생 상담', description: '커리어핏 상담 운영' };
   const today = toDateKey();
   const pendingCount = followUps.filter(item => item.status !== 'complete').length;
-  const notifications = useMemo(() => buildOperationalNotifications(students, followUps, appointments, today), [students, followUps, appointments, today]);
+  const notifications = useMemo(
+    () => buildCounselorOperationalNotifications(students, followUps, appointments, recipientUid, today),
+    [students, followUps, appointments, recipientUid, today],
+  );
   const visibleEventNotifications = useMemo(
     () => filterNotificationsForRecipient(eventNotifications, recipientUid),
     [eventNotifications, recipientUid],
@@ -285,7 +283,7 @@ export default function AppLayout({ logout }) {
         </div>
         <div className="header-actions">
           <div className="global-search-wrap"><label className="global-search"><Icon name="search" size={18} /><span className="sr-only">학생 또는 상담 검색</span><input ref={searchInputRef} value={search} placeholder="학생 또는 상담 검색" onFocus={() => setPanel('search')} onChange={e => { setSearch(e.target.value); setPanel('search'); }} onKeyDown={e => { if (e.key === 'Enter' && searchResults[0]) navigate(searchResults[0].to); }} /><kbd>⌘ K</kbd></label>{panel === 'search' && search.trim() && <div className="header-popover search-popover"><strong>통합 검색 결과 {searchResults.length}건</strong>{searchResults.length ? searchResults.map(result => <NavLink key={result.id} to={result.to}><span>{result.type}</span><div><b>{result.title}</b><small>{result.description}</small></div></NavLink>) : <p>일치하는 학생 또는 상담 기록이 없습니다.</p>}<button onClick={() => navigate(`/students?q=${encodeURIComponent(search.trim())}`)}>학생 목록에서 자세히 찾기</button></div>}</div>
-          <div className="header-popover-wrap"><IconButton label={`알림 ${noticeCount}개`} icon="bell" aria-expanded={panel === 'notice'} aria-controls="notice-popover" onClick={() => setPanel(panel === 'notice' ? '' : 'notice')} />{noticeCount > 0 && <span className="notice-dot" aria-hidden="true">{noticeCount > 9 ? '9+' : noticeCount}</span>}{panel === 'notice' && <div className="header-popover notice-popover" id="notice-popover"><strong>확인할 알림 {noticeCount}개</strong>{headerNotifications.slice(0, 5).map(item => <p key={item.id}><b>{item.title}</b>{item.description}</p>)}{noticeCount === 0 && <p>새로 확인할 일정이나 기한 초과 업무가 없습니다.</p>}<NavLink to="/notifications" onClick={() => setPanel('')}>알림 센터 열기</NavLink></div>}</div>
+          <div className="header-popover-wrap"><IconButton label={`알림 ${noticeCount}개`} icon="bell" aria-expanded={panel === 'notice'} aria-controls="notice-popover" onClick={() => setPanel(panel === 'notice' ? '' : 'notice')} />{noticeCount > 0 && <span className="notice-dot" aria-hidden="true">{noticeCount > 9 ? '9+' : noticeCount}</span>}{panel === 'notice' && <div className="header-popover notice-popover" id="notice-popover"><strong>확인할 알림 {noticeCount}개</strong>{headerNotifications.slice(0, 5).map(item => <p key={item.id}><b>{item.title}</b>{item.description}</p>)}{noticeCount === 0 && <p>새로 확인할 상담 신청이나 담당 업무가 없습니다.</p>}<NavLink to="/notifications" onClick={() => setPanel('')}>알림 센터 열기</NavLink></div>}</div>
           <div className="header-popover-wrap"><button className="profile-button" aria-expanded={panel === 'profile'} onClick={() => setPanel(panel === 'profile' ? '' : 'profile')}><span className="profile-avatar" aria-hidden="true">{shortCounselorName.slice(0, 1)}</span><span>{shortCounselorName}</span><Icon name="chevron" size={16} /></button>{panel === 'profile' && <div className="header-popover profile-popover"><strong>{counselorName}</strong><small>대학일자리플러스센터</small><NavLink to="/settings" onClick={() => setPanel('')}>내 설정</NavLink><button onClick={logout}>로그아웃</button></div>}</div>
         </div>
       </header>

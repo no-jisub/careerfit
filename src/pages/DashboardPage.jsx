@@ -10,16 +10,20 @@ export default function DashboardPage() {
   const today = new Date();
   const todayKey = toDateKey(today);
   const scheduled = appointments.filter(item => item.date === todayKey && ['confirmed', 'scheduled'].includes(item.status)).sort((a, b) => a.time.localeCompare(b.time));
-  const writing = students.filter(s => s.status === 'writing');
+  const preparing = appointments.filter(item => item.date >= todayKey && ['confirmed', 'scheduled'].includes(item.status));
+  const writing = students.filter(s => ['inProgress', 'writing'].includes(s.status));
   const pending = followUps.filter(f => f.status !== 'complete');
   const overdue = pending.filter(f => f.status === 'overdue');
   const studentById = id => students.find(s => s.id === id);
   return <>
-    <section className="summary-grid" aria-label="오늘의 상담 요약">
-      <Link className="summary-card blue" to="/appointments" aria-label={`오늘 상담 예정 ${scheduled.length}명 확인`}><span className="summary-icon"><Icon name="calendar" /></span><div><small>오늘 상담 예정</small><strong>{scheduled.length}<em>명</em></strong><p>{scheduled[0] ? <><b>다음</b> {getDayPeriod(scheduled[0].time)} {scheduled[0].time} {studentById(scheduled[0].studentId)?.name}</> : '예정된 상담이 없습니다'}</p></div><Icon name="arrow" className="summary-arrow" size={17} /></Link>
-      <Link className="summary-card purple" to="/students?select=consultation" aria-label={`기록 작성 필요 ${writing.length}건 확인`}><span className="summary-icon"><Icon name="note" /></span><div><small>기록 작성 필요</small><strong>{writing.length}<em>건</em></strong><p>{writing.length ? '오늘 안에 기록해 주세요' : '밀린 기록이 없습니다'}</p></div><Icon name="arrow" className="summary-arrow" size={17} /></Link>
-      <Link className="summary-card green" to="/follow-ups" aria-label={`미완료 할 일 ${pending.length}건 확인`}><span className="summary-icon"><Icon name="check" /></span><div><small>미완료 할 일</small><strong>{pending.length}<em>건</em></strong><p>학생 {pending.filter(f => f.owner === '학생').length} · 상담사 {pending.filter(f => f.owner === '교직원').length}</p></div><Icon name="arrow" className="summary-arrow" size={17} /></Link>
-      <Link className="summary-card red" to="/follow-ups" aria-label={`기한 초과 ${overdue.length}건 확인`}><span className="summary-icon"><Icon name="alert" /></span><div><small>기한 초과</small><strong>{overdue.length}<em>건</em></strong><p>{overdue.length ? '우선 확인이 필요해요' : '기한을 넘긴 항목이 없습니다'}</p></div><Icon name="arrow" className="summary-arrow" size={17} /></Link>
+    <section className="dashboard-workflow" aria-labelledby="dashboard-workflow-title">
+      <header><div><h1 id="dashboard-workflow-title">오늘의 상담 업무 흐름</h1><p>학생이 있는 단계부터 확인하면 다음 행동이 자연스럽게 이어집니다.</p></div><Link to="/consultations">상담 관리 전체 보기<Icon name="arrow" size={16} /></Link></header>
+      <div className="summary-grid workflow-summary-grid">
+        <Link className="summary-card blue" to="/appointments" aria-label={`1단계 상담 일정, 오늘 예정 ${scheduled.length}명 확인`}><span className="workflow-step-number">01</span><span className="summary-icon"><Icon name="calendar" /></span><div><small>상담 일정</small><strong>{scheduled.length}<em>명</em></strong><p>{scheduled[0] ? <><b>다음</b> {getDayPeriod(scheduled[0].time)} {scheduled[0].time} {studentById(scheduled[0].studentId)?.name}</> : '오늘 예정된 상담이 없습니다'}</p></div><Icon name="arrow" className="summary-arrow" size={17} /></Link>
+        <Link className="summary-card blue" to="/consultation-prep" aria-label={`2단계 상담 전 준비, ${preparing.length}명 확인`}><span className="workflow-step-number">02</span><span className="summary-icon"><Icon name="list" /></span><div><small>상담 전 준비</small><strong>{preparing.length}<em>명</em></strong><p>학생 맥락과 확인 질문 준비</p></div><Icon name="arrow" className="summary-arrow" size={17} /></Link>
+        <Link className="summary-card purple" to="/consultation-write" aria-label={`3단계 상담 기록 작성, ${writing.length}건 확인`}><span className="workflow-step-number">03</span><span className="summary-icon"><Icon name="note" /></span><div><small>상담 기록 작성</small><strong>{writing.length}<em>건</em></strong><p>{writing.length ? '진행 중·기록 필요 학생 확인' : '밀린 기록이 없습니다'}</p></div><Icon name="arrow" className="summary-arrow" size={17} /></Link>
+        <Link className={`summary-card ${overdue.length ? 'red' : 'green'}`} to="/follow-ups" aria-label={`4단계 상담 후 할 일, 미완료 ${pending.length}건 확인`}><span className="workflow-step-number">04</span><span className="summary-icon"><Icon name={overdue.length ? 'alert' : 'check'} /></span><div><small>상담 후 할 일</small><strong>{pending.length}<em>건</em></strong><p>{overdue.length ? `기한 초과 ${overdue.length}건 우선 확인` : '학생과 상담사의 다음 행동'}</p></div><Icon name="arrow" className="summary-arrow" size={17} /></Link>
+      </div>
     </section>
     <div className="dashboard-grid">
       <section className="card span-2"><SectionHeader eyebrow="오늘의 일정" title="오늘 상담 예정 학생" description="상담 전 이전 기록과 할 일을 확인해 보세요." action={<Link to="/appointments">전체 보기 <Icon name="chevron" size={16} /></Link>} />

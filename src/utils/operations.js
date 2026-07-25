@@ -1,4 +1,5 @@
 import { addDays, toDateKey } from './date.js';
+import { buildEventNotification } from './notifications.js';
 
 export function buildOperationalNotifications(students, followUps, appointments, today = toDateKey()) {
   const studentById = new Map(students.map(student => [student.id, student]));
@@ -18,6 +19,72 @@ export function buildOperationalNotifications(students, followUps, appointments,
     notices.push({ id: `appointment-${item.id}`, type: 'appointment', title: `오늘 ${item.time} 상담 예정`, description: `${student?.name || '학생'} · ${item.type}`, date: item.date, to: `/students/${item.studentId}`, priority: 2 });
   });
   return notices.sort((a, b) => a.priority - b.priority || a.date.localeCompare(b.date));
+}
+
+export function buildCounselorOperationalNotifications(students, followUps, appointments, counselorUid = '', today = toDateKey()) {
+  const studentById = new Map(students.map(student => [student.id, student]));
+  const notices = [];
+  const belongsToCounselor = item => !counselorUid || !item.counselorUid || item.counselorUid === counselorUid;
+
+  followUps.forEach(item => {
+    const counselorOwned = ['교직원', '상담사'].includes(item.owner);
+    const assignedToCounselor = !counselorUid || !item.assigneeUid || item.assigneeUid === counselorUid;
+    if (!counselorOwned || !assignedToCounselor || item.status === 'complete') return;
+    const student = studentById.get(item.studentId);
+    const description = `${student?.name || '학생'} · ${item.content}`;
+    if (item.status === 'overdue' || item.dueDate < today) {
+      notices.push({ id: `counselor-followup-overdue-${item.id}`, type: 'overdue', title: '내 담당 업무 기한 초과', description, date: item.dueDate, to: `/follow-ups?student=${item.studentId}`, priority: 0 });
+    } else if (item.dueDate <= addDays(today, 2)) {
+      notices.push({ id: `counselor-followup-due-${item.id}`, type: 'due', title: '내 담당 업무 마감 임박', description, date: item.dueDate, to: `/follow-ups?student=${item.studentId}`, priority: 1 });
+    }
+  });
+
+  appointments.filter(belongsToCounselor).forEach(item => {
+    const student = studentById.get(item.studentId);
+    if (item.status === 'pending' && item.requestedBy === 'student') {
+      const createdAt = item.createdAt || `${today}T09:00:00.000Z`;
+      notices.push({
+        ...buildEventNotification({
+          eventId: `${item.id}-created`,
+          recipientUid: counselorUid,
+          actorUid: item.studentUid || '',
+          type: 'appointment',
+          title: `${student?.name || '학생'} 학생이 상담을 신청했습니다`,
+          description: `${item.date} ${item.time} · ${item.type}`,
+          to: '/appointments',
+          createdAt,
+        }),
+        priority: 0,
+      });
+    }
+
+    const changeRequest = item.rescheduleRequest;
+    if (changeRequest?.status === 'pending' && changeRequest.initiatedByRole === 'student') {
+      notices.push({
+        ...buildEventNotification({
+          eventId: `${changeRequest.id}-requested`,
+          recipientUid: counselorUid,
+          actorUid: item.studentUid || '',
+          type: 'appointment',
+          title: `${student?.name || '학생'} 학생이 일정 변경을 요청했습니다`,
+          description: `${changeRequest.date} ${changeRequest.time} · 확인이 필요합니다.`,
+          to: '/appointments',
+          createdAt: changeRequest.createdAt || `${today}T09:00:00.000Z`,
+        }),
+        priority: 0,
+      });
+    }
+
+    if (['confirmed', 'scheduled'].includes(item.status) && item.date === today) {
+      notices.push({ id: `counselor-appointment-${item.id}`, type: 'appointment', title: `오늘 ${item.time} 상담 예정`, description: `${student?.name || '학생'} · ${item.type}`, date: item.date, to: `/students/${item.studentId}`, priority: 2 });
+    }
+  });
+
+  return notices.sort((left, right) => {
+    const priorityDifference = (left.priority ?? 9) - (right.priority ?? 9);
+    if (priorityDifference) return priorityDifference;
+    return String(right.createdAt || right.date).localeCompare(String(left.createdAt || left.date));
+  });
 }
 
 export function summarizeOperations(students, consultations, followUps, appointments, fromDate = '') {

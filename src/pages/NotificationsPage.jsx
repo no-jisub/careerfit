@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Icon from '../components/Icon';
 import { EmptyState, PageIntro } from '../components/UI';
-import { buildOperationalNotifications } from '../utils/operations';
+import { buildCounselorOperationalNotifications, buildOperationalNotifications } from '../utils/operations';
 import { isNotificationRead, mergeNotifications } from '../utils/notifications';
 import { useAuth } from '../auth/AuthContext';
 import { filterNotificationsForRecipient, getSessionActorUid } from '../utils/demoInteraction';
@@ -16,7 +16,7 @@ export default function NotificationsPage() {
   const { readIds, markReadIds } = useNotificationReadState(recipientUid);
   const [filter, setFilter] = useState('unread');
   const derived = useMemo(() => {
-    if (role !== 'student') return buildOperationalNotifications(students, followUps, appointments);
+    if (role !== 'student') return buildCounselorOperationalNotifications(students, followUps, appointments, recipientUid);
     const student = students.find(item => item.uid === recipientUid);
     if (!student) return [];
     return buildOperationalNotifications(
@@ -51,6 +51,12 @@ export default function NotificationsPage() {
       setNotifications(items => items.map(item => updateById.get(item.id) || item));
     }
   };
-  const content = <><PageIntro eyebrow="알림 센터" title="놓치기 쉬운 일을 먼저 확인하세요" description="상담 일정, 변경, 공개 요약과 상담 후 할 일을 모아 보여줍니다." action={<button className="button secondary" onClick={markAllRead}>모두 읽음</button>} /><section className="task-filter-bar"><div className="segmented"><button className={filter === 'unread' ? 'active' : ''} onClick={() => setFilter('unread')}>읽지 않음 <span>{notices.filter(item => !isRead(item)).length}</span></button><button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>전체 <span>{notices.length}</span></button></div></section><section className="card notification-list">{visible.length ? visible.map(item => <article key={item.id} className={`${item.type} ${isRead(item) ? 'read' : ''}`}><span className="notification-icon"><Icon name={item.type === 'appointment' ? 'calendar' : 'alert'} /></span><div><small>{item.type === 'appointment' ? '상담 일정' : item.type === 'overdue' ? '기한 초과' : '알림'}</small><h2>{item.title}</h2><p>{item.description}</p><time>{item.date}</time></div><div><Link className="button secondary small" to={item.to} onClick={() => markRead(item.id)}>확인하기</Link>{!isRead(item) && <button className="text-button" onClick={() => markRead(item.id)}>읽음 처리</button>}</div></article>) : <EmptyState icon="check" title="확인할 알림이 없습니다" description="새 일정이나 마감 알림이 생기면 이곳에 표시됩니다." />}</section></>;
+  const pageDescription = role === 'student'
+    ? '상담 일정, 공개 요약과 나의 할 일 변화를 모아 보여줍니다.'
+    : '상담 신청, 일정 변경과 내가 담당한 업무를 모아 보여줍니다.';
+  const emptyDescription = role === 'student'
+    ? '새 일정이나 할 일 알림이 생기면 이곳에 표시됩니다.'
+    : '새 상담 신청이나 확인할 담당 업무가 생기면 이곳에 표시됩니다.';
+  const content = <><PageIntro eyebrow="알림 센터" title="놓치기 쉬운 일을 먼저 확인하세요" description={pageDescription} action={<button className="button secondary" onClick={markAllRead}>모두 읽음</button>} /><section className="task-filter-bar"><div className="segmented"><button className={filter === 'unread' ? 'active' : ''} onClick={() => setFilter('unread')}>읽지 않음 <span>{notices.filter(item => !isRead(item)).length}</span></button><button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>전체 <span>{notices.length}</span></button></div></section><section className="card notification-list">{visible.length ? visible.map(item => <article key={item.id} className={`${item.type} ${isRead(item) ? 'read' : ''}`}><span className="notification-icon"><Icon name={item.type === 'appointment' ? 'calendar' : 'alert'} /></span><div><small>{item.type === 'appointment' ? '상담 일정' : item.type === 'overdue' ? '기한 초과' : '알림'}</small><h2>{item.title}</h2><p>{item.description}</p><time>{item.date}</time></div><div><Link className="button secondary small" to={item.to} onClick={() => markRead(item.id)}>확인하기</Link>{!isRead(item) && <button className="text-button" onClick={() => markRead(item.id)}>읽음 처리</button>}</div></article>) : <EmptyState icon="check" title="확인할 알림이 없습니다" description={emptyDescription} />}</section></>;
   return content;
 }
