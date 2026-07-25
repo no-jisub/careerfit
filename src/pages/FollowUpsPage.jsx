@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Icon from '../components/Icon';
 import TaskOwnerCards from '../components/TaskOwnerCards';
@@ -34,10 +34,13 @@ const taskOwnerFormOptions = taskOwnerOptions.slice(1).map(option => ({
 export default function FollowUpsPage() {
   const { user, profile } = useAuth();
   const { students, followUps, setFollowUps, setNotifications, persistDocumentGroup, notify } = useApp();
+  const [searchParams] = useSearchParams();
+  const selectedStudentId = searchParams.get('student') || '';
+  const selectedStudent = students.find(student => student.id === selectedStudentId);
   const counselorUid = user?.uid || profile?.id || 'demo-counselor';
   const [filter, setFilter] = useState('all');
   const [owner, setOwner] = useState('all');
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(() => selectedStudent?.name || '');
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
@@ -59,6 +62,9 @@ export default function FollowUpsPage() {
     return student && (filter === 'all' || f.status === filter) && (owner === 'all' || f.owner === owner)
       && (!keyword || [student.name, student.studentNo, f.content].some(value => value?.toLowerCase().includes(keyword)));
   }).sort((a, b) => (a.status === 'overdue' ? -1 : 1) - (b.status === 'overdue' ? -1 : 1) || a.dueDate.localeCompare(b.dueDate)), [students, followUps, filter, owner, query]);
+  useEffect(() => {
+    if (selectedStudentId) setQuery(selectedStudent?.name || '');
+  }, [selectedStudentId, selectedStudent?.name]);
   useEffect(() => {
     if (!showAdd) return undefined;
     const closeModal = event => { if (event.key === 'Escape' && !saving) setShowAdd(false); };

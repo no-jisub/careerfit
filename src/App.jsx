@@ -29,6 +29,7 @@ const AccountStatusPage = lazy(() => import('./pages/AccountStatusPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const StudentsPage = lazy(() => import('./pages/StudentsPage'));
 const StudentDetailPage = lazy(() => import('./pages/StudentDetailPage'));
+const ConsultationsPage = lazy(() => import('./pages/ConsultationsPage'));
 const ConsultationPreparationPage = lazy(() => import('./pages/ConsultationPreparationPage'));
 const ConsultationFormPage = lazy(() => import('./pages/ConsultationFormPage'));
 const FollowUpsPage = lazy(() => import('./pages/FollowUpsPage'));
@@ -242,7 +243,7 @@ function CounselorRoutes() {
       <Route path="students/:studentId" element={<StudentDetailPage />} />
       <Route path="students/:studentId/preparation" element={<ConsultationPreparationPage />} />
       <Route path="students/:studentId/consultation/new" element={<ConsultationFormPage />} />
-      <Route path="consultations" element={<Navigate to="/students" replace />} />
+      <Route path="consultations" element={<ConsultationsPage />} />
       <Route path="follow-ups" element={<FollowUpsPage />} />
       <Route path="appointments" element={<AppointmentsPage />} />
       <Route path="notifications" element={<NotificationsPage />} />
