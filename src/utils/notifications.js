@@ -19,3 +19,11 @@ export function mergeNotifications(events, derived) {
   const byId = new Map([...events, ...derived].map(item => [item.id, item]));
   return [...byId.values()].sort((left, right) => String(right.createdAt || right.date).localeCompare(String(left.createdAt || left.date)));
 }
+
+export function mergeNotificationReadIds(currentIds = [], nextIds = []) {
+  return [...new Set([...currentIds, ...nextIds].filter(Boolean).map(String))];
+}
+
+export function isNotificationRead(notification, readIds = []) {
+  return Boolean(notification?.readAt) || readIds.includes(notification?.id);
+}

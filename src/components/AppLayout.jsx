@@ -8,7 +8,8 @@ import { useAuth } from '../auth/AuthContext';
 import { buildOperationalNotifications } from '../utils/operations';
 import { isAdministrator } from '../utils/roles';
 import { filterNotificationsForRecipient, getSessionActorUid } from '../utils/demoInteraction';
-import { mergeNotifications } from '../utils/notifications';
+import { isNotificationRead, mergeNotifications } from '../utils/notifications';
+import useNotificationReadState from '../hooks/useNotificationReadState';
 
 const navGroups = [
   {
@@ -86,6 +87,7 @@ export default function AppLayout({ logout }) {
   const { students, consultations, followUps, appointments, notifications: eventNotifications } = useApp();
   const { profile, user, role } = useAuth();
   const recipientUid = getSessionActorUid({ userUid: user?.uid, profileId: profile?.id, role });
+  const { readIds: readNotificationIds } = useNotificationReadState(recipientUid);
   const counselorName = profile?.displayName || user?.displayName || '상담 담당자';
   const shortCounselorName = counselorName.replace(/\s*상담사$/, '');
   const location = useLocation();
@@ -133,8 +135,9 @@ export default function AppLayout({ logout }) {
     [eventNotifications, recipientUid],
   );
   const headerNotifications = useMemo(
-    () => mergeNotifications(visibleEventNotifications.filter(item => !item.readAt), notifications),
-    [visibleEventNotifications, notifications],
+    () => mergeNotifications(visibleEventNotifications, notifications)
+      .filter(item => !isNotificationRead(item, readNotificationIds)),
+    [visibleEventNotifications, notifications, readNotificationIds],
   );
   const noticeCount = headerNotifications.length;
   const searchResults = useMemo(() => {

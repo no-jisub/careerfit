@@ -4,6 +4,8 @@ import { useAuth } from '../auth/AuthContext';
 import { useApp } from '../context/AppContext';
 import { DEMO_STUDENT_ID, filterNotificationsForRecipient, getSessionActorUid } from '../utils/demoInteraction';
 import { getStudentAssignedFollowUps } from '../utils/followUps';
+import { isNotificationRead } from '../utils/notifications';
+import useNotificationReadState from '../hooks/useNotificationReadState';
 import Icon from './Icon';
 import { IconButton } from './UI';
 
@@ -60,11 +62,13 @@ export default function StudentLayout() {
   const studentInitial = studentName.slice(0, 1);
   const studentDescription = [student?.department, student?.grade].filter(Boolean).join(' · ') || '커리어핏 학생';
   const recipientUid = getSessionActorUid({ userUid: user?.uid, profileId: profile?.id, role });
+  const { readIds: readNotificationIds } = useNotificationReadState(recipientUid);
   const studentTasks = useMemo(() => getStudentAssignedFollowUps(followUps, student, user?.uid), [followUps, student, user?.uid]);
   const pendingTaskCount = studentTasks.filter(item => item.status !== 'complete').length;
   const noticeCount = useMemo(
-    () => filterNotificationsForRecipient(notifications, recipientUid).filter(item => !item.readAt).length,
-    [notifications, recipientUid],
+    () => filterNotificationsForRecipient(notifications, recipientUid)
+      .filter(item => !isNotificationRead(item, readNotificationIds)).length,
+    [notifications, recipientUid, readNotificationIds],
   );
   const currentPage = getStudentPageMeta(location);
   const sidebarCollapsed = !sidebarExpanded;
