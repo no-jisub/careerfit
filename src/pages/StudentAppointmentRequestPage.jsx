@@ -111,7 +111,7 @@ export default function StudentAppointmentRequestPage() {
   return <div className="student-page student-booking-page">
       <Link className="withdrawal-back-link" to={changingAppointment ? `/student/appointments?change=${changingAppointment.id}` : '/student/appointments'}><Icon name="arrow" size={16} />다른 시간 선택하기</Link>
       <div className="student-request-layout">
-        <aside className="student-selected-slot"><span className="eyebrow light">선택한 상담 시간</span><strong>{slot.date}</strong><b>{slot.time}–{getTimeRangeEnd(slot)}</b><p>{slot.duration}분 · {slot.location}</p><small>{student.counselor || '담당 상담사'} 상담사</small></aside>
+        <aside className="student-selected-slot"><span className="eyebrow light">선택한 상담 시간</span><strong>{slot.date}</strong><b>{slot.time}–{getTimeRangeEnd(slot)}</b><p><span>{slot.duration}분</span><span>{slot.location}</span></p><small>{student.counselor || '담당 상담사'} 상담사</small></aside>
         <section className="card student-request-card">
           <span className="eyebrow">{changingAppointment ? '일정 변경 요청' : '상담 사전 내용'}</span><h1>{changingAppointment ? '상담 내용도 함께 확인하세요' : '상담사에게 미리 알려주세요'}</h1><p>{changingAppointment ? '기존 상담 내용이 유지되며 필요한 경우 수정할 수 있습니다.' : '작성한 내용은 담당 상담사만 확인하며, 상담 준비를 위해 사용됩니다.'}</p>
           {!bookable && <p className="student-slot-warning" role="alert">선택한 시간이 더 이상 신청 가능하지 않습니다. 다른 시간을 선택해 주세요.</p>}

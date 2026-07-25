@@ -24,6 +24,7 @@ const paths = {
   lock: <><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" /></>,
   shield: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="m9 12 2 2 4-4" /></>,
   eye: <><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></>,
+  kakao: <path d="M12 3C6.48 3 2 6.58 2 11c0 2.72 1.7 5.13 4.3 6.58L5.2 21l4.08-2.24c.87.16 1.78.24 2.72.24 5.52 0 10-3.58 10-8S17.52 3 12 3Z" fill="currentColor" stroke="none" />,
   key: <><circle cx="8" cy="15" r="4" /><path d="m11 12 8-8M17 4l3 3M15 8l2 2" /></>,
   user: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>,
   edit: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" /></>,

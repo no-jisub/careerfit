@@ -206,6 +206,9 @@ export default function StudentLayout() {
             <span>{item.shortLabel}</span>
           </Link>})}
       </nav>
+      <a className="student-kakao-fab" href="https://pf.kakao.com/_IzWdxj" target="_blank" rel="noopener noreferrer" aria-label="카카오톡 채널 문의, 새 탭에서 열림">
+        <Icon name="kakao" size={30} />
+      </a>
     </div>
   </div>;
 }

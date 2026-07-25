@@ -1764,6 +1764,9 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .student-welcome-actions .student-profile-edit { margin-top:0; }
 .student-consultation-apply { min-height:40px; padding:0 14px; border:1px solid #fff; border-radius:11px; display:inline-flex; align-items:center; gap:7px; color:var(--blue-dark); background:#fff; font-size:11px; font-weight: 700; }
 .student-consultation-apply:hover { background:#eef4ff; }
+.student-kakao-fab { width:58px; height:58px; position:fixed; right:24px; bottom:24px; z-index:26; border:1px solid #dbe3ee; border-radius:50%; display:grid; place-items:center; color:#191919; background:#fff; box-shadow:0 4px 12px rgba(15, 23, 42, .28), 0 16px 36px rgba(15, 23, 42, .26); transition:transform .18s ease, box-shadow .18s ease, background .18s ease; }
+.student-kakao-fab:hover { color:#191919; background:#fff; box-shadow:0 5px 14px rgba(15, 23, 42, .32), 0 20px 42px rgba(15, 23, 42, .3); transform:translateY(-2px); }
+.student-kakao-fab:focus-visible { outline:3px solid rgba(254, 229, 0, .38); outline-offset:4px; }
 .student-booking-page main { width:min(calc(100% - 40px), 900px); padding-top:34px; }
 .student-booking-page > header .brand { display:flex; align-items:center; }
 .student-booking-intro { margin-bottom:24px; }
@@ -1812,8 +1815,10 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .student-selected-slot { padding:24px; border-radius:17px; display:grid; color:#fff; background:#1f4b8e; box-shadow:0 4px 14px rgba(25,61,130,.16); }
 .student-selected-slot .eyebrow { color:#cbdcff; }
 .student-selected-slot > strong { margin-top:20px; color:#dce7ff; font-size:13px; }
-.student-selected-slot > b { margin:4px 0 10px; font-size:34px; }
-.student-selected-slot > p { margin:0; color:#d6e2fb; font-size:12px; line-height:1.65; }
+.student-selected-slot > b { margin:4px 0 13px; font-size:34px; font-variant-numeric:tabular-nums; line-height:1.15; letter-spacing:-1px; white-space:nowrap; }
+.student-selected-slot > p { margin:0; display:grid; gap:4px; color:#d6e2fb; font-size:12px; line-height:1.55; }
+.student-selected-slot > p span { display:block; }
+.student-selected-slot > p span:first-child { color:#fff; font-weight:700; }
 .student-selected-slot > small { margin-top:18px; padding-top:14px; border-top:1px solid rgba(255,255,255,.18); color:#bcd0f7; font-size:11px; }
 .student-request-card { padding:30px; }
 .student-request-card h1 { margin:7px 0 9px; color:var(--navy); font-size:27px; letter-spacing:-.8px; }
@@ -1825,7 +1830,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
 .student-request-label-line { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
 .student-request-label-line > span { min-width:0; }
 .student-request-label-line > small { flex:0 0 auto; margin:0; color:var(--muted); font-size:10px; font-weight:500; line-height:1.4; white-space:nowrap; }
-.student-request-attachment-field > input[type="file"] { margin-top:12px; }
+.student-request-attachment-field > input[type="file"] { margin-top:18px; }
 .student-request-card form .student-request-file-help { margin-top:8px; }
 .student-slot-warning { margin:0 0 18px!important; padding:12px 14px; border-radius:10px; color:#8c3036!important; background:var(--red-soft); }
 .student-request-actions { margin-top:5px; display:flex; justify-content:flex-end; gap:9px; }
@@ -1848,10 +1853,9 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, .38
   .student-slot-group article { grid-template-columns:70px 1fr; gap:10px; }
   .student-slot-group article .button { grid-column:1 / -1; width:100%; }
   .student-request-layout { grid-template-columns:1fr; }
-  .student-selected-slot { padding:21px; grid-template-columns:1fr auto; align-items:end; gap:4px 14px; }
-  .student-selected-slot .eyebrow, .student-selected-slot > p, .student-selected-slot > small { grid-column:1 / -1; }
+  .student-selected-slot { padding:21px; grid-template-columns:1fr; align-items:start; gap:0; }
   .student-selected-slot > strong { margin-top:12px; }
-  .student-selected-slot > b { margin:0; font-size:29px; }
+  .student-selected-slot > b { margin:4px 0 12px; font-size:clamp(27px, 8vw, 32px); }
   .student-request-card { padding:24px 18px; }
   .student-request-actions { display:grid; grid-template-columns:1fr; }
   .student-request-actions .button { width:100%; }
@@ -7434,6 +7438,13 @@ textarea {
 
   .student-app-shell .mobile-main-nav {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .student-kakao-fab {
+    width:54px;
+    height:54px;
+    right:16px;
+    bottom:calc(82px + env(safe-area-inset-bottom));
   }
 
   .student-app-shell .topbar-title span {
