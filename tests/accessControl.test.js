@@ -57,6 +57,7 @@ test('anonymous demo sessions cannot directly access Firestore application data'
 
 test('email delivery documents are inaccessible to browser clients', () => {
   assert.match(rules, /match \/mail\/\{mailId\} \{\s*allow read, write: if false;\s*\}/);
+  assert.match(rules, /match \/demoEmailUsage\/\{usageId\} \{\s*allow read, write: if false;\s*\}/);
 });
 
 test('email notification preferences are isolated to the signed-in owner', () => {

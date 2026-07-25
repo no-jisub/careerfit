@@ -63,6 +63,11 @@ export function buildAppointmentMailId(appointmentId, eventKey) {
   return `appointment-${safeAppointmentId}-${safeEventKey}`;
 }
 
+export function getAppointmentEmailEventByKey(eventKey) {
+  const event = Object.values(emailEvents).find(item => item.key === eventKey);
+  return event ? { ...event, recipientUid: 'demo-recipient' } : null;
+}
+
 export function buildAppointmentEmailMessage(event, appointment, studentName = '학생') {
   const dateTime = `${appointment.date || '날짜 미정'} ${appointment.time || ''}`.trim();
   const location = appointment.location || '장소 미정';

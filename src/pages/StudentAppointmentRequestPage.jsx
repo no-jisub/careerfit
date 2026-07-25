@@ -10,6 +10,7 @@ import { buildEventNotification } from '../utils/notifications';
 import { DEMO_STUDENT_ID } from '../utils/demoInteraction';
 import { validateAttachments } from '../utils/attachments';
 import { uploadAppointmentAttachment } from '../services/attachmentService';
+import { queueDemoAppointmentEmail } from '../services/demoAppointmentEmailService';
 
 const initialForm = { type: '진로 상담', subject: '', requestMessage: '', preferredOutcome: '' };
 const consultationTypes = ['진로 상담', '취업 상담', '자기소개서 상담', '면접 상담', '기타 상담'];
@@ -92,6 +93,14 @@ export default function StudentAppointmentRequestPage() {
     setError('');
     try {
       await persistDocumentGroup([{ name: 'appointments', record: appointment }, { name: 'counselorAvailability', record: bookedSlot }, { name: 'notifications', record: notification }]);
+      if (!user) {
+        await queueDemoAppointmentEmail({
+          recipientUid: appointment.counselorUid,
+          eventKey: 'student-requested',
+          appointment,
+          studentName: student.name,
+        });
+      }
       const attachments = [];
       for (const file of validatedFiles.value) attachments.push(await uploadAppointmentAttachment({ file, appointmentId, studentUid: appointment.studentUid, counselorUid: appointment.counselorUid, uploaderUid: appointment.studentUid }));
       const savedAppointment = attachments.length ? { ...appointment, attachments } : appointment;

@@ -9,6 +9,7 @@ import { getAppointmentDateParts, getDayPeriod, getTimeRangeEnd, toDateKey } fro
 import { DEMO_STUDENT_ID } from '../utils/demoInteraction';
 import { getStudentAssignedFollowUps } from '../utils/followUps';
 import { buildEventNotification } from '../utils/notifications';
+import { queueDemoAppointmentEmail } from '../services/demoAppointmentEmailService';
 
 const summaryProvenanceLabel = summary => summary?.provenance?.type === 'ai-assisted'
   ? '상담사가 작성 근거를 확인한 상담 요약'
@@ -51,6 +52,14 @@ export default function StudentMyPage() {
       setAppointments(items => items.map(item => item.id === updated.id ? updated : item));
       if (closedAvailability) setCounselorAvailability(items => items.map(item => item.id === closedAvailability.id ? closedAvailability : item));
       setNotifications(items => items.some(item => item.id === notification.id) ? items : [...items, notification]);
+      if (!user) {
+        await queueDemoAppointmentEmail({
+          recipientUid: appointment.counselorUid,
+          eventKey: 'student-cancelled',
+          appointment: updated,
+          studentName: student.name,
+        });
+      }
       notify('상담 예약을 취소했습니다. 해당 시간은 상담사가 다시 열기 전까지 마감됩니다.');
     } catch { /* 공통 저장 오류 안내를 사용합니다. */ }
   };

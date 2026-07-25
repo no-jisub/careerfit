@@ -11,6 +11,7 @@ import { buildEventNotification } from '../utils/notifications';
 import RecurringAvailabilityForm from '../components/RecurringAvailabilityForm';
 import { DatePicker, TimePicker } from '../components/DateTimePicker';
 import { openAttachment } from '../services/attachmentService';
+import { queueDemoAppointmentEmail } from '../services/demoAppointmentEmailService';
 
 const emptyForm = () => ({ studentId: '', date: toDateKey(), time: '10:00', endTime: '10:50', type: '진로 상담', location: '대학일자리플러스센터 상담실 2', preparation: '' });
 const emptyAvailabilityForm = () => ({ dates: [toDateKey()], startTime: '09:00', endTime: '18:00', exclusions: [], location: '대학일자리플러스센터 상담실 2' });
@@ -161,6 +162,14 @@ export default function AppointmentsPage() {
       if (updatedStudent) setStudents(items => items.map(item => item.id === updatedStudent.id ? updatedStudent : item));
       if (closedAvailability) setCounselorAvailability(items => items.map(item => item.id === closedAvailability.id ? closedAvailability : item));
       if (eventNotification) setNotifications(items => items.some(item => item.id === eventNotification.id) ? items : [...items, eventNotification]);
+      if (!user && ['confirmed', 'cancelled'].includes(status)) {
+        await queueDemoAppointmentEmail({
+          recipientUid: appointment.studentUid,
+          eventKey: status === 'confirmed' ? 'counselor-confirmed' : 'counselor-cancelled',
+          appointment: updated,
+          studentName: student?.name || '학생',
+        });
+      }
       notify(`상담 일정을 ${appointmentStatusLabels[status]} 상태로 변경했습니다.`);
     } catch { /* 공통 오류 메시지를 사용합니다. */ }
   };

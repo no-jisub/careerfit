@@ -112,7 +112,7 @@ export default function StudentProfilePage() {
           <label>현재 고민<small>지금 가장 도움받고 싶은 내용을 적어 주세요.</small><textarea rows="6" value={form.concern} onChange={event => update('concern', event.target.value)} required /></label>
           <fieldset className="student-email-notification-settings">
             <legend>상담 이메일 알림</legend>
-            <p>상담사가 예약을 확정하거나 취소하면 아래 주소로 알려드립니다.</p>
+            <p>{demoMode ? '데모 상담사가 예약을 확정하거나 취소해도 아래 주소로 실제 발송됩니다.' : '상담사가 예약을 확정하거나 취소하면 아래 주소로 알려드립니다.'}</p>
             <label>이메일 알림 수신 주소<input type="email" autoComplete="email" value={emailPreference.email} onChange={event => setEmailPreference(current => ({ ...current, email: event.target.value }))} placeholder="name@example.com" required={emailPreference.appointmentEmailEnabled} /></label>
             <label className="student-email-notification-toggle"><input type="checkbox" checked={emailPreference.appointmentEmailEnabled} onChange={event => setEmailPreference(current => ({ ...current, appointmentEmailEnabled: event.target.checked }))} /><span>상담 확정·취소 이메일 받기</span></label>
           </fieldset>
