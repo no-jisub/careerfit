@@ -4,8 +4,12 @@ import { useAuth } from '../auth/AuthContext';
 import Icon from '../components/Icon';
 import { PageIntro } from '../components/UI';
 import { useApp } from '../context/AppContext';
+import {
+  loadEmailNotificationPreference,
+  saveEmailNotificationPreference,
+} from '../services/emailNotificationPreferenceService';
 import { updateOwnSensitivePhone } from '../services/sensitiveAccessService';
-import { DEMO_STUDENT_ID } from '../utils/demoInteraction';
+import { DEMO_STUDENT_ID, DEMO_STUDENT_UID } from '../utils/demoInteraction';
 import { buildEventNotification } from '../utils/notifications';
 
 const createForm = (student, demoMode) => ({
@@ -20,9 +24,25 @@ export default function StudentProfilePage() {
   const { user, demoModeEnabled } = useAuth();
   const demoMode = demoModeEnabled && !user;
   const student = user ? students.find(item => item.uid === user.uid) : students.find(item => item.id === DEMO_STUDENT_ID);
+  const notificationUid = user?.uid || DEMO_STUDENT_UID;
   const [form, setForm] = useState(() => createForm(student, demoMode));
+  const [emailPreference, setEmailPreference] = useState({
+    email: user?.email || '',
+    appointmentEmailEnabled: true,
+  });
   const [saving, setSaving] = useState(false);
   useEffect(() => { if (student) setForm(createForm(student, demoMode)); }, [student?.id, demoMode]);
+  useEffect(() => {
+    let active = true;
+    loadEmailNotificationPreference({
+      uid: notificationUid,
+      fallbackEmail: user?.email || '',
+      demoMode,
+    }).then(preference => {
+      if (active) setEmailPreference(preference);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [demoMode, notificationUid, user?.email]);
 
   if (!student) return <div className="app-loading" role="status">연결된 학생 정보를 찾고 있어요...</div>;
 
@@ -54,7 +74,15 @@ export default function StudentProfilePage() {
         to: `/students/${student.id}`,
         createdAt: now,
       });
-      await persistDocumentGroup([{ name: 'students', record: updated }, { name: 'notifications', record: notification }]);
+      await Promise.all([
+        persistDocumentGroup([{ name: 'students', record: updated }, { name: 'notifications', record: notification }]),
+        saveEmailNotificationPreference({
+          uid: notificationUid,
+          email: emailPreference.email,
+          appointmentEmailEnabled: emailPreference.appointmentEmailEnabled,
+          demoMode,
+        }),
+      ]);
       setStudents(items => items.map(item => item.id === student.id ? updated : item));
       setNotifications(items => items.some(item => item.id === notification.id) ? items : [...items, notification]);
       setForm(createForm(updated, demoMode));
@@ -82,6 +110,12 @@ export default function StudentProfilePage() {
           <label>관심 분야<small>여러 항목은 쉼표로 구분해 주세요.</small><input value={form.interests} onChange={event => update('interests', event.target.value)} placeholder="예: 서비스 기획, 데이터 분석" /></label>
           <label>진로 목표<input value={form.goal} onChange={event => update('goal', event.target.value)} placeholder="예: IT 서비스 기획자 취업" required /></label>
           <label>현재 고민<small>지금 가장 도움받고 싶은 내용을 적어 주세요.</small><textarea rows="6" value={form.concern} onChange={event => update('concern', event.target.value)} required /></label>
+          <fieldset className="student-email-notification-settings">
+            <legend>상담 이메일 알림</legend>
+            <p>상담사가 예약을 확정하거나 취소하면 아래 주소로 알려드립니다.</p>
+            <label>이메일 알림 수신 주소<input type="email" autoComplete="email" value={emailPreference.email} onChange={event => setEmailPreference(current => ({ ...current, email: event.target.value }))} placeholder="name@example.com" required={emailPreference.appointmentEmailEnabled} /></label>
+            <label className="student-email-notification-toggle"><input type="checkbox" checked={emailPreference.appointmentEmailEnabled} onChange={event => setEmailPreference(current => ({ ...current, appointmentEmailEnabled: event.target.checked }))} /><span>상담 확정·취소 이메일 받기</span></label>
+          </fieldset>
           <div className="student-profile-form-actions"><Link className="button secondary" to="/student">취소</Link><button className="button primary" disabled={saving}>{saving ? '저장 중...' : '변경 내용 저장'}</button></div>
         </form>
       </section>
