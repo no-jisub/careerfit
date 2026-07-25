@@ -97,6 +97,22 @@ export default function ConsultationPreparationPage() {
     </section>
 
     <div className="preparation-workspace">
+      <section className="card prep-card">
+        <div className="section-header"><div><span className="eyebrow">30초 상담 브리핑</span><h2>이번 상담 전에 확인할 3가지</h2><p>{student.name} 학생의 이전 상담 맥락과 이어갈 질문을 빠르게 확인하세요.</p></div><span className="updated-label"><Icon name="clock" size={14} />{latestConsultation ? `최근 상담 ${formatPreparationDate(latestConsultation.date)}` : '이전 상담 기록 없음'}</span></div>
+        <div className="student-briefing">
+          <article className="briefing-overview">
+            <div className="briefing-title"><span className="prep-icon blue"><Icon name="list" /></span><div><small>1 · 지금까지의 상담 흐름</small><strong>{student.name} 학생의 현재 맥락</strong></div></div>
+            <p>{briefingSummary}</p>
+            {briefingHistory.length > 0 && <ol className="briefing-journey" aria-label="최근 상담 흐름">{briefingHistory.map(item => <li key={item.id}><time dateTime={item.date}>{item.date.slice(5).replace('-', '.')}</time><span>{item.purpose}</span></li>)}</ol>}
+            <small className="briefing-source"><Icon name="shield" size={13} />{latestConsultation ? '최근 상담 기록의 목적·고민·확인 항목을 바탕으로 정리했습니다.' : '이전 상담 기록이 없어 학생 기본 정보의 진로 목표·현재 고민을 바탕으로 정리했습니다.'}</small>
+          </article>
+          <div className="briefing-focus-list">
+            <article className="briefing-focus caution"><span className="prep-icon blue"><Icon name="alert" /></span><div><small>2 · 주의해서 볼 점</small><strong>{briefingCaution}</strong></div></article>
+            <article className="briefing-focus next"><span className="prep-icon blue"><Icon name="target" /></span><div><small>3 · 이번 상담에서 확인할 질문</small><strong>{briefingNextStep}</strong></div></article>
+          </div>
+        </div>
+      </section>
+
       <section className="card preparation-intake-card" aria-labelledby="preparation-intake-title">
         <header className="preparation-intake-heading">
           <span aria-hidden="true"><Icon name="note" size={20} /></span>
@@ -137,22 +153,6 @@ export default function ConsultationPreparationPage() {
           </section>
         </div>
         <small className="preparation-intake-source"><Icon name="shield" size={13} />담당 상담사에게 배정된 학생의 상담 준비 목적으로만 표시됩니다.</small>
-      </section>
-
-      <section className="card prep-card">
-        <div className="section-header"><div><span className="eyebrow">30초 상담 브리핑</span><h2>이번 상담 전에 확인할 3가지</h2><p>{student.name} 학생의 이전 상담 맥락과 이어갈 질문을 빠르게 확인하세요.</p></div><span className="updated-label"><Icon name="clock" size={14} />{latestConsultation ? `최근 상담 ${formatPreparationDate(latestConsultation.date)}` : '이전 상담 기록 없음'}</span></div>
-        <div className="student-briefing">
-          <article className="briefing-overview">
-            <div className="briefing-title"><span className="prep-icon blue"><Icon name="list" /></span><div><small>1 · 지금까지의 상담 흐름</small><strong>{student.name} 학생의 현재 맥락</strong></div></div>
-            <p>{briefingSummary}</p>
-            {briefingHistory.length > 0 && <ol className="briefing-journey" aria-label="최근 상담 흐름">{briefingHistory.map(item => <li key={item.id}><time dateTime={item.date}>{item.date.slice(5).replace('-', '.')}</time><span>{item.purpose}</span></li>)}</ol>}
-            <small className="briefing-source"><Icon name="shield" size={13} />{latestConsultation ? '최근 상담 기록의 목적·고민·확인 항목을 바탕으로 정리했습니다.' : '이전 상담 기록이 없어 학생 기본 정보의 진로 목표·현재 고민을 바탕으로 정리했습니다.'}</small>
-          </article>
-          <div className="briefing-focus-list">
-            <article className="briefing-focus caution"><span className="prep-icon blue"><Icon name="alert" /></span><div><small>2 · 주의해서 볼 점</small><strong>{briefingCaution}</strong></div></article>
-            <article className="briefing-focus next"><span className="prep-icon blue"><Icon name="target" /></span><div><small>3 · 이번 상담에서 확인할 질문</small><strong>{briefingNextStep}</strong></div></article>
-          </div>
-        </div>
       </section>
 
       <div className="preparation-support-grid">
