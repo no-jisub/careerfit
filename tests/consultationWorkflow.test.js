@@ -7,6 +7,7 @@ import { initialStudents } from '../src/data/students.js';
 import { buildConsultationSummary, defaultConsultationVisibility } from '../src/utils/consultations.js';
 import { hasCounselorAppointmentConflict, isAvailabilityBookable } from '../src/utils/appointments.js';
 import { validateCounselorRegistrationInput } from '../src/utils/validation.js';
+import { addDays, toDateKey } from '../src/utils/date.js';
 
 const consultation = {
   id: 'c1', studentId: 's1', studentUid: 'student-1', counselorUid: 'counselor-1', counselor: '박지현',
@@ -21,9 +22,26 @@ test('demo data includes a multi-session consultation journey for one student', 
   assert.equal(studentHistory.length, 3);
   assert.deepEqual(
     studentHistory.map(item => item.date).sort(),
-    ['2026-06-12', '2026-07-03', '2026-07-17'],
+    [addDays(toDateKey(), -45), addDays(toDateKey(), -22), addDays(toDateKey(), -7)].sort(),
   );
   assert.equal(studentHistory.some(item => item.studentVisible === false), true);
+});
+
+test('demo schedules remain varied relative to the day they are opened', () => {
+  const today = toDateKey();
+  const statuses = new Set(initialAppointments.map(item => item.status));
+
+  assert.deepEqual(statuses, new Set(['pending', 'confirmed', 'completed', 'cancelled']));
+  assert.ok(initialAppointments.some(item => item.date === today && item.status === 'confirmed'));
+  assert.ok(initialAppointments.some(item => item.date === today && item.status === 'completed'));
+  assert.ok(initialAppointments.some(item => item.date > today && item.status === 'pending'));
+  assert.ok(initialAppointments.some(item => item.date < today && item.status === 'cancelled'));
+  assert.ok(initialAppointments.some(item => item.rescheduleRequest?.status === 'pending'));
+
+  assert.ok(initialFollowUps.some(item => item.dueDate < today && item.status === 'overdue'));
+  assert.ok(initialFollowUps.some(item => item.dueDate === today && item.status === 'inProgress'));
+  assert.ok(initialFollowUps.some(item => item.dueDate > today && item.status === 'scheduled'));
+  assert.ok(initialFollowUps.some(item => item.status === 'complete'));
 });
 
 test('demo data covers completed records, first counseling, and repeat counseling scenarios', () => {

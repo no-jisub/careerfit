@@ -1,6 +1,11 @@
+import { addDays, toDateKey } from '../utils/date.js';
+
+const today = toDateKey();
+const daysAgo = days => addDays(today, -days);
+
 export const initialConsultations = [
   {
-    id: 'c1', studentId: 's1', date: '2026-07-08', type: '진로 탐색', purpose: '관심 직무 구체화', counselor: '박지현',
+    id: 'c1', studentId: 's1', date: daysAgo(17), type: '진로 탐색', purpose: '관심 직무 구체화', counselor: '박지현',
     summary: '개발 수업 경험이 있으나 서비스 기획에도 관심이 있음. 프로젝트 경험과 포트폴리오가 부족하다고 느낌.',
     guidance: 'IT 직무 소개 자료를 확인하고, 관심 직무 두 개의 역할과 필요 역량을 비교해 보기로 함.',
     strengths: '개발 경험을 바탕으로 역할의 차이를 스스로 비교하고 질문하는 탐색 태도가 강점으로 확인됨.',
@@ -16,8 +21,8 @@ export const initialConsultations = [
       needsConfirmation: [],
       sensitiveWarning: [],
       model: 'gemini-2.5-flash',
-      generatedAt: '2026-07-08T09:34:00.000Z',
-      reviewedAt: '2026-07-08T09:38:00.000Z',
+      generatedAt: `${daysAgo(17)}T09:34:00.000Z`,
+      reviewedAt: `${daysAgo(17)}T09:38:00.000Z`,
       reviewedBy: '박지현',
       reviewedFields: ['summary', 'strengths', 'concern', 'guidance'],
       evidenceCoverage: 100,
@@ -27,7 +32,7 @@ export const initialConsultations = [
     },
   },
   {
-    id: 'c2', studentId: 's2', date: '2026-07-17', type: '취업 준비', purpose: '인턴 지원 준비', counselor: '박지현',
+    id: 'c2', studentId: 's2', date: daysAgo(7), type: '취업 준비', purpose: '인턴 지원 준비', counselor: '박지현',
     summary: '마케팅 프로젝트 경험을 포트폴리오에 배치하는 순서를 논의함.',
     guidance: '성과를 수치와 행동 중심으로 정리하도록 안내함.',
     concern: '경험은 있으나 직무 역량과 연결하기 어려움.',
@@ -38,7 +43,7 @@ export const initialConsultations = [
     studentVisible: true,
   },
   {
-    id: 'c4', studentId: 's2', date: '2026-06-12', type: '진로 탐색', purpose: '데이터 기반 마케팅 직무 탐색', counselor: '박지현',
+    id: 'c4', studentId: 's2', date: daysAgo(45), type: '진로 탐색', purpose: '데이터 기반 마케팅 직무 탐색', counselor: '박지현',
     summary: '교내 홍보 프로젝트와 데이터 분석 수업 경험을 비교하며 관심 직무를 퍼포먼스 마케팅과 CRM 마케팅으로 좁힘.',
     guidance: '두 직무의 주요 업무와 요구 역량을 채용 공고 세 건에서 비교해 보도록 안내함.',
     concern: '마케팅에 관심은 있지만 구체적인 직무 선택 기준이 부족함.',
@@ -49,7 +54,7 @@ export const initialConsultations = [
     studentVisible: true,
   },
   {
-    id: 'c5', studentId: 's2', date: '2026-07-03', type: '포트폴리오', purpose: '프로젝트 경험 구조화', counselor: '박지현',
+    id: 'c5', studentId: 's2', date: daysAgo(22), type: '포트폴리오', purpose: '프로젝트 경험 구조화', counselor: '박지현',
     summary: '교내 홍보 프로젝트를 문제 정의, 실행, 성과 순서로 재구성하고 데이터 분석 경험을 직무 역량과 연결함.',
     guidance: '팀 성과와 본인 기여를 구분하고, 결과 지표의 산출 근거를 확인한 뒤 포트폴리오에 반영하도록 안내함.',
     concern: '프로젝트에서 본인이 맡은 역할과 성과를 구체적으로 표현하기 어려움.',
@@ -59,9 +64,9 @@ export const initialConsultations = [
     nextCheckItems: '성과 지표 근거와 초안 완성도 확인',
     studentVisible: false,
   },
-  { id: 'c3', studentId: 's3', date: '2026-07-15', type: '면접', purpose: '실무 면접 준비', counselor: '박지현', summary: '브랜딩 프로젝트의 본인 기여도를 중심으로 답변을 구성함.', guidance: 'STAR 방식으로 1분 답변을 준비하도록 안내함.', concern: '긴장하면 답변이 길어짐.', programs: ['모의 면접 집중 과정'], studentActions: '1분 답변 녹화', counselorActions: '예상 질문 전달', nextCheckItems: '답변 길이와 핵심 메시지' },
+  { id: 'c3', studentId: 's3', date: daysAgo(10), type: '면접', purpose: '실무 면접 준비', counselor: '박지현', summary: '브랜딩 프로젝트의 본인 기여도를 중심으로 답변을 구성함.', guidance: 'STAR 방식으로 1분 답변을 준비하도록 안내함.', concern: '긴장하면 답변이 길어짐.', programs: ['모의 면접 집중 과정'], studentActions: '1분 답변 녹화', counselorActions: '예상 질문 전달', nextCheckItems: '답변 길이와 핵심 메시지' },
   {
-    id: 'c6', studentId: 's5', date: '2026-07-19', type: '자기소개서', purpose: '금융 공기업 자기소개서 최종 점검', counselor: '박지현',
+    id: 'c6', studentId: 's5', appointmentId: 'a5', date: daysAgo(6), type: '자기소개서', purpose: '금융 공기업 자기소개서 최종 점검', counselor: '박지현',
     summary: '지원 기관의 인재상과 경험 사례를 연결하고, 직무 역량 문항의 최종 표현을 다듬어 상담을 마무리함.',
     guidance: '문항별 핵심 메시지를 한 문장으로 먼저 제시하고 성과 근거를 뒤에 배치하도록 최종 안내함.',
     strengths: '경제 수업과 팀 프로젝트 경험을 금융 공기업의 고객 관점 문제 해결 역량으로 연결하는 힘이 있음.',
@@ -73,7 +78,19 @@ export const initialConsultations = [
     studentVisible: true,
   },
   {
-    id: 'c7', studentId: 's8', date: '2026-07-21', type: '취업 준비', purpose: '해외영업 직무 경험 정리', counselor: '박지현',
+    id: 'c8', studentId: 's6', date: daysAgo(23), type: '창업', purpose: '소셜벤처 아이디어 초기 검토', counselor: '박지현',
+    summary: '지역 문제 해결 아이디어의 대상 고객과 가설을 정리하고 작은 인터뷰부터 시작하기로 함.',
+    guidance: '해결책을 만들기 전에 잠재 사용자 다섯 명을 만나 현재 행동과 불편을 확인하도록 안내함.',
+    strengths: '사회 문제에 대한 관심을 구체적인 실행 아이디어로 연결하는 추진력이 있음.',
+    concern: '아이디어 검증 전에 서비스 기능부터 구체화하려는 경향이 있음.',
+    programs: ['소셜벤처 아이디어톤'],
+    studentActions: '잠재 사용자 인터뷰 질문 작성',
+    counselorActions: '문제 인터뷰 가이드 전달',
+    nextCheckItems: '인터뷰 대상과 핵심 가설 확인',
+    studentVisible: true,
+  },
+  {
+    id: 'c7', studentId: 's8', date: daysAgo(4), type: '취업 준비', purpose: '해외영업 직무 경험 정리', counselor: '박지현',
     summary: '교환학생 팀 프로젝트와 무역 실무 수업 경험을 해외영업의 관계 형성 및 시장 조사 역량과 연결함.',
     guidance: '영문 이력서의 성과 표현을 수정하고, 다음 상담에서 영어 면접 답변 두 개를 점검하기로 함.',
     strengths: '다문화 팀에서 의견을 조율하고 조사 결과를 실행안으로 정리한 경험이 구체적임.',

@@ -49,7 +49,7 @@ const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const InsightsPage = lazy(() => import('./pages/InsightsPage'));
 
-const DEMO_DATA_VERSION = '2026-07-25-varied-scenarios-v5';
+const DEMO_DATA_VERSION = '2026-07-25-relative-scenarios-v6';
 const DEMO_DATA_VERSION_KEY = 'careerfit_demo_data_version';
 const read = (key, fallback) => {
   try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; }
