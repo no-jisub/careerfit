@@ -54,3 +54,13 @@ test('anonymous demo sessions cannot directly access Firestore application data'
   assert.match(rules, /match \/notifications\/\{notificationId\} \{[\s\S]*allow create: if nonAnonymousSignedIn\(\)/);
   assert.match(rules, /match \/programs\/\{programId\} \{[\s\S]*allow read: if nonAnonymousSignedIn\(\)/);
 });
+
+test('email delivery documents are inaccessible to browser clients', () => {
+  assert.match(rules, /match \/mail\/\{mailId\} \{\s*allow read, write: if false;\s*\}/);
+});
+
+test('email notification preferences are isolated to the signed-in owner', () => {
+  assert.match(rules, /match \/notificationPreferences\/\{userId\} \{[\s\S]*allow read: if nonAnonymousSignedIn\(\) && request\.auth\.uid == userId/);
+  assert.match(rules, /allow create, update: if nonAnonymousSignedIn\(\)[\s\S]*request\.auth\.uid == userId[\s\S]*validNotificationPreference\(request\.resource\.data, userId\)/);
+  assert.match(rules, /function validNotificationPreference[\s\S]*data\.keys\(\)\.hasOnly\(\['uid', 'email', 'appointmentEmailEnabled', 'createdAt', 'updatedAt'\]\)/);
+});

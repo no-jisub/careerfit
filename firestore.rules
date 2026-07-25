@@ -29,6 +29,18 @@ service cloud.firestore {
       return !(field in data) || (data[field] is string && data[field].size() <= maxSize);
     }
 
+    function validNotificationPreference(data, userId) {
+      return data.keys().hasOnly(['uid', 'email', 'appointmentEmailEnabled', 'createdAt', 'updatedAt'])
+        && data.uid == userId
+        && data.email is string
+        && data.email.size() <= 254
+        && data.appointmentEmailEnabled is bool
+        && (!data.appointmentEmailEnabled
+          || data.email.matches('^[^@ ]+@[^@ ]+[.][^@ ]+$'))
+        && validText(data.updatedAt, 40)
+        && validOptionalText(data, 'createdAt', 40);
+    }
+
     function validUserProfile(data) {
       return validText(data.email, 254)
         && validText(data.displayName, 80)
@@ -464,6 +476,18 @@ service cloud.firestore {
       allow update: if nonAnonymousSignedIn() && resource.data.recipientUid == request.auth.uid
         && validNotification(request.resource.data)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt']);
+      allow delete: if false;
+    }
+
+    match /mail/{mailId} {
+      allow read, write: if false;
+    }
+
+    match /notificationPreferences/{userId} {
+      allow read: if nonAnonymousSignedIn() && request.auth.uid == userId;
+      allow create, update: if nonAnonymousSignedIn()
+        && request.auth.uid == userId
+        && validNotificationPreference(request.resource.data, userId);
       allow delete: if false;
     }
 

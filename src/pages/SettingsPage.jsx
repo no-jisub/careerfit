@@ -1,10 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import Icon from '../components/Icon';
 import { PageIntro } from '../components/UI';
 import { useAuth } from '../auth/AuthContext';
 import { configureSensitiveAccessPin } from '../services/sensitiveAccessService';
+import {
+  loadEmailNotificationPreference,
+  saveEmailNotificationPreference,
+} from '../services/emailNotificationPreferenceService';
 import { normalizeSensitivePin } from '../utils/sensitiveData';
+import { getSessionActorUid } from '../utils/demoInteraction';
 
 const accessRows = [
   { role: '학생', scope: '본인 정보', canRead: '선택 공개된 상담 요약, 본인 일정·할 일', blocked: '내부 메모, 작성 근거, 다른 학생 정보' },
@@ -18,11 +23,61 @@ export default function SettingsPage() {
   const { notify } = useApp();
   const { user, role, demoModeEnabled } = useAuth();
   const demoMode = demoModeEnabled && !user;
+  const notificationUid = getSessionActorUid({ userUid: user?.uid, role });
   const canConfigurePin = ['counselor', 'admin'].includes(role);
   const [pinForm, setPinForm] = useState({ password: '', pin: '', confirm: '' });
   const [pinSaving, setPinSaving] = useState(false);
   const [pinError, setPinError] = useState('');
-  const [notificationSettings, setNotificationSettings] = useState({ appointment: true, followUp: true });
+  const [notificationSettings, setNotificationSettings] = useState({
+    appointment: true,
+    followUp: true,
+    email: user?.email || '',
+    appointmentEmailEnabled: true,
+  });
+  const [notificationSaving, setNotificationSaving] = useState(false);
+  const [notificationError, setNotificationError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    if (role !== 'counselor' || !notificationUid) return undefined;
+    loadEmailNotificationPreference({
+      uid: notificationUid,
+      fallbackEmail: user?.email || '',
+      demoMode,
+    }).then(preference => {
+      if (!active) return;
+      setNotificationSettings(current => ({
+        ...current,
+        email: preference.email,
+        appointmentEmailEnabled: preference.appointmentEmailEnabled,
+      }));
+    }).catch(error => {
+      if (active) setNotificationError(error.message || '이메일 알림 설정을 불러오지 못했습니다.');
+    });
+    return () => { active = false; };
+  }, [demoMode, notificationUid, role, user?.email]);
+
+  const saveNotifications = async event => {
+    event.preventDefault();
+    setNotificationError('');
+    setNotificationSaving(true);
+    try {
+      if (role === 'counselor') {
+        const saved = await saveEmailNotificationPreference({
+          uid: notificationUid,
+          email: notificationSettings.email,
+          appointmentEmailEnabled: notificationSettings.appointmentEmailEnabled,
+          demoMode,
+        });
+        setNotificationSettings(current => ({ ...current, email: saved.email }));
+      }
+      notify('알림 설정을 저장했습니다.');
+    } catch (error) {
+      setNotificationError(error.message || '알림 설정을 저장하지 못했습니다.');
+    } finally {
+      setNotificationSaving(false);
+    }
+  };
   const savePin = async event => {
     event.preventDefault();
     setPinError('');
@@ -57,10 +112,18 @@ export default function SettingsPage() {
 
         <section className="card settings-card settings-notification-card">
           <div className="settings-section-heading"><span className="settings-section-icon"><Icon name="bell" size={21} /></span><div><h2 id="notification-settings-title">알림 설정</h2><p>상담과 후속 업무를 놓치지 않도록 필요한 알림만 선택하세요.</p></div></div>
-          <form className="settings-notification-form" aria-labelledby="notification-settings-title" onSubmit={event => { event.preventDefault(); notify('알림 설정을 저장했습니다.'); }}>
+          <form className="settings-notification-form" aria-labelledby="notification-settings-title" onSubmit={saveNotifications}>
             <label className="notification-setting-row"><span><strong>상담 일정 알림</strong><small>상담 시작 30분 전에 알려드립니다.</small></span><span className="settings-switch"><input type="checkbox" role="switch" checked={notificationSettings.appointment} onChange={event => setNotificationSettings(current => ({ ...current, appointment: event.target.checked }))} /><i aria-hidden="true" /></span></label>
             <label className="notification-setting-row"><span><strong>할 일 기한 알림</strong><small>기한 전날과 당일에 알려드립니다.</small></span><span className="settings-switch"><input type="checkbox" role="switch" checked={notificationSettings.followUp} onChange={event => setNotificationSettings(current => ({ ...current, followUp: event.target.checked }))} /><i aria-hidden="true" /></span></label>
-            <button className="button primary">알림 설정 저장</button>
+            {role === 'counselor' && <>
+              <label className="notification-email-field">
+                <span><strong>이메일 알림 수신 주소</strong><small>학생의 상담 신청·취소 알림을 받을 이메일입니다.</small></span>
+                <input type="email" autoComplete="email" value={notificationSettings.email} onChange={event => setNotificationSettings(current => ({ ...current, email: event.target.value }))} placeholder="name@example.com" required={notificationSettings.appointmentEmailEnabled} />
+              </label>
+              <label className="notification-setting-row"><span><strong>상담 이메일 알림</strong><small>학생이 상담을 신청하거나 취소하면 이메일로 알려드립니다.</small></span><span className="settings-switch"><input type="checkbox" role="switch" checked={notificationSettings.appointmentEmailEnabled} onChange={event => setNotificationSettings(current => ({ ...current, appointmentEmailEnabled: event.target.checked }))} /><i aria-hidden="true" /></span></label>
+            </>}
+            {notificationError && <p className="settings-notification-error" role="alert">{notificationError}</p>}
+            <button className="button primary" disabled={notificationSaving}>{notificationSaving ? '저장 중...' : '알림 설정 저장'}</button>
           </form>
         </section>
       </div>

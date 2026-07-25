@@ -6098,6 +6098,35 @@ time {
   flex-direction: column;
   gap: 10px;
 }
+.notification-email-field {
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-component);
+  display: grid;
+  gap: 11px;
+  color: var(--navy);
+  background: var(--surface);
+}
+.notification-email-field strong,
+.notification-email-field small {
+  display: block;
+}
+.notification-email-field small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-weight: 500;
+  line-height: 1.5;
+}
+.notification-email-field input {
+  width: 100%;
+  min-height: 44px;
+}
+.settings-notification-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--type-caption);
+  font-weight: 700;
+}
 .notification-setting-row {
   min-height: 76px;
   padding: 14px 15px;
@@ -8080,6 +8109,40 @@ textarea {
 .student-profile-form-card label > small {
   color: var(--muted);
   font-weight: 500;
+}
+
+.student-email-notification-settings {
+  margin: 3px 0 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-component);
+  display: grid;
+  gap: 12px;
+  background: var(--surface-subtle);
+}
+
+.student-email-notification-settings legend {
+  padding: 0 6px;
+  color: var(--navy);
+  font-weight: 800;
+}
+
+.student-email-notification-settings > p {
+  margin: -4px 0 1px;
+  color: var(--muted);
+}
+
+.student-email-notification-settings .student-email-notification-toggle {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 9px;
+  font-weight: 700;
+}
+
+.student-email-notification-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
 }
 
 .student-profile-form-actions {

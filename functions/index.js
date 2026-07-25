@@ -1,6 +1,8 @@
 import { GoogleGenAI } from '@google/genai';
 import { initializeApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { logger } from 'firebase-functions';
 import { defineSecret } from 'firebase-functions/params';
@@ -27,6 +29,12 @@ import {
   isAllowedDemoOrigin,
   isAnonymousFirebaseAuth,
 } from './demoAiAccess.js';
+import {
+  buildAppointmentEmailMessage,
+  buildAppointmentMailId,
+  getAppointmentEmailEvent,
+  normalizeNotificationEmail,
+} from './appointmentEmail.js';
 
 initializeApp();
 
@@ -35,6 +43,92 @@ const MODEL = 'gemini-2.5-flash';
 const DAILY_LIMIT = 50;
 const SENSITIVE_PIN_PEPPER = defineSecret('SENSITIVE_PIN_PEPPER');
 const RECENT_AUTH_SECONDS = 5 * 60;
+
+function isAlreadyCreatedError(error) {
+  return error?.code === 6 || error?.code === 'already-exists';
+}
+
+export const sendAppointmentEmail = onDocumentWritten({
+  document: 'appointments/{appointmentId}',
+  region: REGION,
+  timeoutSeconds: 30,
+  memory: '256MiB',
+  maxInstances: 3,
+}, async event => {
+  const before = event.data?.before.exists ? event.data.before.data() : null;
+  const after = event.data?.after.exists ? event.data.after.data() : null;
+  const emailEvent = getAppointmentEmailEvent(before, after);
+  if (!emailEvent?.recipientUid || !after) return;
+
+  const database = getFirestore();
+  const preferenceSnapshot = await database.doc(`notificationPreferences/${emailEvent.recipientUid}`).get();
+  const preference = preferenceSnapshot.data();
+  if (preference?.appointmentEmailEnabled === false) {
+    logger.info('Appointment email disabled by recipient', {
+      appointmentId: event.params.appointmentId,
+      eventKey: emailEvent.key,
+      recipientUid: emailEvent.recipientUid,
+    });
+    return;
+  }
+
+  let recipient;
+  try {
+    recipient = await getAuth().getUser(emailEvent.recipientUid);
+  } catch (error) {
+    logger.warn('Appointment email recipient could not be loaded', {
+      appointmentId: event.params.appointmentId,
+      eventKey: emailEvent.key,
+      recipientUid: emailEvent.recipientUid,
+      code: error?.code || 'unknown',
+    });
+    return;
+  }
+  const recipientEmail = normalizeNotificationEmail(preference?.email)
+    || normalizeNotificationEmail(recipient.email);
+  if (!recipientEmail) {
+    logger.warn('Appointment email recipient has no email address', {
+      appointmentId: event.params.appointmentId,
+      eventKey: emailEvent.key,
+      recipientUid: emailEvent.recipientUid,
+    });
+    return;
+  }
+
+  const studentSnapshot = after.studentId
+    ? await database.doc(`students/${after.studentId}`).get()
+    : null;
+  const studentName = studentSnapshot?.data()?.name || '학생';
+  const message = buildAppointmentEmailMessage(emailEvent, after, studentName);
+  const mailId = buildAppointmentMailId(event.params.appointmentId, emailEvent.key);
+
+  try {
+    await database.collection('mail').doc(mailId).create({
+      to: [recipientEmail],
+      message,
+      appointmentId: event.params.appointmentId,
+      eventKey: emailEvent.key,
+      recipientUid: emailEvent.recipientUid,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    logger.info('Appointment email queued', {
+      appointmentId: event.params.appointmentId,
+      eventKey: emailEvent.key,
+      recipientUid: emailEvent.recipientUid,
+      mailId,
+    });
+  } catch (error) {
+    if (isAlreadyCreatedError(error)) {
+      logger.info('Duplicate appointment email event ignored', {
+        appointmentId: event.params.appointmentId,
+        eventKey: emailEvent.key,
+        mailId,
+      });
+      return;
+    }
+    throw error;
+  }
+});
 
 async function assertApprovedCounselor(uid) {
   const snapshot = await getFirestore().doc(`users/${uid}`).get();
