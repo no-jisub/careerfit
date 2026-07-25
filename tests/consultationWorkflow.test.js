@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { initialAppointments } from '../src/data/appointments.js';
+import { initialAppointments, restoreAppointmentStore } from '../src/data/appointments.js';
 import { initialConsultations } from '../src/data/consultations.js';
 import { initialFollowUps } from '../src/data/followUps.js';
 import { initialStudents } from '../src/data/students.js';
@@ -45,6 +45,13 @@ test('demo data covers completed records, first counseling, and repeat counselin
     new Set(initialFollowUps.filter(item => item.studentId === repeatCounselingStudent.id).map(item => item.status)),
     new Set(['complete', 'inProgress', 'scheduled']),
   );
+});
+
+test('legacy demo appointments restore student intake details for the preparation briefing', () => {
+  const restored = restoreAppointmentStore([{ id: 'a1', studentId: 's1', status: 'confirmed' }]);
+  assert.equal(restored[0].requestedBy, 'student');
+  assert.match(restored[0].requestMessage, /상담받고 싶어요/);
+  assert.ok(restored[0].preferredOutcome);
 });
 
 test('student summary contains only counselor-selected public fields', () => {

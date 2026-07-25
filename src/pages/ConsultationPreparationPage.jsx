@@ -36,6 +36,13 @@ export default function ConsultationPreparationPage() {
     .filter(item => item.studentId === student.id && activeAppointmentStatuses.includes(item.status) && item.date >= toDateKey())
     .sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`))[0];
   const attachments = upcomingAppointment?.attachments || [];
+  const interestsLabel = student.interests?.length ? student.interests.join(' · ') : '입력한 관심 분야가 없습니다.';
+  const hasAppointmentIntake = Boolean(
+    upcomingAppointment?.subject
+    || upcomingAppointment?.requestMessage
+    || upcomingAppointment?.preferredOutcome
+    || attachments.length,
+  );
   const briefingHistory = history.slice(0, 3).reverse();
   const latestConsultation = history[0];
   const overdueTaskCount = tasks.filter(task => task.status === 'overdue').length;
@@ -73,7 +80,6 @@ export default function ConsultationPreparationPage() {
             <div><dt>장소</dt><dd>{upcomingAppointment.location}</dd></div>
             <div><dt>준비 사항</dt><dd>{upcomingAppointment.preparation || '별도 준비 사항 없음'}</dd></div>
           </dl>
-          {attachments.length > 0 && <div className="preparation-attachments"><strong>학생 첨부 자료</strong><div>{attachments.map(file => <button type="button" className="text-button" key={file.id} onClick={() => openAttachment(file)}><Icon name="note" size={14} />{file.fileName}</button>)}</div></div>}
         </> : <p className="preparation-appointment-empty">상담 일정에서 다음 예약을 확인하거나 새 일정을 등록해 주세요.</p>}
       </section>
 
@@ -91,6 +97,48 @@ export default function ConsultationPreparationPage() {
     </section>
 
     <div className="preparation-workspace">
+      <section className="card preparation-intake-card" aria-labelledby="preparation-intake-title">
+        <header className="preparation-intake-heading">
+          <span aria-hidden="true"><Icon name="note" size={20} /></span>
+          <div>
+            <span className="eyebrow">학생 작성 정보</span>
+            <h2 id="preparation-intake-title">학생이 미리 알려준 내용</h2>
+            <p>회원가입·학생 정보와 이번 상담 신청에서 학생이 남긴 내용을 함께 확인하세요.</p>
+          </div>
+          <strong>{upcomingAppointment ? '이번 상담 연결됨' : '학생 기본 정보'}</strong>
+        </header>
+
+        <div className="preparation-intake-grid">
+          <section className="preparation-intake-section" aria-labelledby="preparation-profile-intake-title">
+            <div className="preparation-intake-section-heading">
+              <span aria-hidden="true"><Icon name="user" size={17} /></span>
+              <div><small>회원가입·학생 정보</small><h3 id="preparation-profile-intake-title">상담 시작 정보</h3></div>
+            </div>
+            <dl>
+              <div><dt>관심 분야</dt><dd>{interestsLabel}</dd></div>
+              <div><dt>진로 목표</dt><dd>{student.goal || '입력한 진로 목표가 없습니다.'}</dd></div>
+              <div className="preparation-intake-wide"><dt>현재 고민</dt><dd>{student.concern || '입력한 현재 고민이 없습니다.'}</dd></div>
+            </dl>
+          </section>
+
+          <section className="preparation-intake-section appointment" aria-labelledby="preparation-appointment-intake-title">
+            <div className="preparation-intake-section-heading">
+              <span aria-hidden="true"><Icon name="calendar" size={17} /></span>
+              <div><small>이번 상담 신청</small><h3 id="preparation-appointment-intake-title">상담사에게 전달한 내용</h3></div>
+            </div>
+            {upcomingAppointment && hasAppointmentIntake ? <>
+              <dl>
+                <div><dt>상담받고 싶은 주제</dt><dd>{upcomingAppointment.subject || upcomingAppointment.type}</dd></div>
+                <div><dt>상담 후 얻고 싶은 결과</dt><dd>{upcomingAppointment.preferredOutcome || '별도로 입력하지 않았습니다.'}</dd></div>
+                <div className="preparation-intake-wide"><dt>상담사에게 전달한 내용</dt><dd>{upcomingAppointment.requestMessage || '별도로 입력하지 않았습니다.'}</dd></div>
+              </dl>
+              {attachments.length > 0 && <div className="preparation-intake-attachments"><strong>상담 준비자료</strong><div>{attachments.map(file => <button type="button" className="text-button" key={file.id} onClick={() => openAttachment(file)}><Icon name="note" size={14} />{file.fileName}</button>)}</div></div>}
+            </> : <p className="preparation-intake-empty">{upcomingAppointment ? '상담사가 직접 등록한 일정이거나 학생이 별도의 사전 내용을 입력하지 않았습니다.' : '예정된 상담이 없어 연결된 상담 신청 내용이 없습니다.'}</p>}
+          </section>
+        </div>
+        <small className="preparation-intake-source"><Icon name="shield" size={13} />담당 상담사에게 배정된 학생의 상담 준비 목적으로만 표시됩니다.</small>
+      </section>
+
       <section className="card prep-card">
         <div className="section-header"><div><span className="eyebrow">30초 상담 브리핑</span><h2>이번 상담 전에 확인할 3가지</h2><p>{student.name} 학생의 이전 상담 맥락과 이어갈 질문을 빠르게 확인하세요.</p></div><span className="updated-label"><Icon name="clock" size={14} />{latestConsultation ? `최근 상담 ${formatPreparationDate(latestConsultation.date)}` : '이전 상담 기록 없음'}</span></div>
         <div className="student-briefing">

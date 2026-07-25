@@ -5,7 +5,7 @@ import { initialStudents } from './data/students';
 import { initialConsultations } from './data/consultations';
 import { initialConsultationSummaries } from './data/consultationSummaries';
 import { initialFollowUps } from './data/followUps';
-import { initialAppointments } from './data/appointments';
+import { initialAppointments, restoreAppointmentStore } from './data/appointments';
 import { initialCounselorAvailability } from './data/counselorAvailability';
 import { initialUsers } from './data/users';
 import { initialStudentRegistrations } from './data/studentRegistrations';
@@ -73,7 +73,7 @@ function AppProvider({ children }) {
   const [consultationNotes, setConsultationNotes] = useState(() => syncingRemoteData ? [] : readDemo('careerfit_consultation_notes', []));
   const [consultationDrafts, setConsultationDrafts] = useState(() => syncingRemoteData ? [] : readDemo('careerfit_consultation_drafts', []));
   const [followUps, setFollowUps] = useState(() => syncingRemoteData ? [] : readDemo('careerfit_followups', initialFollowUps).map(followUp => ({ ...followUp, status: resolveFollowUpStatus(followUp) })));
-  const [appointments, setAppointments] = useState(() => syncingRemoteData ? [] : readDemo('careerfit_appointments', initialAppointments));
+  const [appointments, setAppointments] = useState(() => syncingRemoteData ? [] : restoreAppointmentStore(readDemo('careerfit_appointments', initialAppointments)));
   const [counselorAvailability, setCounselorAvailability] = useState(() => syncingRemoteData ? [] : restoreCounselorAvailabilityStore(readDemo('careerfit_counselor_availability', initialCounselorAvailability), initialCounselorAvailability));
   const [notifications, setNotifications] = useState(() => syncingRemoteData ? [] : readDemo('careerfit_notifications', []));
   const [programs, setPrograms] = useState(() => restoreProgramStore(readDemo('careerfit_program_store', null), initialPrograms));
@@ -133,7 +133,7 @@ function AppProvider({ children }) {
         case DEMO_STORAGE_KEYS.followUps:
           setFollowUps(value.map(followUp => ({ ...followUp, status: resolveFollowUpStatus(followUp) })));
           break;
-        case DEMO_STORAGE_KEYS.appointments: setAppointments(value); break;
+        case DEMO_STORAGE_KEYS.appointments: setAppointments(restoreAppointmentStore(value)); break;
         case DEMO_STORAGE_KEYS.counselorAvailability:
           setCounselorAvailability(restoreCounselorAvailabilityStore(value, initialCounselorAvailability));
           break;
