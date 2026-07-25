@@ -8410,3 +8410,533 @@ label > .ui-picker {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Counselor workflow: keep one counseling entry in navigation, then reveal the work in order. */
+.dashboard-workflow {
+  margin-bottom: 24px;
+}
+
+.dashboard-workflow > header,
+.consultation-action-section > header,
+.consultation-workflow-heading {
+  margin-bottom: 14px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.dashboard-workflow > header h1,
+.consultation-action-section > header h2,
+.consultation-workflow-heading h2 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 20px;
+  line-height: 1.35;
+}
+
+.dashboard-workflow > header p,
+.consultation-action-section > header p,
+.consultation-workflow-heading p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.dashboard-workflow > header > a,
+.consultation-action-section > header > a {
+  min-height: 44px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: var(--font-weight-bold);
+}
+
+.workflow-summary-grid {
+  margin-bottom: 0;
+}
+
+.workflow-summary-grid .summary-card {
+  padding-top: 27px;
+}
+
+.workflow-step-number {
+  position: absolute;
+  top: 9px;
+  left: 22px;
+  color: var(--blue);
+  font-size: 9px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: .08em;
+}
+
+.workflow-summary-grid .summary-card::after {
+  width: 8px;
+  height: 8px;
+  position: absolute;
+  top: 13px;
+  right: 14px;
+  border-top: 1.5px solid #c3ccda;
+  border-right: 1.5px solid #c3ccda;
+  content: "";
+  transform: rotate(45deg);
+}
+
+.consultation-workflow-overview {
+  padding: 24px;
+}
+
+.consultation-workflow-heading {
+  align-items: center;
+}
+
+.consultation-workflow-heading > span {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid var(--primary-border);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--blue);
+  background: var(--primary-soft);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+}
+
+.consultation-workflow-heading > span.needs-attention {
+  border-color: #f0c9cd;
+  color: var(--red);
+  background: var(--red-soft);
+}
+
+.consultation-workflow-steps {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  list-style: none;
+}
+
+.consultation-workflow-steps li {
+  min-width: 0;
+}
+
+.consultation-workflow-steps li + li {
+  position: relative;
+}
+
+.consultation-workflow-steps li + li::before {
+  width: 10px;
+  height: 1px;
+  position: absolute;
+  top: 50%;
+  left: -10px;
+  content: "";
+  background: var(--primary-border);
+}
+
+.consultation-workflow-steps a {
+  min-height: 210px;
+  padding: 17px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  color: var(--text);
+  background: var(--surface);
+  transition: border-color .18s ease, background-color .18s ease;
+}
+
+.consultation-workflow-steps a:hover {
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
+}
+
+.workflow-step-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--blue);
+  font-size: 10px;
+}
+
+.workflow-step-icon {
+  width: 42px;
+  height: 42px;
+  margin: 20px 0 13px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.consultation-workflow-steps a > strong {
+  color: var(--navy);
+  font-size: 14px;
+}
+
+.consultation-workflow-steps a > p {
+  min-height: 36px;
+  margin: 6px 0 16px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.workflow-step-count {
+  margin-top: auto;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.workflow-step-count em {
+  margin-right: 3px;
+  color: var(--navy);
+  font-size: 18px;
+  font-style: normal;
+  font-weight: var(--font-weight-extrabold);
+}
+
+.consultation-action-section {
+  margin-top: 28px;
+}
+
+.consultation-action-lanes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.consultation-action-lane {
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  --lane-accent: var(--blue);
+  --lane-tint: rgba(var(--primary-rgb), .08);
+  --lane-border: rgba(var(--primary-rgb), .18);
+}
+
+.consultation-action-lane.writing {
+  --lane-tint: rgba(var(--primary-rgb), .055);
+}
+
+.consultation-action-lane.follow-up {
+  --lane-tint: rgba(var(--primary-rgb), .035);
+}
+
+.consultation-action-lane > header {
+  min-height: 116px;
+  padding: 18px;
+  border-top: 4px solid var(--lane-accent);
+  border-bottom: 1px solid var(--lane-border);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  background: var(--lane-tint);
+}
+
+.consultation-lane-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: var(--lane-accent);
+  box-shadow: 0 3px 0 rgba(16, 33, 61, .14);
+}
+
+.consultation-lane-step {
+  margin-bottom: 4px;
+  display: block;
+  color: var(--lane-accent);
+  font-size: 9px;
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: .06em;
+}
+
+.consultation-action-lane > header h3 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 15px;
+  line-height: var(--line-height-tight);
+}
+
+.consultation-action-lane > header p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.consultation-lane-count {
+  min-width: 46px;
+  height: 46px;
+  border: 1px solid var(--lane-border);
+  border-radius: 13px;
+  display: grid;
+  grid-template-columns: auto auto;
+  place-items: center;
+  align-content: center;
+  column-gap: 2px;
+  color: var(--lane-accent);
+  background: rgba(255, 255, 255, .86);
+}
+
+.consultation-lane-count strong {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.consultation-lane-count small {
+  align-self: end;
+  padding-bottom: 1px;
+  font-size: 9px;
+  font-weight: var(--font-weight-bold);
+}
+
+.consultation-action-lane > div {
+  min-height: 236px;
+  padding: 0 18px;
+  background: var(--surface);
+}
+
+.consultation-action-row {
+  min-width: 0;
+  min-height: 78px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.consultation-action-row:hover .consultation-action-copy > strong {
+  color: var(--blue);
+}
+
+.consultation-action-avatar {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--primary-border);
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: var(--blue);
+  background: var(--primary-soft);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+}
+
+.consultation-action-copy {
+  min-width: 0;
+}
+
+.consultation-action-copy > strong,
+.consultation-action-copy > small,
+.consultation-action-copy > span {
+  display: block;
+}
+
+.consultation-action-copy > strong {
+  color: var(--navy);
+  font-size: 12px;
+}
+
+.consultation-action-copy > small,
+.consultation-action-copy > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.consultation-action-copy > small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.consultation-action-copy > span {
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 9px;
+}
+
+.consultation-action-side {
+  display: grid;
+  justify-items: end;
+  gap: 7px;
+}
+
+.consultation-action-side .badge {
+  min-height: 22px;
+  padding-inline: 7px;
+  font-size: 8px;
+}
+
+.consultation-action-side > b {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--blue);
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.consultation-lane-link {
+  min-height: 44px;
+  margin-top: 0;
+  padding: 10px 18px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--blue);
+  background: var(--surface);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+}
+
+.consultation-lane-empty {
+  min-height: 180px;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+.consultation-history-shortcut {
+  min-height: 82px;
+  margin-top: 20px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 16px;
+  background: var(--surface);
+}
+
+.consultation-history-shortcut > div {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.consultation-history-shortcut > div > span {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.consultation-history-shortcut strong {
+  color: var(--navy);
+  font-size: 12px;
+}
+
+.consultation-history-shortcut p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.consultation-history-shortcut > small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+@media (max-width: 1120px) {
+  .consultation-action-lanes {
+    grid-template-columns: 1fr;
+  }
+
+  .consultation-action-lane > div {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 860px) {
+  .consultation-workflow-steps,
+  .workflow-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .consultation-workflow-steps li + li::before {
+    display: none;
+  }
+
+  .consultation-history-shortcut {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .consultation-history-shortcut > small {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-workflow > header,
+  .consultation-action-section > header,
+  .consultation-workflow-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .consultation-workflow-overview {
+    padding: 18px;
+  }
+
+  .consultation-workflow-steps,
+  .workflow-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .consultation-workflow-steps a {
+    min-height: 172px;
+  }
+
+  .workflow-step-icon {
+    margin-top: 13px;
+  }
+
+  .consultation-action-lane {
+    padding: 0;
+  }
+
+  .consultation-action-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .consultation-action-side {
+    grid-column: 2;
+    justify-items: start;
+    grid-auto-flow: column;
+    align-items: center;
+  }
+
+  .consultation-history-shortcut {
+    grid-template-columns: 1fr;
+  }
+
+  .consultation-history-shortcut > .button {
+    width: 100%;
+  }
+}
